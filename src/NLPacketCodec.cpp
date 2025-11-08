@@ -482,11 +482,7 @@ std::vector<uint8_t> NLPacket::computeProtocolVersionSignature() {
         PacketType type = static_cast<PacketType>(i);
         uint8_t version = versionForPacketType(type);
         buffer.push_back(version);
-        if (i < 20 || i >= numPacketTypes - 10) {  // Print first 20 and last 10
-            std::cout << "  Type " << (int)i << ": version " << (int)version << std::endl;
-        } else if (i == 20) {
-            std::cout << "  ... (middle entries omitted) ..." << std::endl;
-        }
+        std::cout << "  Type " << (int)i << ": version " << (int)version << std::endl;
     }
     
     // Compute MD5 hash
