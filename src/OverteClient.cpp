@@ -504,51 +504,79 @@ void OverteClient::sendDomainConnectRequest() {
     NLPacket packet(PacketType::DomainConnectRequest, PacketVersions::DomainConnectRequest_SocketTypes, true);
     packet.setSequenceNumber(m_sequenceNumber++);
     
-    // Build packet payload with authentication  
-    // Format: [ProtocolVersion:string][HardwareAddress:string][MachineFingerprint:string][Username:string][Password:string]
-    std::string protocolVersion = "Starworld-0.1";
-    std::string hardwareAddress = m_sessionUUID;
-    std::string machineFingerprint = m_sessionUUID; // Use session UUID as fingerprint
-    
-    // Helper lambda to add length-prefixed string
-    auto addString = [&packet](const std::string& str) {
-        if (str.size() > 255) {
-            packet.writeUInt8(255);
-            packet.write(str.data(), 255);
-        } else {
-            packet.writeUInt8(static_cast<uint8_t>(str.size()));
-            packet.write(str.data(), str.size());
+    // 1. Write connect UUID (16 bytes)
+    // Parse session UUID and write as 16 bytes
+    // Format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+    uint8_t uuidBytes[16] = {0};
+    if (m_sessionUUID.length() >= 36) {
+        // Parse UUID hex string to bytes
+        int byteIdx = 0;
+        for (size_t i = 0; i < m_sessionUUID.length() && byteIdx < 16; i++) {
+            char c = m_sessionUUID[i];
+            if (c == '-') continue;
+            
+            uint8_t nibble = 0;
+            if (c >= '0' && c <= '9') nibble = c - '0';
+            else if (c >= 'a' && c <= 'f') nibble = c - 'a' + 10;
+            else if (c >= 'A' && c <= 'F') nibble = c - 'A' + 10;
+            
+            if (i % 2 == 0 || (i > 0 && m_sessionUUID[i-1] == '-')) {
+                uuidBytes[byteIdx] = nibble << 4;
+            } else {
+                uuidBytes[byteIdx] |= nibble;
+                byteIdx++;
+            }
         }
-    };
+    }
+    packet.write(uuidBytes, 16);
     
-    // Add protocol version
-    addString(protocolVersion);
+    // 2. Write protocol version signature (MD5 hash) with length prefix
+    auto protocolSig = NLPacket::computeProtocolVersionSignature();
+    packet.writeUInt32(static_cast<uint32_t>(protocolSig.size()));  // Length prefix
+    packet.write(protocolSig.data(), protocolSig.size());
     
-    // Add hardware address (session UUID)
-    addString(hardwareAddress);
+    // 3. Write hardware address (MAC address as QString format)
+    // QString format: uint32 length + UTF-16 chars
+    // We'll use a fake MAC address
+    std::string macAddr = "00:00:00:00:00:00";
+    packet.writeUInt32(static_cast<uint32_t>(macAddr.size()));
+    for (char c : macAddr) {
+        packet.writeUInt16(static_cast<uint16_t>(c));  // UTF-16 encoding
+    }
     
-    // Add machine fingerprint
-    addString(machineFingerprint);
+    // 4. Write machine fingerprint (QString format)
+    std::string fingerprint = m_sessionUUID;
+    packet.writeUInt32(static_cast<uint32_t>(fingerprint.size()));
+    for (char c : fingerprint) {
+        packet.writeUInt16(static_cast<uint16_t>(c));
+    }
     
-    // Add username (empty if not authenticated)
-    addString(m_username);
+    // 5. Write compressed system info (QByteArray format)
+    // QByteArray format: uint32 length + data
+    // Minimal JSON system info
+    std::string systemInfo = "{\"computer\":{\"OS\":\"Linux\"},\"cpus\":[{\"model\":\"Stardust\"}]}";
+    packet.writeUInt32(static_cast<uint32_t>(systemInfo.size()));
+    packet.write(systemInfo.data(), systemInfo.size());
     
-    // Add password/token (empty if not authenticated)
-    addString(m_password);
+    // 6. Write local socket type (SocketType enum: Public=0, Local=1, Stun=2)
+    packet.writeUInt8(0);  // Public socket
+    
+    // 7. Write public socket type
+    packet.writeUInt8(0);  // Public socket
     
     const auto& data = packet.getData();
     ssize_t s = ::sendto(m_udpFd, data.data(), data.size(), 0, 
                          reinterpret_cast<sockaddr*>(&m_udpAddr), m_udpAddrLen);
     if (s > 0) {
         std::cout << "[OverteClient] DomainConnectRequest sent (" << s << " bytes, seq=" << (m_sequenceNumber-1) << ")" << std::endl;
-        std::cout << "[OverteClient]   Protocol: " << protocolVersion << std::endl;
-        std::cout << "[OverteClient]   Session: " << hardwareAddress << std::endl;
+        std::cout << "[OverteClient]   Session UUID: " << m_sessionUUID << std::endl;
+        std::cout << "[OverteClient]   Protocol signature: " << protocolSig.size() << " bytes (MD5)" << std::endl;
         if (!m_username.empty()) {
             std::cout << "[OverteClient]   Username: " << m_username << std::endl;
         }
-        // Hex dump first 32 bytes
+        // Hex dump first 48 bytes
         std::cout << "[OverteClient] >>> NLPacket Hex: ";
-        for (size_t i = 0; i < std::min(size_t(32), data.size()); ++i) {
+        for (size_t i = 0; i < std::min(size_t(48), data.size()); ++i) {
             printf("%02x ", data[i]);
         }
         std::cout << std::endl;
