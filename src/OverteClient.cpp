@@ -268,16 +268,17 @@ void OverteClient::parseDomainPacket(const char* data, size_t len) {
     if (len < 6) return;  // NLPacket header is minimum 6 bytes
     
     // Parse NLPacket header
-    auto header = NLPacket::parseHeader(data, len);
-    if (!header) {
+    NLPacket::Header header;
+    const uint8_t* udata = reinterpret_cast<const uint8_t*>(data);
+    if (!NLPacket::parseHeader(udata, len, header)) {
         std::cerr << "[OverteClient] Failed to parse NLPacket header" << std::endl;
         return;
     }
     
-    PacketType packetType = NLPacket::getType(data, len);
+    PacketType packetType = NLPacket::getType(udata, len);
     std::cout << "[OverteClient] Domain packet type: " << static_cast<int>(packetType) 
               << " (0x" << std::hex << static_cast<int>(packetType) << std::dec << ")" 
-              << " version: " << (int)header->version << std::endl;
+              << " version: " << (int)header.version << std::endl;
     
     // Payload starts after header (6 bytes base, +2 if has source ID)
     const char* payload = data + 6;  // Assuming no source ID for now
@@ -289,10 +290,6 @@ void OverteClient::parseDomainPacket(const char* data, size_t len) {
             break;
             
         case PacketType::DomainConnectionDenied:
-            handleDomainConnectionDenied(payload, payloadLen);
-            break;
-            
-        case PacketType::DomainServerConnectionDenied:
             handleDomainConnectionDenied(payload, payloadLen);
             break;
             
