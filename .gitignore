@@ -1,0 +1,27 @@
+# Build artifacts
+/build/
+
+# CMake
+CMakeFiles/
+CMakeCache.txt
+cmake-build-*/
+Makefile
+*.cmake
+compile_commands.json
+install_manifest.txt
+
+# Rust bridge target
+/bridge/target/
+
+# IDE/editor
+.vscode/
+.idea/
+*.user
+
+# Logs
+*.log
+
+# Temporary
+*.tmp
+*.swp
+.DS_Store
