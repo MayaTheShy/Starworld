@@ -497,26 +497,24 @@ void OverteClient::handleDomainConnectionDenied(const char* data, size_t len) {
 void OverteClient::sendDomainConnectRequest() {
     if (!m_udpReady || m_udpFd == -1) return;
     
-    // DomainConnectRequest packet (PacketType 0x04)
-    const unsigned char PACKET_TYPE_DOMAIN_CONNECT_REQUEST = 0x04;
+    // Create NLPacket with DomainConnectRequest type
+    NLPacket packet(PacketType::DomainConnectRequest, 0, true);  // version 0, reliable
+    packet.setSequenceNumber(m_sequenceNumber++);
     
-    // Build packet with authentication
-    // Format: [PacketType][ProtocolVersion:string][HardwareAddress:string][MachineFingerprint:string][Username:string][Password:string]
+    // Build packet payload with authentication  
+    // Format: [ProtocolVersion:string][HardwareAddress:string][MachineFingerprint:string][Username:string][Password:string]
     std::string protocolVersion = "Starworld-0.1";
     std::string hardwareAddress = m_sessionUUID;
     std::string machineFingerprint = m_sessionUUID; // Use session UUID as fingerprint
     
-    std::vector<char> packet;
-    packet.push_back(static_cast<char>(PACKET_TYPE_DOMAIN_CONNECT_REQUEST));
-    
     // Helper lambda to add length-prefixed string
     auto addString = [&packet](const std::string& str) {
         if (str.size() > 255) {
-            packet.push_back(static_cast<char>(255));
-            packet.insert(packet.end(), str.begin(), str.begin() + 255);
+            packet.writeUInt8(255);
+            packet.write(str.data(), 255);
         } else {
-            packet.push_back(static_cast<char>(str.size()));
-            packet.insert(packet.end(), str.begin(), str.end());
+            packet.writeUInt8(static_cast<uint8_t>(str.size()));
+            packet.write(str.data(), str.size());
         }
     };
     
@@ -535,19 +533,20 @@ void OverteClient::sendDomainConnectRequest() {
     // Add password/token (empty if not authenticated)
     addString(m_password);
     
-    ssize_t s = ::sendto(m_udpFd, packet.data(), packet.size(), 0, 
+    const auto& data = packet.getData();
+    ssize_t s = ::sendto(m_udpFd, data.data(), data.size(), 0, 
                          reinterpret_cast<sockaddr*>(&m_udpAddr), m_udpAddrLen);
     if (s > 0) {
-        std::cout << "[OverteClient] Domain connect request sent (" << s << " bytes)" << std::endl;
+        std::cout << "[OverteClient] DomainConnectRequest sent (" << s << " bytes, seq=" << (m_sequenceNumber-1) << ")" << std::endl;
         std::cout << "[OverteClient]   Protocol: " << protocolVersion << std::endl;
         std::cout << "[OverteClient]   Session: " << hardwareAddress << std::endl;
         if (!m_username.empty()) {
             std::cout << "[OverteClient]   Username: " << m_username << std::endl;
         }
         // Hex dump first 32 bytes
-        std::cout << "[OverteClient] >>> Hex: ";
-        for (size_t i = 0; i < std::min(size_t(32), packet.size()); ++i) {
-            printf("%02x ", (unsigned char)packet[i]);
+        std::cout << "[OverteClient] >>> NLPacket Hex: ";
+        for (size_t i = 0; i < std::min(size_t(32), data.size()); ++i) {
+            printf("%02x ", data[i]);
         }
         std::cout << std::endl;
     } else {
@@ -556,37 +555,40 @@ void OverteClient::sendDomainConnectRequest() {
 }
 
 void OverteClient::sendDomainListRequest() {
-    // Send DomainList request packet (PacketType 0x02)
+    // Send DomainList request packet using NLPacket format
     if (!m_udpReady || m_udpFd == -1) return;
     
-    const unsigned char PACKET_TYPE_DOMAIN_LIST_REQUEST = 0x02;
-    char packet[1] = { static_cast<char>(PACKET_TYPE_DOMAIN_LIST_REQUEST) };
+    // Create NLPacket with DomainListRequest type
+    NLPacket packet(PacketType::DomainListRequest, 0, true);  // version 0, reliable
+    packet.setSequenceNumber(m_sequenceNumber++);
     
-    ssize_t s = ::sendto(m_udpFd, packet, sizeof(packet), 0, 
+    // DomainListRequest has no payload, just the header
+    
+    const auto& data = packet.getData();
+    ssize_t s = ::sendto(m_udpFd, data.data(), data.size(), 0, 
                          reinterpret_cast<sockaddr*>(&m_udpAddr), m_udpAddrLen);
     if (s > 0) {
-        std::cout << "[OverteClient] DomainList request sent" << std::endl;
+        std::cout << "[OverteClient] DomainListRequest sent (seq=" << (m_sequenceNumber-1) << ")" << std::endl;
     } else {
         std::cerr << "[OverteClient] Failed to send domain list request: " << strerror(errno) << std::endl;
     }
 }
 
 void OverteClient::sendPing(int fd, const sockaddr_storage& addr, socklen_t addrLen) {
-    const unsigned char PACKET_TYPE_PING = 0x01;
-    
-    // Ping packet: [PacketType][Timestamp:u64][PingType:u8]
-    char packet[1 + 8 + 1];
-    packet[0] = static_cast<char>(PACKET_TYPE_PING);
+    // Create NLPacket for Ping
+    NLPacket packet(PacketType::Ping, 0, false);  // version 0, not reliable for pings
+    packet.setSequenceNumber(m_sequenceNumber++);
     
     // Add timestamp (microseconds since epoch)
     auto now = std::chrono::system_clock::now();
     auto micros = std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()).count();
-    std::memcpy(packet + 1, &micros, 8);
+    packet.writeUInt64(micros);
     
     // Ping type (0 = local, 1 = public)
-    packet[9] = 0;
+    packet.writeUInt8(0);
     
-    ssize_t s = ::sendto(fd, packet, sizeof(packet), 0, 
+    const auto& data = packet.getData();
+    ssize_t s = ::sendto(fd, data.data(), data.size(), 0, 
                          reinterpret_cast<const sockaddr*>(&addr), addrLen);
     if (s < 0 && errno != EWOULDBLOCK && errno != EAGAIN) {
         std::cerr << "[OverteClient] Ping send failed: " << strerror(errno) << std::endl;

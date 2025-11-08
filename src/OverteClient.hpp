@@ -69,6 +69,7 @@ private:
 	std::string m_sessionUUID; // Our client session UUID
 	std::string m_username;     // Domain authentication username
 	std::string m_password;     // Domain authentication password (or token)
+	std::uint32_t m_sequenceNumber{0};  // Packet sequence number for NLPacket protocol
 
 	// Very small in-process world state for testing
 	std::unordered_map<std::uint64_t, OverteEntity> m_entities;
