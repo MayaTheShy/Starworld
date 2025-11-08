@@ -53,6 +53,10 @@ enum class PacketType : uint8_t {
     EntityData = 0x45,
 };
 
+using PacketVersion = uint8_t;
+using LocalID = uint16_t;
+using SequenceNumber = uint32_t;
+
 // Packet version constants (from Overte source)
 namespace PacketVersions {
     constexpr PacketVersion DomainConnectRequest_SocketTypes = 27;  // NoHostname(17) + 10
@@ -60,10 +64,6 @@ namespace PacketVersions {
     constexpr PacketVersion DomainList_SocketTypes = 25;            // PrePermissionsGrid(18) + 7
     constexpr PacketVersion Ping_IncludeConnectionID = 18;
 }
-
-using PacketVersion = uint8_t;
-using LocalID = uint16_t;
-using SequenceNumber = uint32_t;
 
 // NLPacket structure (minimal implementation)
 class NLPacket {
