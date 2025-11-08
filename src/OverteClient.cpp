@@ -44,6 +44,13 @@ bool OverteClient::connect() {
     auto colon = url.find(':');
     m_host = colon == std::string::npos ? url : url.substr(0, colon);
     m_port = colon == std::string::npos ? 40102 : std::stoi(url.substr(colon + 1));
+    
+    // Check for environment override for UDP port (domain server UDP port)
+    const char* portEnv = std::getenv("OVERTE_UDP_PORT");
+    int udpPort = portEnv ? std::atoi(portEnv) : 40104; // Default to 40104 for Overte domain UDP
+    
+    std::cout << "[OverteClient] Connecting to domain at " << m_host 
+              << " (HTTP:" << m_port << ", UDP:" << udpPort << ")" << std::endl;
 
     // Resolve host:port
     addrinfo hints{}; hints.ai_socktype = SOCK_STREAM; hints.ai_family = AF_UNSPEC;
