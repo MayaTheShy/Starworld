@@ -125,10 +125,8 @@ bool OverteClient::connectAvatarMixer() {
 }
 
 bool OverteClient::connectEntityServer() {
-    // Send DomainList request to discover EntityServer endpoint
-    sendDomainListRequest();
-    
-    // Create UDP socket for EntityServer and BIND it to receive packets
+    // Entity server connection will be established after DomainList reply
+    // For now, create socket and bind to receive packets
     m_entityFd = ::socket(AF_INET, SOCK_DGRAM, 0);
     if (m_entityFd == -1) {
         std::cerr << "[OverteClient] Failed to create EntityServer socket: " << std::strerror(errno) << std::endl;
@@ -138,30 +136,24 @@ bool OverteClient::connectEntityServer() {
     // Make non-blocking
     ::fcntl(m_entityFd, F_SETFL, O_NONBLOCK);
     
-    // Bind to port 40103 to receive entity packets
+    // Bind to ephemeral port (let OS choose) for receiving entity packets
     sockaddr_in bindAddr{};
     bindAddr.sin_family = AF_INET;
-    bindAddr.sin_addr.s_addr = INADDR_ANY;  // Listen on all interfaces
-    bindAddr.sin_port = htons(m_port + 1);   // 40103
+    bindAddr.sin_addr.s_addr = INADDR_ANY;
+    bindAddr.sin_port = 0; // Let OS assign port
     
     if (::bind(m_entityFd, reinterpret_cast<sockaddr*>(&bindAddr), sizeof(bindAddr)) == -1) {
-        std::cerr << "[OverteClient] Failed to bind EntityServer socket to port " << (m_port + 1) 
-                  << ": " << std::strerror(errno) << std::endl;
+        std::cerr << "[OverteClient] Failed to bind EntityServer socket: " << std::strerror(errno) << std::endl;
         ::close(m_entityFd);
         m_entityFd = -1;
         return false;
     }
     
-    // Store the target address for sending (if needed)
-    m_entityAddr = {};
-    sockaddr_in* addr = reinterpret_cast<sockaddr_in*>(&m_entityAddr);
-    addr->sin_family = AF_INET;
-    addr->sin_port = htons(m_port + 1);
-    ::inet_pton(AF_INET, m_host.c_str(), &addr->sin_addr);
-    m_entityAddrLen = sizeof(sockaddr_in);
-    
-    m_entityServerReady = true;
-    std::cout << "[OverteClient] EntityServer socket bound and listening on port " << (m_port + 1) << std::endl;
+    // Get the assigned port
+    socklen_t addrLen = sizeof(bindAddr);
+    if (::getsockname(m_entityFd, reinterpret_cast<sockaddr*>(&bindAddr), &addrLen) == 0) {
+        std::cout << "[OverteClient] EntityServer socket bound to port " << ntohs(bindAddr.sin_port) << std::endl;
+    }
     
     m_entityServer = true;
     return true;
@@ -176,21 +168,21 @@ bool OverteClient::connectAudioMixer() {
 void OverteClient::poll() {
     if (!m_connected) return;
 
-    // Try a lightweight UDP ping if ready (placeholder for avatar mixer handshake)
+    // Poll domain UDP socket for domain-level packets
     if (m_udpReady && m_udpFd != -1) {
-        const char ping[4] = {'P','I','N','G'};
-        ssize_t s = ::sendto(m_udpFd, ping, sizeof(ping), 0, reinterpret_cast<sockaddr*>(&m_udpAddr), m_udpAddrLen);
-        if (s == -1 && errno != EWOULDBLOCK && errno != EAGAIN) {
-            std::cerr << "[OverteClient] UDP send failed: " << std::strerror(errno) << std::endl;
-        }
         char buf[1500];
         sockaddr_storage from{}; socklen_t fromlen = sizeof(from);
         ssize_t r = ::recvfrom(m_udpFd, buf, sizeof(buf), 0, reinterpret_cast<sockaddr*>(&from), &fromlen);
         if (r > 0) {
-            // Parse as potential domain/avatar packets
-            std::cout << "[OverteClient] Domain UDP packet received (" << r << " bytes, type=0x" 
-                      << std::hex << (int)(unsigned char)buf[0] << std::dec << ")" << std::endl;
-            parseEntityPacket(buf, static_cast<size_t>(r));
+            parseDomainPacket(buf, static_cast<size_t>(r));
+        }
+        
+        // Send periodic ping to domain to keep connection alive
+        static auto lastPing = std::chrono::steady_clock::now();
+        auto now = std::chrono::steady_clock::now();
+        if (std::chrono::duration_cast<std::chrono::seconds>(now - lastPing).count() >= 1) {
+            sendPing(m_udpFd, m_udpAddr, m_udpAddrLen);
+            lastPing = now;
         }
     }
 
@@ -222,6 +214,47 @@ void OverteClient::parseNetworkPackets() {
                       << std::hex << (int)(unsigned char)buf[0] << std::dec << ")" << std::endl;
             parseEntityPacket(buf, static_cast<size_t>(r));
         }
+    }
+}
+
+void OverteClient::parseDomainPacket(const char* data, size_t len) {
+    if (len < 1) return;
+    
+    unsigned char packetType = static_cast<unsigned char>(data[0]);
+    
+    // Domain-level packet types
+    const unsigned char PACKET_TYPE_PING = 0x01;
+    const unsigned char PACKET_TYPE_PING_REPLY = 0x02;
+    const unsigned char PACKET_TYPE_DOMAIN_LIST = 0x03;
+    const unsigned char PACKET_TYPE_DOMAIN_CONNECTION_DENIED = 0x06;
+    const unsigned char PACKET_TYPE_DOMAIN_SERVER_REQUIRE_DT = 0x07;
+    const unsigned char PACKET_TYPE_DOMAIN_CONNECT_ACK = 0x0A;
+    
+    std::cout << "[OverteClient] Domain packet type: 0x" << std::hex << (int)packetType << std::dec << std::endl;
+    
+    switch (packetType) {
+        case PACKET_TYPE_DOMAIN_LIST:
+            handleDomainListReply(data + 1, len - 1);
+            break;
+            
+        case PACKET_TYPE_DOMAIN_CONNECTION_DENIED:
+            handleDomainConnectionDenied(data + 1, len - 1);
+            break;
+            
+        case PACKET_TYPE_DOMAIN_CONNECT_ACK:
+            std::cout << "[OverteClient] Domain connection acknowledged!" << std::endl;
+            m_domainConnected = true;
+            // Request domain list after successful connection
+            sendDomainListRequest();
+            break;
+            
+        case PACKET_TYPE_PING_REPLY:
+            // Keep-alive ping reply
+            break;
+            
+        default:
+            std::cout << "[OverteClient] Unknown domain packet type: 0x" << std::hex << (int)packetType << std::dec << std::endl;
+            break;
     }
 }
 
