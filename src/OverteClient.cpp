@@ -267,31 +267,18 @@ void OverteClient::parseEntityPacket(const char* data, size_t len) {
     
     unsigned char packetType = static_cast<unsigned char>(data[0]);
     
-    // Overte PacketType enum values (reference from protocol documentation)
-    // Reference: https://github.com/overte-org/overte/blob/master/libraries/networking/src/udt/PacketHeaders.h
-    const unsigned char PACKET_TYPE_DOMAIN_LIST = 0x03;
-    const unsigned char PACKET_TYPE_DOMAIN_CONNECTION_DENIED = 0x06;
-    const unsigned char PACKET_TYPE_PING = 0x01;
-    const unsigned char PACKET_TYPE_PING_REPLY = 0x02;
-    
     // Entity packet types
     const unsigned char PACKET_TYPE_ENTITY_ADD = 0x10;
     const unsigned char PACKET_TYPE_ENTITY_EDIT = 0x11;
     const unsigned char PACKET_TYPE_ENTITY_ERASE = 0x12;
     const unsigned char PACKET_TYPE_ENTITY_QUERY = 0x15;
     const unsigned char PACKET_TYPE_OCTREE_STATS = 0x16;
+    const unsigned char PACKET_TYPE_ENTITY_DATA = 0x41; // Bulk entity data response
     
     switch (packetType) {
-        case PACKET_TYPE_DOMAIN_LIST:
-            handleDomainListReply(data + 1, len - 1);
-            break;
-            
-        case PACKET_TYPE_PING_REPLY:
-            std::cout << "[OverteClient] Ping reply received from domain" << std::endl;
-            break;
-            
+        case PACKET_TYPE_ENTITY_DATA:
         case PACKET_TYPE_ENTITY_ADD: {
-            // EntityAdd packet structure (simplified):
+            // EntityAdd/EntityData packet structure (simplified):
             // u64 entityID, string name, vec3 position, quat rotation, vec3 dimensions, ...
             if (len < 9) break; // need at least 1+8 bytes
             
@@ -306,7 +293,8 @@ void OverteClient::parseEntityPacket(const char* data, size_t len) {
             }
             if (name.empty()) name = "Entity_" + std::to_string(entityId);
             
-            // Create entity with a visible position spread out in front of user
+            // TODO: Parse full entity properties (position, rotation, dimensions)
+            // For now, create entity with a visible position spread out in front of user
             // Position entities in a grid pattern for visibility
             float spacing = 0.5f;
             int index = static_cast<int>(entityId % 10);
@@ -338,6 +326,7 @@ void OverteClient::parseEntityPacket(const char* data, size_t len) {
                 // TODO: parse property flags and update transform
                 // For now, mark as updated
                 m_updateQueue.push_back(entityId);
+                std::cout << "[OverteClient] Entity edited: id=" << entityId << std::endl;
             }
             break;
         }
@@ -358,11 +347,12 @@ void OverteClient::parseEntityPacket(const char* data, size_t len) {
             break;
         }
         
+        case PACKET_TYPE_OCTREE_STATS:
+            std::cout << "[OverteClient] Received octree stats" << std::endl;
+            break;
+            
         default:
-            // Log unknown packet types for debugging
-            if (packetType != PACKET_TYPE_PING && packetType != PACKET_TYPE_PING_REPLY) {
-                std::cout << "[OverteClient] Unknown packet type: 0x" << std::hex << (int)packetType << std::dec << std::endl;
-            }
+            std::cout << "[OverteClient] Unknown entity packet type: 0x" << std::hex << (int)packetType << std::dec << std::endl;
             break;
     }
 }
