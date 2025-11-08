@@ -74,7 +74,14 @@ def main():
     print("\nDeleting entity 1002...")
     send_entity_erase(sock, addr, 1002)
     
-    print("\nDone! Check your client output.")
+    time.sleep(1)
+    
+    # Clean up remaining entities
+    print("\nCleaning up remaining entities...")
+    send_entity_erase(sock, addr, 1001)
+    send_entity_erase(sock, addr, 1003)
+    
+    print("\nDone! All entities removed.")
     sock.close()
 
 if __name__ == '__main__':
