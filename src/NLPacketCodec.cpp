@@ -328,6 +328,11 @@ static void ensureVersionTable(uint8_t& vAvatarRemoveAttachments,
             s_vPingIncludeConnID = static_cast<uint8_t>(ping["IncludeConnectionID"]);
             s_vIcePingSendPeerID = static_cast<uint8_t>(icePing["SendICEPeerID"]);
             s_vAudioStopInjectors = static_cast<uint8_t>(audio["StopInjectors"]);
+            
+            // More debug
+            std::cout << "  EntityLastPacket: " << (int)s_vEntityLastPacket << " (from count=" << entityCount << ")" << std::endl;
+            std::cout << "  EntityParticleSpin: " << (int)s_vEntityParticleSpin << std::endl;
+            std::cout << "  AudioStopInjectors: " << (int)s_vAudioStopInjectors << std::endl;
             s_numPacketTypes = parsePacketTypeCount(content);
             inited = true;
         } else {
