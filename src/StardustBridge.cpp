@@ -246,6 +246,7 @@ bool StardustBridge::loadBridge() {
         m_fnPoll = reinterpret_cast<fn_poll_t>(req("sdxr_poll"));
         m_fnShutdown = reinterpret_cast<fn_shutdown_t>(req("sdxr_shutdown"));
         m_fnCreateNode = reinterpret_cast<fn_create_node_t>(req("sdxr_create_node"));
+        m_fnCreateNode = reinterpret_cast<fn_create_node_t>(req("sdxr_create_node"));
         m_fnUpdateNode = reinterpret_cast<fn_update_node_t>(req("sdxr_update_node"));
         m_fnRemoveNode = reinterpret_cast<fn_remove_node_t>(req("sdxr_remove_node"));
         if (m_fnStart && m_fnPoll && m_fnCreateNode && m_fnUpdateNode) {
