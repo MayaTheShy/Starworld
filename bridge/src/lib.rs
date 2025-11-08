@@ -166,10 +166,22 @@ pub extern "C" fn sdxr_start(app_id: *const std::os::raw::c_char) -> i32 {
 
             println!("[bridge] Connecting to Stardust server...");
             
+            // Debug: try raw socket connection first
+            let socket_path = std::env::var("XDG_RUNTIME_DIR")
+                .map(|dir| format!("{}/stardust-0", dir))
+                .or_else(|_| std::env::var("STARDUST_INSTANCE").map(|inst| format!("/run/user/1000/{}", inst)))
+                .unwrap_or_else(|_| "/run/user/1000/stardust-0".to_string());
+            println!("[bridge] Socket path: {}", socket_path);
+            
+            match tokio::net::UnixStream::connect(&socket_path).await {
+                Ok(_) => println!("[bridge] Raw socket connection OK"),
+                Err(e) => println!("[bridge] Raw socket connection failed: {}", e),
+            }
+            
             // Run the client - asteroids will manage the projector and call reify() each frame
             // This blocks until the client disconnects or is shut down
             match stardust_xr_fusion::client::Client::connect().await {
-                Ok(client) => {
+                Ok(_client) => {
                     println!("[bridge] Connected to Stardust server successfully");
                     // Now try to run the full asteroids client
                     ast::client::run::<BridgeState>(&[]).await;
