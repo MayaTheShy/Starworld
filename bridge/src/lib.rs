@@ -34,6 +34,7 @@ impl Default for BridgeState {
 enum Command {
     Create { c_id: u64, name: String, transform: Mat4 },
     Update { c_id: u64, transform: Mat4 },
+    Remove { c_id: u64 },
     Shutdown,
 }
 
@@ -179,6 +180,13 @@ pub extern "C" fn sdxr_start(app_id: *const std::os::raw::c_char) -> i32 {
                                 }
                             }
                         }
+                        Command::Remove { c_id } => {
+                            if let Ok(mut state) = shared_for_commands.lock() {
+                                if state.nodes.remove(&c_id).is_some() {
+                                    println!("[bridge] remove node id={} (remaining={})", c_id, state.nodes.len());
+                                }
+                            }
+                        }
                         Command::Shutdown => { STOP_REQUESTED.store(true, Ordering::SeqCst); break; }
                     }
                 }
@@ -294,6 +302,14 @@ pub extern "C" fn sdxr_update_node(id: u64, mat4: *const f32) -> i32 {
     let mat = Mat4::from_cols_array(&arr);
     let ctrl = CTRL.lock().unwrap();
     if let Some(tx) = &ctrl.tx { let _ = tx.send(Command::Update { c_id: id, transform: mat }); }
+    0
+}
+
+#[no_mangle]
+pub extern "C" fn sdxr_remove_node(id: u64) -> i32 {
+    if !STARTED.load(Ordering::SeqCst) { return -1; }
+    let ctrl = CTRL.lock().unwrap();
+    if let Some(tx) = &ctrl.tx { let _ = tx.send(Command::Remove { c_id: id }); }
     0
 }
 
