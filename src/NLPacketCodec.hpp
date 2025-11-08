@@ -45,6 +45,7 @@ enum class PacketType : uint8_t {
     AvatarIdentity = 29,
     NodeIgnoreRequest = 30,
     DomainConnectRequest = 31,
+    DomainServerRequireDTLS = 32,
     // ... many more packet types
     EntityAdd = 0x41,
     EntityEdit = 0x42,
