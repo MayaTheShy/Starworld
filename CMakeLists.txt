@@ -6,8 +6,15 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 option(USE_OVERTE_SDK "Link against Overte SDK if available" OFF)
 option(USE_STARDUST_SDK "Link against StardustXR SDK if available" OFF)
+option(USE_OVERTE_NETWORKING "Link against Overte networking library" ON)
 
 find_package(glm REQUIRED)
+
+# Find Qt5 for Overte networking library
+if(USE_OVERTE_NETWORKING)
+    find_package(Qt5 COMPONENTS Core Network REQUIRED)
+    set(CMAKE_AUTOMOC ON)
+endif()
 
 add_executable(stardust-overte-client
     src/main.cpp
@@ -18,6 +25,25 @@ add_executable(stardust-overte-client
 )
 
 target_link_libraries(stardust-overte-client PRIVATE glm::glm)
+
+# Link Overte networking library
+if(USE_OVERTE_NETWORKING)
+    # Add Overte include directories
+    target_include_directories(stardust-overte-client PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/overte-src/libraries/networking/src
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/overte-src/libraries/shared/src
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/overte-src/libraries/platform/src
+    )
+    
+    # Link against precompiled Overte networking library
+    target_link_libraries(stardust-overte-client PRIVATE
+        /opt/overte/lib/libnetworking.so
+        Qt5::Core
+        Qt5::Network
+    )
+    
+    target_compile_definitions(stardust-overte-client PRIVATE HAVE_OVERTE_NETWORKING=1)
+endif()
 
 if(USE_OVERTE_SDK)
     find_package(Overte QUIET)
