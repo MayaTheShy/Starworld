@@ -38,6 +38,17 @@ impl Migrate for BridgeState { type Old = Self; }
 impl ClientState for BridgeState {
     const APP_ID: &'static str = "org.stardustxr.starworld";
     fn initial_state_update(&mut self) {}
+    
+    fn on_frame(&mut self, _info: &stardust_xr_fusion::root::FrameInfo) {
+        // Sync from the global shared state on each frame
+        if let Ok(ctrl) = CTRL.lock() {
+            if let Some(shared) = &ctrl.shared_state {
+                if let Ok(shared_state) = shared.lock() {
+                    self.nodes = shared_state.nodes.clone();
+                }
+            }
+        }
+    }
 }
 
 impl Reify for BridgeState {
