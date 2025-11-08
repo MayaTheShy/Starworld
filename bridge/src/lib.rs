@@ -10,7 +10,7 @@ use glam::Mat4;
 use stardust_xr_asteroids as ast; // alias for brevity
 use stardust_xr_asteroids::{
     client::ClientState,
-    elements::{PlaySpace, Axes},
+    elements::{PlaySpace, Lines},
     Migrate, Reify,
 };
 use stardust_xr_asteroids::{CustomElement, Transformable};
@@ -53,15 +53,35 @@ impl ClientState for BridgeState {
 
 impl Reify for BridgeState {
     fn reify(&self) -> impl ast::Element<Self> {
-        // Root playspace. Attach a visible Axes element per tracked node id.
+        // Root playspace. Attach a visible cube wireframe per tracked node id.
         let children = self.nodes.iter().map(|(id, node)| {
             // Decompose transform into TRS
             let (scale, rot, trans) = node.transform.to_scale_rotation_translation();
-            // Make axes much larger and visible: default is 1cm, scale up to 20cm
-            let vis_scale = glam::Vec3::splat(20.0) * scale.x;
+            // Visible cube size: 20cm, scaled by node scale
+            let vis_scale = glam::Vec3::splat(0.20) * scale.x;
+
+            // Build cube edges as 12 line segments
+            use stardust_xr_molecules::lines::{line_from_points, LineExt};
+            use stardust_xr_fusion::values::color::rgba_linear;
+            let t = 0.004; // thickness
+            let c = rgba_linear!(0.8, 0.8, 0.9, 1.0);
+            let hs = 0.5f32; // half size in model space (unit cube)
+            let mut seg = |a: [f32;3], b: [f32;3]| {
+                line_from_points(vec![a, b]).thickness(t).color(c)
+            };
+            let corners = [
+                [-hs, -hs, -hs], [ hs, -hs, -hs], [ hs,  hs, -hs], [-hs,  hs, -hs],
+                [-hs, -hs,  hs], [ hs, -hs,  hs], [ hs,  hs,  hs], [-hs,  hs,  hs],
+            ];
+            // Edges: 0-1-2-3-0 (bottom), 4-5-6-7-4 (top), verticals 0-4,1-5,2-6,3-7
+            let lines = vec![
+                seg(corners[0], corners[1]), seg(corners[1], corners[2]), seg(corners[2], corners[3]), seg(corners[3], corners[0]),
+                seg(corners[4], corners[5]), seg(corners[5], corners[6]), seg(corners[6], corners[7]), seg(corners[7], corners[4]),
+                seg(corners[0], corners[4]), seg(corners[1], corners[5]), seg(corners[2], corners[6]), seg(corners[3], corners[7]),
+            ];
             (
                 *id,
-                Axes::default()
+                Lines::new(lines)
                     .pos([trans.x, trans.y, trans.z])
                     .rot([rot.x, rot.y, rot.z, rot.w])
                     .scl([vis_scale.x, vis_scale.y, vis_scale.z])
