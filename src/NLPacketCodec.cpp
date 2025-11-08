@@ -459,11 +459,11 @@ std::vector<uint8_t> NLPacket::computeProtocolVersionSignature() {
     std::vector<uint8_t> buffer;
     
     // Write number of packet types (256 max, but we'll use actual count)
-    int dummyA=0,dummyB=0,dummyC=0,dummyD=0,dummyE=0,dummyF=0,dummyG=0,dummyH=0,dummyI=0,dummyJ=0,dummyK=0,dummyL=0,dummyM=0;
+    uint8_t dummyA=0,dummyB=0,dummyC=0,dummyD=0,dummyE=0,dummyF=0,dummyG=0,dummyH=0,dummyI=0,dummyJ=0,dummyK=0,dummyL=0,dummyM=0,dummyN=0,dummyO=0;
     int numPacketTypesInt = 106;
-    ensureVersionTable(*(uint8_t*)&dummyA, *(uint8_t*)&dummyB, *(uint8_t*)&dummyC, *(uint8_t*)&dummyD, *(uint8_t*)&dummyE,
-                       *(uint8_t*)&dummyF, *(uint8_t*)&dummyG, *(uint8_t*)&dummyH, *(uint8_t*)&dummyI, *(uint8_t*)&dummyJ,
-                       *(uint8_t*)&dummyK, *(uint8_t*)&dummyL, *(uint8_t*)&dummyM, numPacketTypesInt);
+    ensureVersionTable(dummyA, dummyB, dummyC, dummyD, dummyE,
+                       dummyF, dummyG, dummyH, dummyI, dummyJ,
+                       dummyK, dummyL, dummyM, dummyN, dummyO, numPacketTypesInt);
     uint8_t numPacketTypes = static_cast<uint8_t>(numPacketTypesInt);
     buffer.push_back(numPacketTypes);
     
