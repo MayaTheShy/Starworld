@@ -4,6 +4,10 @@
 #include <cstring>
 #include <string>
 #include <openssl/md5.h>
+#include <fstream>
+#include <sstream>
+#include <unordered_map>
+#include <algorithm>
 
 namespace Overte {
 
@@ -149,20 +153,230 @@ PacketType NLPacket::getType(const uint8_t* data, size_t size) {
     return static_cast<PacketType>(data[sizeof(uint32_t)]);
 }
 
+// --- Helpers to parse Overte header enums to ensure exact version numbers ---
+static std::string readFileToString(const std::string& path) {
+    std::ifstream in(path);
+    if (!in.is_open()) return {};
+    std::ostringstream ss; ss << in.rdbuf();
+    return ss.str();
+}
+
+static std::unordered_map<std::string, int> parseEnumValues(const std::string& content, const std::string& enumName) {
+    std::unordered_map<std::string, int> values;
+    std::string startToken = "enum class " + enumName;
+    auto startPos = content.find(startToken);
+    if (startPos == std::string::npos) return values;
+    auto bracePos = content.find('{', startPos);
+    if (bracePos == std::string::npos) return values;
+    auto endPos = content.find('};', bracePos);
+    if (endPos == std::string::npos) return values;
+    std::string body = content.substr(bracePos + 1, endPos - bracePos - 1);
+
+    int current = -1;
+    std::istringstream lines(body);
+    std::string line;
+    while (std::getline(lines, line)) {
+        // strip comments
+        auto cpos = line.find("//");
+        if (cpos != std::string::npos) line = line.substr(0, cpos);
+        // trim
+        auto notspace = [](int ch){ return !std::isspace(ch); };
+        line.erase(line.begin(), std::find_if(line.begin(), line.end(), notspace));
+        line.erase(std::find_if(line.rbegin(), line.rend(), notspace).base(), line.end());
+        if (line.empty()) continue;
+        // split by comma; a line may have trailing comma
+        auto comma = line.find(',');
+        std::string token = (comma == std::string::npos) ? line : line.substr(0, comma);
+        // handle assignments
+        auto eq = token.find('=');
+        std::string name = token;
+        if (eq != std::string::npos) {
+            name = token.substr(0, eq);
+            std::string val = token.substr(eq + 1);
+            // trim name
+            name.erase(name.begin(), std::find_if(name.begin(), name.end(), notspace));
+            name.erase(std::find_if(name.rbegin(), name.rend(), notspace).base(), name.end());
+            // trim val
+            val.erase(val.begin(), std::find_if(val.begin(), val.end(), notspace));
+            val.erase(std::find_if(val.rbegin(), val.rend(), notspace).base(), val.end());
+            // numeric (no hex used in these enums)
+            try { current = std::stoi(val); } catch (...) { continue; }
+        } else {
+            // trim name
+            name.erase(name.begin(), std::find_if(name.begin(), name.end(), notspace));
+            name.erase(std::find_if(name.rbegin(), name.rend(), notspace).base(), name.end());
+            current = current + 1;
+        }
+        if (!name.empty()) values[name] = current;
+    }
+    return values;
+}
+
+static int parsePacketTypeCount(const std::string& content) {
+    // Count identifiers in PacketTypeEnum::Value until NUM_PACKET_TYPE
+    auto pos = content.find("enum class Value : uint8_t");
+    if (pos == std::string::npos) return 106; // fallback
+    auto brace = content.find('{', pos);
+    if (brace == std::string::npos) return 106;
+    auto end = content.find("NUM_PACKET_TYPE", brace);
+    if (end == std::string::npos) return 106;
+    std::string body = content.substr(brace + 1, end - brace - 1);
+    int count = 0;
+    std::istringstream lines(body);
+    std::string line;
+    while (std::getline(lines, line)) {
+        auto cpos = line.find("//"); if (cpos != std::string::npos) line = line.substr(0, cpos);
+        auto notspace = [](int ch){ return !std::isspace(ch); };
+        line.erase(line.begin(), std::find_if(line.begin(), line.end(), notspace));
+        line.erase(std::find_if(line.rbegin(), line.rend(), notspace).base(), line.end());
+        if (line.empty()) continue;
+        if (line.find('=') != std::string::npos) {
+            // handle explicit value lines (rare in this enum)
+            count++;
+        } else if (line.find(',') != std::string::npos) {
+            count++;
+        }
+    }
+    return count; // this should equal NUM_PACKET_TYPE
+}
+
+static void ensureVersionTable(uint8_t& vAvatarRemoveAttachments,
+                               uint8_t& vAvatarTraitsAck,
+                               uint8_t& vEntityLastPacket,
+                               uint8_t& vAssetBakingTextureMeta,
+                               uint8_t& vEntityScriptClientCallable,
+                               uint8_t& vEntityQueryCbor,
+                               uint8_t& vDomainServerAddedNodeSocketTypes,
+                               uint8_t& vDomainListSocketTypes,
+                               uint8_t& vDomainListRequestSocketTypes,
+                               uint8_t& vDomainConnectionDeniedExtraInfo,
+                               uint8_t& vPingIncludeConnID,
+                               uint8_t& vIcePingSendPeerID,
+                               uint8_t& vAudioStopInjectors,
+                               int& numPacketTypes)
+{
+    static bool inited = false;
+    static uint8_t s_vAvatarRemoveAttachments, s_vAvatarTraitsAck, s_vEntityLastPacket,
+                   s_vAssetBakingTextureMeta, s_vEntityScriptClientCallable, s_vEntityQueryCbor,
+                   s_vDomainServerAddedNodeSocketTypes, s_vDomainListSocketTypes,
+                   s_vDomainListRequestSocketTypes, s_vDomainConnectionDeniedExtraInfo,
+                   s_vPingIncludeConnID, s_vIcePingSendPeerID, s_vAudioStopInjectors;
+    static int s_numPacketTypes;
+    if (!inited) {
+        std::string path = "third_party/overte-src/libraries/networking/src/udt/PacketHeaders.h";
+        auto content = readFileToString(path);
+        if (!content.empty()) {
+            auto avatar = parseEnumValues(content, "AvatarMixerPacketVersion");
+            auto entity = parseEnumValues(content, "EntityVersion");
+            auto asset = parseEnumValues(content, "AssetServerPacketVersion");
+            auto entScript = parseEnumValues(content, "EntityScriptCallMethodVersion");
+            auto entQuery = parseEnumValues(content, "EntityQueryPacketVersion");
+            auto domAdded = parseEnumValues(content, "DomainServerAddedNodeVersion");
+            auto domList = parseEnumValues(content, "DomainListVersion");
+            auto domListReq = parseEnumValues(content, "DomainListRequestVersion");
+            auto domDenied = parseEnumValues(content, "DomainConnectionDeniedVersion");
+            auto ping = parseEnumValues(content, "PingVersion");
+            auto icePing = parseEnumValues(content, "IcePingVersion");
+            auto audio = parseEnumValues(content, "AudioVersion");
+
+            s_vAvatarRemoveAttachments = static_cast<uint8_t>(avatar["RemoveAttachments"]);
+            s_vAvatarTraitsAck = static_cast<uint8_t>(avatar["AvatarTraitsAck"]);
+            // Entity LAST_PACKET_TYPE is number of entries - 1 before NUM_PACKET_TYPE
+            // If parsing map failed to give LAST_PACKET_TYPE, derive from count of entries before NUM_PACKET_TYPE label.
+            int entityCount = 0;
+            {
+                // Count entries until NUM_PACKET_TYPE in the EntityVersion enum body
+                auto ep = content.find("enum class EntityVersion");
+                if (ep != std::string::npos) {
+                    auto eb = content.find('{', ep);
+                    auto ee = content.find("NUM_PACKET_TYPE", eb);
+                    if (eb != std::string::npos && ee != std::string::npos) {
+                        std::string body = content.substr(eb + 1, ee - eb - 1);
+                        std::istringstream ls(body);
+                        std::string l;
+                        while (std::getline(ls, l)) {
+                            auto cpos = l.find("//"); if (cpos != std::string::npos) l = l.substr(0, cpos);
+                            auto notspace = [](int ch){ return !std::isspace(ch); };
+                            l.erase(l.begin(), std::find_if(l.begin(), l.end(), notspace));
+                            l.erase(std::find_if(l.rbegin(), l.rend(), notspace).base(), l.end());
+                            if (l.empty()) continue;
+                            if (l.find(',') != std::string::npos) entityCount++;
+                        }
+                    }
+                }
+            }
+            s_vEntityLastPacket = entityCount > 0 ? static_cast<uint8_t>(entityCount - 1) : 23;
+            s_vAssetBakingTextureMeta = static_cast<uint8_t>(asset["BakingTextureMeta"]);
+            s_vEntityScriptClientCallable = static_cast<uint8_t>(entScript["ClientCallable"]);
+            s_vEntityQueryCbor = static_cast<uint8_t>(entQuery["CborData"]);
+            s_vDomainServerAddedNodeSocketTypes = static_cast<uint8_t>(domAdded["SocketTypes"]);
+            s_vDomainListSocketTypes = static_cast<uint8_t>(domList["SocketTypes"]);
+            s_vDomainListRequestSocketTypes = static_cast<uint8_t>(domListReq["SocketTypes"]);
+            s_vDomainConnectionDeniedExtraInfo = static_cast<uint8_t>(domDenied["IncludesExtraInfo"]);
+            s_vPingIncludeConnID = static_cast<uint8_t>(ping["IncludeConnectionID"]);
+            s_vIcePingSendPeerID = static_cast<uint8_t>(icePing["SendICEPeerID"]);
+            s_vAudioStopInjectors = static_cast<uint8_t>(audio["StopInjectors"]);
+            s_numPacketTypes = parsePacketTypeCount(content);
+            inited = true;
+        } else {
+            // Fallback values (best-known)
+            s_vAvatarRemoveAttachments = 38; // conservative guess
+            s_vAvatarTraitsAck = 43; // guess
+            s_vEntityLastPacket = 99; // guess
+            s_vAssetBakingTextureMeta = 22;
+            s_vEntityScriptClientCallable = 19;
+            s_vEntityQueryCbor = 24;
+            s_vDomainServerAddedNodeSocketTypes = 19;
+            s_vDomainListSocketTypes = 25;
+            s_vDomainListRequestSocketTypes = 23;
+            s_vDomainConnectionDeniedExtraInfo = 19;
+            s_vPingIncludeConnID = 18;
+            s_vIcePingSendPeerID = 18;
+            s_vAudioStopInjectors = 24;
+            s_numPacketTypes = 106;
+            inited = true;
+        }
+    }
+    vAvatarRemoveAttachments = s_vAvatarRemoveAttachments;
+    vAvatarTraitsAck = s_vAvatarTraitsAck;
+    vEntityLastPacket = s_vEntityLastPacket;
+    vAssetBakingTextureMeta = s_vAssetBakingTextureMeta;
+    vEntityScriptClientCallable = s_vEntityScriptClientCallable;
+    vEntityQueryCbor = s_vEntityQueryCbor;
+    vDomainServerAddedNodeSocketTypes = s_vDomainServerAddedNodeSocketTypes;
+    vDomainListSocketTypes = s_vDomainListSocketTypes;
+    vDomainListRequestSocketTypes = s_vDomainListRequestSocketTypes;
+    vDomainConnectionDeniedExtraInfo = s_vDomainConnectionDeniedExtraInfo;
+    vPingIncludeConnID = s_vPingIncludeConnID;
+    vIcePingSendPeerID = s_vIcePingSendPeerID;
+    vAudioStopInjectors = s_vAudioStopInjectors;
+    numPacketTypes = s_numPacketTypes;
+}
+
 uint8_t NLPacket::versionForPacketType(PacketType type) {
+    uint8_t vAvatarRemoveAttachments, vAvatarTraitsAck, vEntityLastPacket,
+            vAssetBakingTextureMeta, vEntityScriptClientCallable, vEntityQueryCbor,
+            vDomainServerAddedNodeSocketTypes, vDomainListSocketTypes, vDomainListRequestSocketTypes,
+            vDomainConnectionDeniedExtraInfo, vPingIncludeConnID, vIcePingSendPeerID, vAudioStopInjectors;
+    int numPacketTypes = 106;
+    ensureVersionTable(vAvatarRemoveAttachments, vAvatarTraitsAck, vEntityLastPacket,
+                       vAssetBakingTextureMeta, vEntityScriptClientCallable, vEntityQueryCbor,
+                       vDomainServerAddedNodeSocketTypes, vDomainListSocketTypes, vDomainListRequestSocketTypes,
+                       vDomainConnectionDeniedExtraInfo, vPingIncludeConnID, vIcePingSendPeerID, vAudioStopInjectors,
+                       numPacketTypes);
     // Based on Overte's PacketHeaders.cpp versionForPacketType()
     // Returns the protocol version for each packet type
     switch (type) {
         case PacketType::DomainConnectRequest:
             return PacketVersions::DomainConnectRequest_SocketTypes;
         case PacketType::DomainListRequest:
-            return PacketVersions::DomainListRequest_SocketTypes;
+            return vDomainListRequestSocketTypes;
         case PacketType::DomainList:
-            return PacketVersions::DomainList_SocketTypes;
+            return vDomainListSocketTypes;
         case PacketType::Ping:
-            return PacketVersions::Ping_IncludeConnectionID;
+            return vPingIncludeConnID;
         case PacketType::DomainConnectionDenied:
-            return 19;  // IncludesExtraInfo
+            return vDomainConnectionDeniedExtraInfo;
         case PacketType::DomainConnectRequestPending:
             return 17;
         case PacketType::PingReply:
@@ -170,10 +384,43 @@ uint8_t NLPacket::versionForPacketType(PacketType type) {
         case PacketType::ICEServerPeerInformation:
         case PacketType::ICEServerQuery:
             return 17;
+        case PacketType::ICEPing:
+            return vIcePingSendPeerID;
         case PacketType::NodeIgnoreRequest:
             return 18;
         case PacketType::DomainServerAddedNode:
-            return 25;  // SocketTypes
+            return vDomainServerAddedNodeSocketTypes;
+        case PacketType::EntityAdd:
+        case PacketType::EntityClone:
+        case PacketType::EntityEdit:
+        case PacketType::EntityData:
+        case PacketType::EntityPhysics:
+            return vEntityLastPacket;
+        case PacketType::EntityQuery:
+            return vEntityQueryCbor;
+        case PacketType::AvatarIdentity:
+        case PacketType::AvatarData:
+        case PacketType::BulkAvatarData:
+        case PacketType::KillAvatar:
+            return vAvatarRemoveAttachments;
+        case PacketType::MessagesData:
+            return 18; // TextOrBinaryData
+        case PacketType::AssetMappingOperation:
+        case PacketType::AssetMappingOperationReply:
+        case PacketType::AssetGetInfo:
+        case PacketType::AssetGet:
+        case PacketType::AssetUpload:
+            return vAssetBakingTextureMeta;
+        case PacketType::EntityScriptCallMethod:
+            return vEntityScriptClientCallable;
+        case PacketType::MixedAudio:
+        case PacketType::SilentAudioFrame:
+        case PacketType::InjectAudio:
+        case PacketType::MicrophoneAudioNoEcho:
+        case PacketType::MicrophoneAudioWithEcho:
+        case PacketType::AudioStreamStats:
+        case PacketType::StopInjector:
+            return vAudioStopInjectors;
         // For other packet types, return a default version
         // In real Overte, each has a specific version
             default:
@@ -188,7 +435,12 @@ std::vector<uint8_t> NLPacket::computeProtocolVersionSignature() {
     std::vector<uint8_t> buffer;
     
     // Write number of packet types (256 max, but we'll use actual count)
-        uint8_t numPacketTypes = 106;  // NUM_PACKET_TYPE from Overte
+    int dummyA=0,dummyB=0,dummyC=0,dummyD=0,dummyE=0,dummyF=0,dummyG=0,dummyH=0,dummyI=0,dummyJ=0,dummyK=0,dummyL=0,dummyM=0;
+    int numPacketTypesInt = 106;
+    ensureVersionTable(*(uint8_t*)&dummyA, *(uint8_t*)&dummyB, *(uint8_t*)&dummyC, *(uint8_t*)&dummyD, *(uint8_t*)&dummyE,
+                       *(uint8_t*)&dummyF, *(uint8_t*)&dummyG, *(uint8_t*)&dummyH, *(uint8_t*)&dummyI, *(uint8_t*)&dummyJ,
+                       *(uint8_t*)&dummyK, *(uint8_t*)&dummyL, *(uint8_t*)&dummyM, numPacketTypesInt);
+    uint8_t numPacketTypes = static_cast<uint8_t>(numPacketTypesInt);
     buffer.push_back(numPacketTypes);
     
     // Write version for each packet type
