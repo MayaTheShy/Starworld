@@ -6,13 +6,9 @@ echo "=============================="
 echo ""
 echo -n "Username: "
 read username
-echo -n "Password: "
-read -s password
+echo "(Password no longer sent; Overte uses keypair signatures. Username is optional for now.)"
 echo ""
-echo ""
-
 export OVERTE_USERNAME="$username"
-export OVERTE_PASSWORD="$password"
 
 echo "Connecting to Overte domain..."
 ./build/stardust-overte-client
