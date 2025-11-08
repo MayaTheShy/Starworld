@@ -119,7 +119,8 @@ bool OverteClient::connect() {
     
     // Send domain connect request to initiate handshake
     // Start with domain list request - simpler packet
-    std::cout << "[OverteClient] Requesting domain list..." << std::endl;
+    std::cout << "[OverteClient] Initiating domain handshake..." << std::endl;
+    sendDomainConnectRequest();
     sendDomainListRequest();
 
     m_useSimulation = (std::getenv("STARWORLD_SIMULATE") != nullptr);
