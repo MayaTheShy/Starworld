@@ -15,6 +15,7 @@ use stardust_xr_asteroids::{
 };
 use stardust_xr_asteroids::{CustomElement, Transformable, Projector, Context};
 use stardust_xr_fusion::objects::connect_client as fusion_connect_client;
+use stardust_xr_fusion::root::RootAspect;
 use tokio::runtime::Runtime;
 
 #[derive(Clone, serde::Serialize, serde::Deserialize)]
@@ -189,7 +190,7 @@ pub extern "C" fn sdxr_start(app_id: *const std::os::raw::c_char) -> i32 {
                 Ok(c) => c,
                 Err(e) => { eprintln!("[bridge] DBus connect failed: {:?}", e); return; }
             };
-            let accent_color = stardust_xr_molecules::accent_color::AccentColor::new(dbus_connection.clone());
+            let accent_color = stardust_xr_asteroids::accent_color::AccentColor::new(dbus_connection.clone());
             let context = Context { dbus_connection, accent_color };
             let mut state = BridgeState::default();
             let mut projector = Projector::create(&state, &context, client.get_root().clone().as_spatial_ref(), "/".into());
