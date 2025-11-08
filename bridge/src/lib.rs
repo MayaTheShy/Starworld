@@ -76,6 +76,7 @@ impl Reify for BridgeState {
 }
 
 static STARTED: AtomicBool = AtomicBool::new(false);
+static CONNECTED: AtomicBool = AtomicBool::new(false);
 lazy_static::lazy_static! {
     static ref CTRL: Mutex<Ctrl> = Mutex::new(Ctrl::default());
 }
