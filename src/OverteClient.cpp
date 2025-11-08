@@ -142,11 +142,12 @@ void OverteClient::poll() {
         sockaddr_storage from{}; socklen_t fromlen = sizeof(from);
         ssize_t r = ::recvfrom(m_udpFd, buf, sizeof(buf), 0, reinterpret_cast<sockaddr*>(&from), &fromlen);
         if (r > 0) {
-            // TODO: feed avatar/audio packets through protocol parser
-            // std::cout << "[OverteClient] UDP packet received (" << r << " bytes)" << std::endl;
+            // Parse as potential domain/avatar packets
+            parseEntityPacket(buf, static_cast<size_t>(r));
         }
     }
 
+    // Parse entity server packets
     parseNetworkPackets();
 
     if (m_useSimulation) {
