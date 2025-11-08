@@ -567,9 +567,7 @@ void OverteClient::sendDomainConnectRequest() {
         std::cout << "[OverteClient] DomainConnectRequest sent (" << s << " bytes, seq=" << (m_sequenceNumber-1) << ")" << std::endl;
         std::cout << "[OverteClient]   Session UUID: " << m_sessionUUID << std::endl;
         std::cout << "[OverteClient]   Protocol signature: " << protocolSig.size() << " bytes (MD5)" << std::endl;
-        if (!m_username.empty()) {
-            std::cout << "[OverteClient]   Username: " << m_username << std::endl;
-        }
+        // Note: username is not sent in this packet; Overte uses signature-based auth.
         // Hex dump first 48 bytes
         std::cout << "[OverteClient] >>> NLPacket Hex: ";
         for (size_t i = 0; i < std::min(size_t(48), data.size()); ++i) {
