@@ -28,6 +28,9 @@ public:
 	// Update a node's transform. Returns false if the node doesn't exist.
 	bool updateNodeTransform(NodeId id, const glm::mat4& transform);
 
+	// Remove a node. Returns false if the node doesn't exist.
+	bool removeNode(NodeId id);
+
 	// Poll compositor events and input. Non-blocking.
 	void poll();
 
@@ -77,11 +80,13 @@ private:
 	using fn_shutdown_t = void(*)();
 	using fn_create_node_t = std::uint64_t(*)(const char*, const float*);
 	using fn_update_node_t = int(*)(std::uint64_t, const float*);
+	using fn_remove_node_t = int(*)(std::uint64_t);
 	fn_start_t m_fnStart{nullptr};
 	fn_poll_t m_fnPoll{nullptr};
 	fn_shutdown_t m_fnShutdown{nullptr};
 	fn_create_node_t m_fnCreateNode{nullptr};
 	fn_update_node_t m_fnUpdateNode{nullptr};
+	fn_remove_node_t m_fnRemoveNode{nullptr};
 
 	bool loadBridge();
 };
