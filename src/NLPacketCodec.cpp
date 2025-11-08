@@ -475,6 +475,18 @@ std::vector<uint8_t> NLPacket::computeProtocolVersionSignature() {
         buffer.push_back(version);
     }
     
+        // Debug: print buffer being hashed
+        static bool printed = false;
+        if (!printed) {
+            std::cout << "[OverteClient] Protocol signature input (" << buffer.size() << " bytes): ";
+            for (size_t i = 0; i < std::min(size_t(20), buffer.size()); i++) {
+                printf("%02x ", buffer[i]);
+            }
+            if (buffer.size() > 20) std::cout << "...";
+            std::cout << std::endl;
+            printed = true;
+        }
+    
     // Compute MD5 hash
     std::vector<uint8_t> hash(MD5_DIGEST_LENGTH);
     MD5(buffer.data(), buffer.size(), hash.data());
