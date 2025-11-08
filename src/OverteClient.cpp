@@ -96,7 +96,28 @@ bool OverteClient::connectAvatarMixer() {
 }
 
 bool OverteClient::connectEntityServer() {
-    // TODO: Connect to EntityServer and subscribe to updates.
+    // Send DomainList request to discover EntityServer endpoint
+    sendDomainListRequest();
+    
+    // Create UDP socket for EntityServer if not using shared socket
+    // For now, assume EntityServer is on same host:port+1 as a fallback
+    addrinfo hints{}; hints.ai_socktype = SOCK_DGRAM; hints.ai_family = AF_UNSPEC;
+    addrinfo* res = nullptr;
+    int gai = ::getaddrinfo(m_host.c_str(), std::to_string(m_port + 1).c_str(), &hints, &res);
+    if (gai == 0) {
+        for (addrinfo* rp = res; rp; rp = rp->ai_next) {
+            m_entityFd = ::socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
+            if (m_entityFd == -1) continue;
+            ::fcntl(m_entityFd, F_SETFL, O_NONBLOCK);
+            std::memcpy(&m_entityAddr, rp->ai_addr, rp->ai_addrlen);
+            m_entityAddrLen = rp->ai_addrlen;
+            m_entityServerReady = true;
+            std::cout << "[OverteClient] EntityServer socket ready for " << m_host << ":" << (m_port + 1) << std::endl;
+            break;
+        }
+        ::freeaddrinfo(res);
+    }
+    
     m_entityServer = true;
     return true;
 }
