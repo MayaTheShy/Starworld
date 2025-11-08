@@ -213,8 +213,9 @@ void OverteClient::poll() {
         }
         
         // Request domain list periodically if not connected
-        if (!m_domainConnected && std::chrono::duration_cast<std::chrono::seconds>(now - lastDomainList).count() >= 2) {
-            std::cout << "[OverteClient] Retrying domain list request..." << std::endl;
+        if (!m_domainConnected && std::chrono::duration_cast<std::chrono::seconds>(now - lastDomainList).count() >= 3) {
+            std::cout << "[OverteClient] Retrying domain handshake..." << std::endl;
+            sendDomainConnectRequest();
             sendDomainListRequest();
             lastDomainList = now;
         }
