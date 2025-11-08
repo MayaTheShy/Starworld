@@ -41,14 +41,10 @@ bool OverteClient::connect() {
     
     // Check for authentication credentials from environment
     const char* usernameEnv = std::getenv("OVERTE_USERNAME");
-    const char* passwordEnv = std::getenv("OVERTE_PASSWORD");
     if (usernameEnv) m_username = usernameEnv;
-    if (passwordEnv) m_password = passwordEnv;
     
     if (!m_username.empty()) {
-        std::cout << "[OverteClient] Using authentication: username=" << m_username << std::endl;
-    } else {
-        std::cout << "[OverteClient] No authentication credentials provided (set OVERTE_USERNAME/OVERTE_PASSWORD)" << std::endl;
+        std::cout << "[OverteClient] Username present (signature auth not yet implemented)" << std::endl;
     }
     
     // Parse ws://host:port
