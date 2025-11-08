@@ -497,8 +497,8 @@ void OverteClient::handleDomainConnectionDenied(const char* data, size_t len) {
 void OverteClient::sendDomainConnectRequest() {
     if (!m_udpReady || m_udpFd == -1) return;
     
-    // Create NLPacket with DomainConnectRequest type
-    NLPacket packet(PacketType::DomainConnectRequest, 0, true);  // version 0, reliable
+    // Create NLPacket with DomainConnectRequest type and correct version
+    NLPacket packet(PacketType::DomainConnectRequest, PacketVersions::DomainConnectRequest_SocketTypes, true);
     packet.setSequenceNumber(m_sequenceNumber++);
     
     // Build packet payload with authentication  
@@ -558,8 +558,8 @@ void OverteClient::sendDomainListRequest() {
     // Send DomainList request packet using NLPacket format
     if (!m_udpReady || m_udpFd == -1) return;
     
-    // Create NLPacket with DomainListRequest type
-    NLPacket packet(PacketType::DomainListRequest, 0, true);  // version 0, reliable
+    // Create NLPacket with DomainListRequest type and correct version
+    NLPacket packet(PacketType::DomainListRequest, PacketVersions::DomainListRequest_SocketTypes, true);
     packet.setSequenceNumber(m_sequenceNumber++);
     
     // DomainListRequest has no payload, just the header
