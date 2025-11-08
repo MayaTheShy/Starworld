@@ -21,6 +21,9 @@ path = "../third_party/asteroids"
 [dependencies.stardust-xr-fusion]
 path = "../third_party/core/fusion"
 
+[dependencies.stardust-xr-molecules]
+path = "../third_party/molecules"
+
 [features]
 # Feature enabling real StardustXR integration when crates are present.
 real = []
