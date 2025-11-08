@@ -82,6 +82,7 @@ struct Ctrl {
     tx: Option<tokio::sync::mpsc::UnboundedSender<Command>>,
     next_id: u64,
     nodes: HashMap<u64, Node>,
+    shared_state: Option<Arc<Mutex<BridgeState>>>,
 }
 
 impl Default for Ctrl {
@@ -92,6 +93,7 @@ impl Default for Ctrl {
             tx: None,
             next_id: 1,
             nodes: HashMap::new(),
+            shared_state: None,
         }
     }
 }
@@ -99,12 +101,16 @@ impl Default for Ctrl {
 #[no_mangle]
 pub extern "C" fn sdxr_start(app_id: *const std::os::raw::c_char) -> i32 {
     if STARTED.swap(true, Ordering::SeqCst) { return 0; }
-    let name = unsafe { CStr::from_ptr(app_id) }.to_string_lossy().to_string();
+    let _name = unsafe { CStr::from_ptr(app_id) }.to_string_lossy().to_string();
 
     let mut ctrl = CTRL.lock().unwrap();
     ctrl.next_id = 1;
     let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<Command>();
     ctrl.tx = Some(tx.clone());
+
+    // Shared state that both the command handler and the client state will access
+    let shared_state = Arc::new(Mutex::new(BridgeState::default()));
+    let shared_for_commands = Arc::clone(&shared_state);
 
     // Build a single-threaded Tokio runtime for the client
     let rt = tokio::runtime::Builder::new_current_thread()
@@ -113,27 +119,22 @@ pub extern "C" fn sdxr_start(app_id: *const std::os::raw::c_char) -> i32 {
         .expect("tokio runtime");
     let handle = std::thread::spawn(move || {
         let res = rt.block_on(async move {
-            // Run the client with our BridgeState (root PlaySpace)
-            let _state = BridgeState {};
-
-            // Spawn command processor task
+            // Spawn command processor task that updates shared state
             let cmd_task = tokio::spawn(async move {
-                // We cannot mutate CTRL from inside this async task directly, so we
-                // accumulate changes and apply them via a secondary channel or by
-                // locking CTRL per message. Simplicity first: lock per command.
                 while let Some(cmd) = rx.recv().await {
                     match cmd {
                         Command::Create { c_id, name, transform } => {
-                            if let Ok(mut ctrl_locked) = CTRL.lock() {
-                                ctrl_locked.nodes.insert(c_id, Node { id: c_id, name: name.clone(), transform });
+                            if let Ok(mut state) = shared_for_commands.lock() {
+                                state.nodes.insert(c_id, Node { id: c_id, name: name.clone(), transform });
+                                println!("[bridge] create node id={} name={} (state nodes={})", c_id, name, state.nodes.len());
                             }
-                            println!("[bridge] create node id={} name={}", c_id, name);
                         }
                         Command::Update { c_id, transform } => {
-                            if let Ok(mut ctrl_locked) = CTRL.lock() {
-                                if let Some(n) = ctrl_locked.nodes.get_mut(&c_id) {
+                            if let Ok(mut state) = shared_for_commands.lock() {
+                                if let Some(n) = state.nodes.get_mut(&c_id) {
                                     n.transform = transform;
-                                    println!("[bridge] update node id={}", c_id);
+                                    // Suppress verbose per-frame update logs; enable for debugging if needed
+                                    // println!("[bridge] update node id={}", c_id);
                                 } else {
                                     println!("[bridge] update for unknown node id={}", c_id);
                                 }
@@ -144,8 +145,8 @@ pub extern "C" fn sdxr_start(app_id: *const std::os::raw::c_char) -> i32 {
                 }
             });
 
+            // Run the client - asteroids will manage the projector and call reify() each frame
             ast::client::run::<BridgeState>(&[]).await;
-            // Runtime shutdown will drop task; we ignore join result intentionally.
             let _ = cmd_task;
         });
         drop(rt);
@@ -155,6 +156,8 @@ pub extern "C" fn sdxr_start(app_id: *const std::os::raw::c_char) -> i32 {
 
     ctrl.rt = None; // runtime consumed inside thread
     ctrl.handle = Some(handle);
+    // Store the shared state so we can read from it later
+    ctrl.shared_state = Some(shared_state);
     0
 }
 
