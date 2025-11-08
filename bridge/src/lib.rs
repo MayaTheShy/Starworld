@@ -1,5 +1,6 @@
 // Rust C-ABI bridge for StardustXR client integration.
 
+use std::collections::HashMap;
 use std::ffi::CStr;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
@@ -11,8 +12,8 @@ use stardust_xr_asteroids::{
     client::ClientState,
     elements::PlaySpace,
     Migrate, Reify,
-    CustomElement, Element,
 };
+use stardust_xr_asteroids::CustomElement;
 use tokio::runtime::Runtime;
 
 #[derive(Default, serde::Serialize, serde::Deserialize)]
@@ -44,11 +45,30 @@ lazy_static::lazy_static! {
 }
 
 #[derive(Default)]
+struct Node {
+    id: u64,
+    name: String,
+    transform: Mat4,
+}
+
 struct Ctrl {
     rt: Option<Runtime>,
     handle: Option<JoinHandle<()>>, // client running thread
     tx: Option<tokio::sync::mpsc::UnboundedSender<Command>>,
     next_id: u64,
+    nodes: HashMap<u64, Node>,
+}
+
+impl Default for Ctrl {
+    fn default() -> Self {
+        Self {
+            rt: None,
+            handle: None,
+            tx: None,
+            next_id: 1,
+            nodes: HashMap::new(),
+        }
+    }
 }
 
 #[no_mangle]
@@ -68,24 +88,40 @@ pub extern "C" fn sdxr_start(app_id: *const std::os::raw::c_char) -> i32 {
         .expect("tokio runtime");
     let handle = std::thread::spawn(move || {
         let res = rt.block_on(async move {
-            // Run the client with our BridgeState
+            // Run the client with our BridgeState (root PlaySpace)
             let _state = BridgeState {};
 
-            // Launch a task to apply incoming commands once the client is up
+            // Spawn command processor task
             let cmd_task = tokio::spawn(async move {
-                // This is a placeholder; in a full implementation we would
-                // hold references to created nodes. For now we simply drain.
+                // We cannot mutate CTRL from inside this async task directly, so we
+                // accumulate changes and apply them via a secondary channel or by
+                // locking CTRL per message. Simplicity first: lock per command.
                 while let Some(cmd) = rx.recv().await {
                     match cmd {
-                        Command::Create { .. } => {}
-                        Command::Update { .. } => {}
+                        Command::Create { c_id, name, transform } => {
+                            if let Ok(mut ctrl_locked) = CTRL.lock() {
+                                ctrl_locked.nodes.insert(c_id, Node { id: c_id, name: name.clone(), transform });
+                            }
+                            println!("[bridge] create node id={} name={}", c_id, name);
+                        }
+                        Command::Update { c_id, transform } => {
+                            if let Ok(mut ctrl_locked) = CTRL.lock() {
+                                if let Some(n) = ctrl_locked.nodes.get_mut(&c_id) {
+                                    n.transform = transform;
+                                    println!("[bridge] update node id={}", c_id);
+                                } else {
+                                    println!("[bridge] update for unknown node id={}", c_id);
+                                }
+                            }
+                        }
                         Command::Shutdown => break,
                     }
                 }
             });
 
             ast::client::run::<BridgeState>(&[]).await;
-            // Do not await cmd_task here; runtime shutdown will cancel it
+            // Runtime shutdown will drop task; we ignore join result intentionally.
+            let _ = cmd_task;
         });
         drop(rt);
         let _ = res;
@@ -140,4 +176,12 @@ pub extern "C" fn sdxr_update_node(id: u64, mat4: *const f32) -> i32 {
     let ctrl = CTRL.lock().unwrap();
     if let Some(tx) = &ctrl.tx { let _ = tx.send(Command::Update { c_id: id, transform: mat }); }
     0
+}
+
+// Optional: expose number of nodes for diagnostics
+#[no_mangle]
+pub extern "C" fn sdxr_node_count() -> u64 {
+    if !STARTED.load(Ordering::SeqCst) { return 0; }
+    let ctrl = CTRL.lock().unwrap();
+    ctrl.nodes.len() as u64
 }
