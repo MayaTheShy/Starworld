@@ -13,7 +13,7 @@ use stardust_xr_asteroids::{
     elements::{PlaySpace, Axes},
     Migrate, Reify,
 };
-use stardust_xr_asteroids::CustomElement;
+use stardust_xr_asteroids::{CustomElement, Transformable};
 use tokio::runtime::Runtime;
 
 #[derive(Clone, serde::Serialize, serde::Deserialize)]
