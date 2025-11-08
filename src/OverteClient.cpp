@@ -7,6 +7,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
 #include <netdb.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -103,24 +104,40 @@ bool OverteClient::connectEntityServer() {
     // Send DomainList request to discover EntityServer endpoint
     sendDomainListRequest();
     
-    // Create UDP socket for EntityServer if not using shared socket
-    // For now, assume EntityServer is on same host:port+1 as a fallback
-    addrinfo hints{}; hints.ai_socktype = SOCK_DGRAM; hints.ai_family = AF_UNSPEC;
-    addrinfo* res = nullptr;
-    int gai = ::getaddrinfo(m_host.c_str(), std::to_string(m_port + 1).c_str(), &hints, &res);
-    if (gai == 0) {
-        for (addrinfo* rp = res; rp; rp = rp->ai_next) {
-            m_entityFd = ::socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
-            if (m_entityFd == -1) continue;
-            ::fcntl(m_entityFd, F_SETFL, O_NONBLOCK);
-            std::memcpy(&m_entityAddr, rp->ai_addr, rp->ai_addrlen);
-            m_entityAddrLen = rp->ai_addrlen;
-            m_entityServerReady = true;
-            std::cout << "[OverteClient] EntityServer socket ready for " << m_host << ":" << (m_port + 1) << std::endl;
-            break;
-        }
-        ::freeaddrinfo(res);
+    // Create UDP socket for EntityServer and BIND it to receive packets
+    m_entityFd = ::socket(AF_INET, SOCK_DGRAM, 0);
+    if (m_entityFd == -1) {
+        std::cerr << "[OverteClient] Failed to create EntityServer socket: " << std::strerror(errno) << std::endl;
+        return false;
     }
+    
+    // Make non-blocking
+    ::fcntl(m_entityFd, F_SETFL, O_NONBLOCK);
+    
+    // Bind to port 40103 to receive entity packets
+    sockaddr_in bindAddr{};
+    bindAddr.sin_family = AF_INET;
+    bindAddr.sin_addr.s_addr = INADDR_ANY;  // Listen on all interfaces
+    bindAddr.sin_port = htons(m_port + 1);   // 40103
+    
+    if (::bind(m_entityFd, reinterpret_cast<sockaddr*>(&bindAddr), sizeof(bindAddr)) == -1) {
+        std::cerr << "[OverteClient] Failed to bind EntityServer socket to port " << (m_port + 1) 
+                  << ": " << std::strerror(errno) << std::endl;
+        ::close(m_entityFd);
+        m_entityFd = -1;
+        return false;
+    }
+    
+    // Store the target address for sending (if needed)
+    m_entityAddr = {};
+    sockaddr_in* addr = reinterpret_cast<sockaddr_in*>(&m_entityAddr);
+    addr->sin_family = AF_INET;
+    addr->sin_port = htons(m_port + 1);
+    ::inet_pton(AF_INET, m_host.c_str(), &addr->sin_addr);
+    m_entityAddrLen = sizeof(sockaddr_in);
+    
+    m_entityServerReady = true;
+    std::cout << "[OverteClient] EntityServer socket bound and listening on port " << (m_port + 1) << std::endl;
     
     m_entityServer = true;
     return true;
