@@ -8,6 +8,11 @@
 
 #include <glm/glm.hpp>
 
+// Networking types needed for member declarations (sockaddr_storage, socklen_t)
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netdb.h>
+
 struct OverteEntity {
 	std::uint64_t id{0};
 	std::string name;
@@ -41,6 +46,8 @@ public:
 
 private:
 	std::string m_domainUrl;
+	std::string m_host{"127.0.0.1"};
+	int m_port{40102};
 	bool m_connected{false};
 	bool m_avatarMixer{false};
 	bool m_entityServer{false};
@@ -50,5 +57,11 @@ private:
 	std::unordered_map<std::uint64_t, OverteEntity> m_entities;
 	std::vector<std::uint64_t> m_updateQueue; // ids of entities updated since last consume
 	std::uint64_t m_nextEntityId{1};
+
+	// Networking
+	int m_udpFd{-1};
+	bool m_udpReady{false};
+	struct sockaddr_storage m_udpAddr{};
+	socklen_t m_udpAddrLen{0};
 };
 

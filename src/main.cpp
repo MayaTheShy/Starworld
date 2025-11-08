@@ -24,7 +24,17 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    OverteClient overte("ws://example.overte.domain:40102");
+    // Overte localhost default assumption (can override via OVERTE_URL env or --overte=ws://host:port)
+    std::string overteUrl = "ws://127.0.0.1:40102";
+    for (int i = 1; i < argc; ++i) {
+        std::string arg = argv[i];
+        const std::string ov = "--overte=";
+        if (arg.rfind(ov, 0) == 0) overteUrl = arg.substr(ov.size());
+    }
+    if (const char* envOv = std::getenv("OVERTE_URL")) {
+        overteUrl = envOv;
+    }
+    OverteClient overte(overteUrl);
     // Overte is optional; warn if unreachable but continue in offline mode.
     if (!overte.connect()) {
         std::cerr << "[Overte] Domain unreachable; running in offline mode.\n";
