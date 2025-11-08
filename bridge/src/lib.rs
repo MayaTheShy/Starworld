@@ -10,7 +10,7 @@ use glam::Mat4;
 use stardust_xr_asteroids as ast; // alias for brevity
 use stardust_xr_asteroids::{
     client::ClientState,
-    elements::PlaySpace,
+    elements::{PlaySpace, Axes},
     Migrate, Reify,
 };
 use stardust_xr_asteroids::CustomElement;
@@ -34,8 +34,30 @@ impl ClientState for BridgeState {
 
 impl Reify for BridgeState {
     fn reify(&self) -> impl ast::Element<Self> {
-        // Root playspace. We attach our dynamic nodes under this.
-        PlaySpace.build()
+        // Root playspace. Attach a visible Axes element per tracked node id.
+        // We read from the global CTRL so the element tree reflects the latest node registry.
+        let nodes = CTRL.lock().ok()
+            .map(|c| c.nodes.clone())
+            .unwrap_or_default();
+
+        let children = nodes.into_iter().map(|(id, node)| {
+            // Decompose transform into TRS
+            let (scale, rot, trans) = node.transform.to_scale_rotation_translation();
+            // Axes are small; apply a uniform visual scale multiplier based on TRS scale.x
+            let vis_scale = glam::Vec3::new(scale.x, scale.y, scale.z) * 0.2;
+            (
+                id,
+                Axes::default()
+                    .pos(trans)
+                    .rot(rot)
+                    .scl(vis_scale)
+                    .build()
+            )
+        });
+
+        PlaySpace
+            .build()
+            .stable_children(children)
     }
 }
 
