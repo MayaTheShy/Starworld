@@ -85,6 +85,10 @@ bool OverteClient::connect() {
         m_entities.emplace(b.id, b);
         m_updateQueue.push_back(a.id);
         m_updateQueue.push_back(b.id);
+        std::cout << "[OverteClient] Simulation mode enabled (STARWORLD_SIMULATE=1)" << std::endl;
+    } else {
+        std::cout << "[OverteClient] Waiting for entity packets from Overte server..." << std::endl;
+        std::cout << "[OverteClient] Tip: Set STARWORLD_SIMULATE=1 to enable demo entities" << std::endl;
     }
     return true;
 }
