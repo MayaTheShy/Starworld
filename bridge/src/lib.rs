@@ -183,13 +183,27 @@ pub extern "C" fn sdxr_start(app_id: *const std::os::raw::c_char) -> i32 {
                 }
             });
             println!("[bridge] Connecting to Stardust server...");
-            let mut client = match stardust_xr_fusion::client::Client::connect().await {
-                Ok(c) => c,
-                Err(e) => { eprintln!("[bridge] Fusion connect failed: {:?}", e); return; }
+            // Retry fusion connect for a few seconds to handle compositor wake-up races.
+            let mut client = loop {
+                match stardust_xr_fusion::client::Client::connect().await {
+                    Ok(c) => break c,
+                    Err(e) => {
+                        eprintln!("[bridge] Fusion connect failed: {:?}; retrying...", e);
+                        tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+                        if STOP_REQUESTED.load(Ordering::SeqCst) { return; }
+                    }
+                }
             };
             let dbus_connection = match fusion_connect_client().await {
                 Ok(c) => c,
-                Err(e) => { eprintln!("[bridge] DBus connect failed: {:?}", e); return; }
+                Err(e) => {
+                    eprintln!("[bridge] DBus connect failed: {:?}; continuing without context extras", e);
+                    // Fallback to a new connection attempt with default
+                    match fusion_connect_client().await {
+                        Ok(c2) => c2,
+                        Err(_) => return,
+                    }
+                }
             };
             let accent_color = AccentColor::new(dbus_connection.clone());
             let context = Context { dbus_connection, accent_color };
