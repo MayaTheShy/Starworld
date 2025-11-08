@@ -51,6 +51,7 @@ private:
 	void parseEntityPacket(const char* data, size_t len);
 	void handleDomainListReply(const char* data, size_t len);
 	void sendDomainListRequest();
+	void sendEntityQuery();
 
 	std::string m_domainUrl;
 	std::string m_host{"127.0.0.1"};

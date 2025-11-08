@@ -382,6 +382,30 @@ void OverteClient::sendDomainListRequest() {
     }
 }
 
+void OverteClient::sendEntityQuery() {
+    if (m_entityFd < 0) return;
+    
+    const unsigned char PACKET_TYPE_ENTITY_QUERY = 0x15;
+    
+    // EntityQuery packet structure:
+    // [PacketType:u8][ConicalViews:bool][CameraPosition:vec3][CameraOrientation:quat][CameraFov:float][CameraAspectRatio:float][CameraNearClip:float][CameraFarClip:float][CameraEyeOffsetPosition:vec3]
+    // Simplified version: just send packet type + false for conical views (requests all entities)
+    
+    unsigned char packet[1 + 1]; // PacketType + ConicalViews flag
+    packet[0] = PACKET_TYPE_ENTITY_QUERY;
+    packet[1] = 0; // false - no conical frustum, send all entities
+    
+    ssize_t sent = sendto(m_entityFd, packet, sizeof(packet), 0, 
+                         reinterpret_cast<const sockaddr*>(&m_entityAddr), m_entityAddrLen);
+    
+    if (sent > 0) {
+        std::cout << "[OverteClient] Sent EntityQuery (all entities)" << std::endl;
+        m_entityServerReady = true;
+    } else {
+        std::cerr << "[OverteClient] Failed to send EntityQuery: " << strerror(errno) << std::endl;
+    }
+}
+
 void OverteClient::sendMovementInput(const glm::vec3& linearVelocity) {
     (void)linearVelocity; // TODO: send to avatar mixer
 }
