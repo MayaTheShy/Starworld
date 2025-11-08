@@ -51,28 +51,26 @@ This will prompt you for username and password.
 
 ### Method 2: Environment Variables
 ```bash
-OVERTE_USERNAME="your_username" OVERTE_PASSWORD="your_password" ./build/stardust-overte-client
+OVERTE_USERNAME="your_username" ./build/stardust-overte-client
 ```
 
 ### Method 3: Export Variables
 ```bash
 export OVERTE_USERNAME="your_username"
-export OVERTE_PASSWORD="your_password"
 ./build/stardust-overte-client
 ```
 
 ## Configuration
 
-- **OVERTE_USERNAME**: Your Overte domain username  
-- **OVERTE_PASSWORD**: Your Overte domain password or access token
+- **OVERTE_USERNAME**: Your Overte account username (optional; signature-based auth not yet implemented)
 - **OVERTE_UDP_PORT**: Domain server UDP port (default: 40104)
 - **STARWORLD_SIMULATE**: Set to "1" to enable simulation mode with demo entities
 
 ## Troubleshooting
 
-### No Response from Domain Server
+### Protocol mismatch or denial
 
-**This is expected!** The current implementation doesn't include the NLPacket protocol layer that Overte requires. Use the test environment instead:
+If you see "Protocol version mismatch" or denial messages, this is due to incomplete protocol implementation (version signature mismatch and missing signature-based auth). Use the test environment instead:
 
 ```bash
 # Works perfectly - bypasses domain server
