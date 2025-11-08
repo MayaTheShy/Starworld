@@ -468,15 +468,11 @@ std::vector<uint8_t> NLPacket::computeProtocolVersionSignature() {
     uint8_t numPacketTypes = static_cast<uint8_t>(numPacketTypesInt);
     buffer.push_back(numPacketTypes);
     
-    // Debug: print version table
-    std::cout << "[OverteClient] Computing protocol signature with " << (int)numPacketTypes << " packet types:" << std::endl;
-    
     // Write version for each packet type
     for (uint8_t i = 0; i < numPacketTypes; i++) {
         PacketType type = static_cast<PacketType>(i);
         uint8_t version = versionForPacketType(type);
         buffer.push_back(version);
-        std::cout << "  Type " << (int)i << ": version " << (int)version << std::endl;
     }
     
     // Compute MD5 hash
