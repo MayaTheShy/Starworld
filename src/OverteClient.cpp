@@ -164,9 +164,120 @@ void OverteClient::poll() {
 }
 
 void OverteClient::parseNetworkPackets() {
-    // Placeholder: implement Overte standards parsing.
-    // Strategy: maintain input buffers per mixer; decode entity add/update/remove messages.
-    // For now, no real network ingestion; this will be replaced by actual protocol integration.
+    // Read from EntityServer socket
+    if (m_entityServerReady && m_entityFd != -1) {
+        char buf[1500];
+        sockaddr_storage from{}; socklen_t fromlen = sizeof(from);
+        ssize_t r = ::recvfrom(m_entityFd, buf, sizeof(buf), 0, reinterpret_cast<sockaddr*>(&from), &fromlen);
+        if (r > 0) {
+            parseEntityPacket(buf, static_cast<size_t>(r));
+        }
+    }
+}
+
+void OverteClient::parseEntityPacket(const char* data, size_t len) {
+    // Overte packet structure (simplified):
+    // - Byte 0: PacketType
+    // - Following bytes: payload (varies by type)
+    
+    if (len < 1) return;
+    
+    unsigned char packetType = static_cast<unsigned char>(data[0]);
+    
+    // Overte PacketType enum values (reference from protocol documentation)
+    // EntityAdd = 0x10, EntityEdit = 0x11, EntityErase = 0x12, etc.
+    const unsigned char PACKET_TYPE_ENTITY_ADD = 0x10;
+    const unsigned char PACKET_TYPE_ENTITY_EDIT = 0x11;
+    const unsigned char PACKET_TYPE_ENTITY_ERASE = 0x12;
+    const unsigned char PACKET_TYPE_DOMAIN_LIST = 0x03;
+    
+    switch (packetType) {
+        case PACKET_TYPE_DOMAIN_LIST:
+            handleDomainListReply(data + 1, len - 1);
+            break;
+            
+        case PACKET_TYPE_ENTITY_ADD: {
+            // EntityAdd packet structure (simplified):
+            // u64 entityID, string name, vec3 position, quat rotation, vec3 dimensions, ...
+            if (len < 9) break; // need at least 1+8 bytes
+            
+            std::uint64_t entityId;
+            std::memcpy(&entityId, data + 1, 8);
+            
+            // Parse name (null-terminated string after ID)
+            size_t offset = 9;
+            std::string name;
+            while (offset < len && data[offset] != '\0') {
+                name += data[offset++];
+            }
+            if (name.empty()) name = "Entity_" + std::to_string(entityId);
+            
+            // For now, default transform (will parse full properties later)
+            OverteEntity entity{entityId, name, glm::mat4(1.0f)};
+            m_entities[entityId] = entity;
+            m_updateQueue.push_back(entityId);
+            
+            std::cout << "[OverteClient] Entity added: " << name << " (id=" << entityId << ")" << std::endl;
+            break;
+        }
+        
+        case PACKET_TYPE_ENTITY_EDIT: {
+            // EntityEdit packet: u64 entityID, property flags, property data...
+            if (len < 9) break;
+            
+            std::uint64_t entityId;
+            std::memcpy(&entityId, data + 1, 8);
+            
+            auto it = m_entities.find(entityId);
+            if (it != m_entities.end()) {
+                // TODO: parse property flags and update transform
+                // For now, mark as updated
+                m_updateQueue.push_back(entityId);
+            }
+            break;
+        }
+        
+        case PACKET_TYPE_ENTITY_ERASE: {
+            // EntityErase packet: u64 entityID
+            if (len < 9) break;
+            
+            std::uint64_t entityId;
+            std::memcpy(&entityId, data + 1, 8);
+            
+            auto it = m_entities.find(entityId);
+            if (it != m_entities.end()) {
+                m_entities.erase(it);
+                m_deleteQueue.push_back(entityId);
+                std::cout << "[OverteClient] Entity erased: id=" << entityId << std::endl;
+            }
+            break;
+        }
+        
+        default:
+            // Unknown or unhandled packet type
+            break;
+    }
+}
+
+void OverteClient::handleDomainListReply(const char* data, size_t len) {
+    // DomainList packet contains mixer endpoints
+    // Format varies; for now just log receipt
+    std::cout << "[OverteClient] DomainList reply received (" << len << " bytes)" << std::endl;
+    // TODO: parse mixer sockaddr structures and update entity/avatar endpoints
+}
+
+void OverteClient::sendDomainListRequest() {
+    // Send DomainList request packet (PacketType 0x02 typically)
+    if (!m_udpReady || m_udpFd == -1) return;
+    
+    const unsigned char PACKET_TYPE_DOMAIN_LIST_REQUEST = 0x02;
+    char packet[1] = { static_cast<char>(PACKET_TYPE_DOMAIN_LIST_REQUEST) };
+    
+    ssize_t s = ::sendto(m_udpFd, packet, sizeof(packet), 0, 
+                         reinterpret_cast<sockaddr*>(&m_udpAddr), m_udpAddrLen);
+    if (s > 0) {
+        std::cout << "[OverteClient] DomainList request sent" << std::endl;
+    }
 }
 
 void OverteClient::sendMovementInput(const glm::vec3& linearVelocity) {
