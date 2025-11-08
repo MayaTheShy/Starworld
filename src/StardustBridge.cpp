@@ -171,6 +171,16 @@ bool StardustBridge::removeNode(NodeId id) {
     return true;
 }
 
+bool StardustBridge::removeNode(NodeId id) {
+    auto it = m_nodes.find(id);
+    if (it == m_nodes.end()) return false;
+    m_nodes.erase(it);
+    if (m_fnRemoveNode) {
+        (void)m_fnRemoveNode(id);
+    }
+    return true;
+}
+
 void StardustBridge::poll() {
     if (!m_connected) return;
 
