@@ -176,8 +176,8 @@ uint8_t NLPacket::versionForPacketType(PacketType type) {
             return 25;  // SocketTypes
         // For other packet types, return a default version
         // In real Overte, each has a specific version
-        default:
-            return 17;  // Default version for unspecified packets
+            default:
+                return 23;  // Default version for unspecified packets (matches Overte)
     }
 }
 
