@@ -361,13 +361,13 @@ static void ensureVersionTable(uint8_t& vAvatarRemoveAttachments,
 
 uint8_t NLPacket::versionForPacketType(PacketType type) {
     uint8_t vAvatarRemoveAttachments, vAvatarTraitsAck, vEntityLastPacket,
-            vAssetBakingTextureMeta, vEntityScriptClientCallable, vEntityQueryCbor,
-            vDomainServerAddedNodeSocketTypes, vDomainListSocketTypes, vDomainListRequestSocketTypes,
+            vEntityParticleSpin, vAssetBakingTextureMeta, vEntityScriptClientCallable, vEntityQueryCbor,
+            vAvatarQueryConical, vDomainServerAddedNodeSocketTypes, vDomainListSocketTypes, vDomainListRequestSocketTypes,
             vDomainConnectionDeniedExtraInfo, vPingIncludeConnID, vIcePingSendPeerID, vAudioStopInjectors;
     int numPacketTypes = 106;
     ensureVersionTable(vAvatarRemoveAttachments, vAvatarTraitsAck, vEntityLastPacket,
-                       vAssetBakingTextureMeta, vEntityScriptClientCallable, vEntityQueryCbor,
-                       vDomainServerAddedNodeSocketTypes, vDomainListSocketTypes, vDomainListRequestSocketTypes,
+                       vEntityParticleSpin, vAssetBakingTextureMeta, vEntityScriptClientCallable, vEntityQueryCbor,
+                       vAvatarQueryConical, vDomainServerAddedNodeSocketTypes, vDomainListSocketTypes, vDomainListRequestSocketTypes,
                        vDomainConnectionDeniedExtraInfo, vPingIncludeConnID, vIcePingSendPeerID, vAudioStopInjectors,
                        numPacketTypes);
     // Based on Overte's PacketHeaders.cpp versionForPacketType()
@@ -390,8 +390,16 @@ uint8_t NLPacket::versionForPacketType(PacketType type) {
         case PacketType::ICEServerPeerInformation:
         case PacketType::ICEServerQuery:
             return 17;
+        case PacketType::ICEServerHeartbeat:
+            return 18; // ICE server heartbeat signing
+        case PacketType::ICEServerHeartbeatACK:
+            return 17;
+        case PacketType::ICEServerHeartbeatDenied:
+            return 17;
         case PacketType::ICEPing:
             return vIcePingSendPeerID;
+        case PacketType::ICEPingReply:
+            return 17;
         case PacketType::NodeIgnoreRequest:
             return 18;
         case PacketType::DomainServerAddedNode:
@@ -404,11 +412,18 @@ uint8_t NLPacket::versionForPacketType(PacketType type) {
             return vEntityLastPacket;
         case PacketType::EntityQuery:
             return vEntityQueryCbor;
+        case PacketType::EntityQueryInitialResultsComplete:
+            return vEntityParticleSpin;
+        case PacketType::AvatarQuery:
+            return vAvatarQueryConical;
         case PacketType::AvatarIdentity:
         case PacketType::AvatarData:
         case PacketType::BulkAvatarData:
         case PacketType::KillAvatar:
             return vAvatarRemoveAttachments;
+        case PacketType::BulkAvatarTraitsAck:
+        case PacketType::BulkAvatarTraits:
+            return vAvatarTraitsAck;
         case PacketType::MessagesData:
             return 18; // TextOrBinaryData
         case PacketType::AssetMappingOperation:
