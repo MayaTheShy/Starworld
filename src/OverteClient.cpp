@@ -38,6 +38,9 @@ struct QtStream {
     void writeUInt64BE(uint64_t v) {
         for (int i = 7; i >= 0; --i) buf.push_back(static_cast<uint8_t>((v >> (i * 8)) & 0xFF));
     }
+    void writeInt32BE(int32_t v) {
+        writeUInt32BE(static_cast<uint32_t>(v));
+    }
     void writeBytes(const uint8_t* d, size_t n) { buf.insert(buf.end(), d, d + n); }
     void writeQByteArray(const std::vector<uint8_t>& a) { writeUInt32BE(static_cast<uint32_t>(a.size())); writeBytes(a.data(), a.size()); }
     void writeQByteArrayFromString(const std::string& s) { std::vector<uint8_t> v(s.begin(), s.end()); writeQByteArray(v); }
