@@ -188,7 +188,7 @@ std::vector<uint8_t> NLPacket::computeProtocolVersionSignature() {
     std::vector<uint8_t> buffer;
     
     // Write number of packet types (256 max, but we'll use actual count)
-    uint8_t numPacketTypes = 128;  // Conservative estimate for now
+        uint8_t numPacketTypes = 106;  // NUM_PACKET_TYPE from Overte
     buffer.push_back(numPacketTypes);
     
     // Write version for each packet type
