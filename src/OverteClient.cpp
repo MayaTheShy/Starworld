@@ -78,10 +78,10 @@ bool OverteClient::connect() {
         }
     }
 
-    // Setup UDP to target (avatar mixer guess: same port by default)
+    // Setup UDP to target (domain server UDP port)
     addrinfo uhints{}; uhints.ai_socktype = SOCK_DGRAM; uhints.ai_family = AF_UNSPEC;
     addrinfo* ures = nullptr;
-    int ugai = ::getaddrinfo(m_host.c_str(), std::to_string(m_port).c_str(), &uhints, &ures);
+    int ugai = ::getaddrinfo(m_host.c_str(), std::to_string(udpPort).c_str(), &uhints, &ures);
     if (ugai != 0) {
         std::cerr << "[OverteClient] UDP resolve failed: " << gai_strerror(ugai) << std::endl;
     } else {
@@ -92,7 +92,7 @@ bool OverteClient::connect() {
             std::memcpy(&m_udpAddr, rp->ai_addr, rp->ai_addrlen);
             m_udpAddrLen = rp->ai_addrlen;
             m_udpReady = true;
-            std::cout << "[OverteClient] UDP socket ready for " << m_host << ":" << m_port << std::endl;
+            std::cout << "[OverteClient] UDP socket ready for " << m_host << ":" << udpPort << std::endl;
             break;
         }
         ::freeaddrinfo(ures);
