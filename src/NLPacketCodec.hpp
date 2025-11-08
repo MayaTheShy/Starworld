@@ -14,19 +14,37 @@ namespace Overte {
 // Packet types from Overte protocol
 enum class PacketType : uint8_t {
     Unknown = 0,
-    Ping = 1,
-    PingReply = 2,
-    DomainList = 3,
-    DomainListRequest = 4,
-    DomainConnectionDenied = 6,
-    DomainServerRequireDTLS = 7,
-    DomainConnectRequest = 8,
-    DomainServerPathQuery = 9,
-    DomainServerPathResponse = 10,
-    DomainServerAddedNode = 11,
-    DomainServerConnectionToken = 12,
-    DomainSettingsRequest = 13,
-    DomainSettings = 14,
+    DomainConnectRequestPending = 1,
+    DomainList = 2,
+    Ping = 3,
+    PingReply = 4,
+    KillAvatar = 5,
+    AvatarData = 6,
+    InjectAudio = 7,
+    MixedAudio = 8,
+    MicrophoneAudioNoEcho = 9,
+    MicrophoneAudioWithEcho = 10,
+    BulkAvatarData = 11,
+    SilentAudioFrame = 12,
+    DomainListRequest = 13,
+    RequestAssignment = 14,
+    CreateAssignment = 15,
+    DomainConnectionDenied = 16,
+    MuteEnvironment = 17,
+    AudioStreamStats = 18,
+    DomainServerPathQuery = 19,
+    DomainServerPathResponse = 20,
+    DomainServerAddedNode = 21,
+    ICEServerPeerInformation = 22,
+    ICEServerQuery = 23,
+    OctreeStats = 24,
+    SetAvatarTraits = 25,
+    InjectorGainSet = 26,
+    AssignmentClientStatus = 27,
+    NoisyMute = 28,
+    AvatarIdentity = 29,
+    NodeIgnoreRequest = 30,
+    DomainConnectRequest = 31,
     // ... many more packet types
     EntityAdd = 0x41,
     EntityEdit = 0x42,
@@ -34,6 +52,14 @@ enum class PacketType : uint8_t {
     EntityQuery = 0x44,
     EntityData = 0x45,
 };
+
+// Packet version constants (from Overte source)
+namespace PacketVersions {
+    constexpr PacketVersion DomainConnectRequest_SocketTypes = 27;  // NoHostname(17) + 10
+    constexpr PacketVersion DomainListRequest_SocketTypes = 23;     // PreSocketTypes(22) + 1
+    constexpr PacketVersion DomainList_SocketTypes = 25;            // PrePermissionsGrid(18) + 7
+    constexpr PacketVersion Ping_IncludeConnectionID = 18;
+}
 
 using PacketVersion = uint8_t;
 using LocalID = uint16_t;
