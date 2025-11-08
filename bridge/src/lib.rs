@@ -158,26 +158,43 @@ pub extern "C" fn sdxr_start(app_id: *const std::os::raw::c_char) -> i32 {
                 }
             });
 
+            println!("[bridge] Connecting to Stardust server...");
+            
             // Run the client - asteroids will manage the projector and call reify() each frame
+            // This blocks until the client disconnects or is shut down
             ast::client::run::<BridgeState>(&[]).await;
+            
+            println!("[bridge] Client disconnected");
             let _ = cmd_task;
         });
         drop(rt);
         let _ = res;
         STARTED.store(false, Ordering::SeqCst);
+        CONNECTED.store(false, Ordering::SeqCst);
     });
 
     ctrl.rt = None; // runtime consumed inside thread
     ctrl.handle = Some(handle);
     // Store the shared state so we can read from it later
     ctrl.shared_state = Some(shared_state);
+    
+    // Give the async runtime a moment to attempt connection
+    std::thread::sleep(std::time::Duration::from_millis(100));
+    
+    // If the thread is still alive, assume connection succeeded
+    // (if it failed immediately, STARTED would be false)
+    if STARTED.load(Ordering::SeqCst) {
+        CONNECTED.store(true, Ordering::SeqCst);
+    }
+    
     0
 }
 
 #[no_mangle]
 pub extern "C" fn sdxr_poll() -> i32 {
     if !STARTED.load(Ordering::SeqCst) { return -1; }
-    0
+    // Return 0 if connected and running, -1 if disconnected
+    if CONNECTED.load(Ordering::SeqCst) { 0 } else { -1 }
 }
 
 #[no_mangle]
