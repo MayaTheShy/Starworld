@@ -577,31 +577,61 @@ void OverteClient::sendDomainConnectRequest() {
     NLPacket packet(PacketType::DomainConnectRequest, PacketVersions::DomainConnectRequest_SocketTypes, true);
     packet.setSequenceNumber(m_sequenceNumber++);
     
-    // Build payload using Qt wire format
+    // Build payload using Qt wire format (match Overte's NodeList.cpp structure exactly)
     QtStream qs;
-    // UUID
+    
+    // 1. UUID
     qs.writeQUuidFromString(m_sessionUUID);
-    // Protocol signature (QByteArray)
+    
+    // 2. Protocol signature (QByteArray)
     auto protocolSig = NLPacket::computeProtocolVersionSignature();
     qs.writeQByteArray(protocolSig);
-    // Hardware address (QString) - leave blank for now
-    std::string macAddr = ""; // leave empty if unknown
+    
+    // 3. Hardware/MAC address (QString) - empty if unknown
+    std::string macAddr = "";
     qs.writeQString(macAddr);
-    // Machine fingerprint (QString) - use session UUID as placeholder
+    
+    // 4. Machine fingerprint (QString) - use session UUID as stable ID
     qs.writeQString(m_sessionUUID);
-    // Timestamp (qint64) for HasTimestamp version stage
-    auto nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-    qs.writeUInt64BE(static_cast<uint64_t>(nowMs));
-    // Reason (quint8) for HasReason stage - 0 = Unknown/Other
-    qs.writeUInt8(0);
-    // System info (compressed QByteArray) for HasCompressedSystemInfo
-    std::string sysJson = "{\"computer\":{\"OS\":\"Linux\"},\"cpus\":[{\"model\":\"Stardust\"}],\"nics\":[],\"displays\":[]}";
+    
+    // 5. Compressed system info (QByteArray)
+    std::string sysJson = "{\"computer\":{\"OS\":\"Linux\"},\"cpus\":[{\"model\":\"Stardust\"}],\"memory\":4096,\"nics\":[],\"gpus\":[],\"displays\":[]}";
     std::vector<uint8_t> sysBytes(sysJson.begin(), sysJson.end());
     auto sysCompressed = qCompressLike(sysBytes, Z_BEST_SPEED);
     qs.writeQByteArray(sysCompressed);
-    // Socket types (two quint8): public, local
-    qs.writeUInt8(0); // public
-    qs.writeUInt8(0); // local
+    
+    // 6. Connect reason (quint8) - 0 = Unknown
+    qs.writeUInt8(0);
+    
+    // 7. Previous connection uptime (quint64) - 0 for first connection
+    qs.writeUInt64BE(0);
+    
+    // 8. Current timestamp in microseconds (quint64)
+    auto nowUs = std::chrono::duration_cast<std::chrono::microseconds>(
+        std::chrono::system_clock::now().time_since_epoch()).count();
+    qs.writeUInt64BE(static_cast<uint64_t>(nowUs));
+    
+    // 9. Owner type (quint8) - 0 = Unknown
+    qs.writeUInt8(0);
+    
+    // 10. Public socket: type (quint8) + address
+    qs.writeUInt8(0); // SocketType::Unknown
+    // Public IP and port (we don't know our public IP, use local)
+    qs.writeUInt32BE(0x7F000001); // 127.0.0.1 placeholder
+    qs.writeUInt16BE(0); // port 0 (unknown)
+    
+    // 11. Local socket: type (quint8) + address
+    qs.writeUInt8(0); // SocketType::Unknown
+    // Local IP and port (use our bound UDP socket info)
+    qs.writeUInt32BE(0x7F000001); // 127.0.0.1
+    qs.writeUInt16BE(0); // ephemeral port (0 = unknown)
+    
+    // 12. Node types of interest (QVector/QList of quint8)
+    // Write as Qt container: size (qint32) + elements
+    qs.writeInt32BE(0); // empty list for now
+    
+    // 13. Place name (QString) - empty
+    qs.writeQString("");
 
     // Append payload to packet
     if (!qs.buf.empty()) packet.write(qs.buf.data(), qs.buf.size());
@@ -613,10 +643,9 @@ void OverteClient::sendDomainConnectRequest() {
         std::cout << "[OverteClient] DomainConnectRequest sent (" << s << " bytes, seq=" << (m_sequenceNumber-1) << ")" << std::endl;
         std::cout << "[OverteClient]   Session UUID: " << m_sessionUUID << std::endl;
         std::cout << "[OverteClient]   Protocol signature: " << protocolSig.size() << " bytes (MD5)" << std::endl;
-        // Note: username is not sent in this packet; Overte uses signature-based auth.
-        // Hex dump first 48 bytes
+        // Hex dump first 64 bytes
         std::cout << "[OverteClient] >>> NLPacket Hex: ";
-        for (size_t i = 0; i < std::min(size_t(48), data.size()); ++i) {
+        for (size_t i = 0; i < std::min(size_t(64), data.size()); ++i) {
             printf("%02x ", data[i]);
         }
         std::cout << std::endl;
