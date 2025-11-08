@@ -478,7 +478,9 @@ void OverteClient::sendDomainConnectRequest() {
     ssize_t s = ::sendto(m_udpFd, packet.data(), packet.size(), 0, 
                          reinterpret_cast<sockaddr*>(&m_udpAddr), m_udpAddrLen);
     if (s > 0) {
-        std::cout << "[OverteClient] Domain connect request sent" << std::endl;
+        std::cout << "[OverteClient] Domain connect request sent (" << s << " bytes)" << std::endl;
+        std::cout << "[OverteClient]   Protocol: " << protocolVersion << std::endl;
+        std::cout << "[OverteClient]   Session: " << hardwareAddress << std::endl;
     } else {
         std::cerr << "[OverteClient] Failed to send domain connect request: " << strerror(errno) << std::endl;
     }
