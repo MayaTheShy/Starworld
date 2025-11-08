@@ -15,9 +15,86 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <cstring>
+#include <zlib.h>
 
 using namespace std::chrono_literals;
 using namespace Overte;
+
+// Minimal QDataStream-like writer (Big Endian) for Qt wire format
+namespace {
+struct QtStream {
+    std::vector<uint8_t> buf;
+    void writeUInt8(uint8_t v) { buf.push_back(v); }
+    void writeUInt16BE(uint16_t v) {
+        buf.push_back(static_cast<uint8_t>((v >> 8) & 0xFF));
+        buf.push_back(static_cast<uint8_t>(v & 0xFF));
+    }
+    void writeUInt32BE(uint32_t v) {
+        buf.push_back(static_cast<uint8_t>((v >> 24) & 0xFF));
+        buf.push_back(static_cast<uint8_t>((v >> 16) & 0xFF));
+        buf.push_back(static_cast<uint8_t>((v >> 8) & 0xFF));
+        buf.push_back(static_cast<uint8_t>(v & 0xFF));
+    }
+    void writeUInt64BE(uint64_t v) {
+        for (int i = 7; i >= 0; --i) buf.push_back(static_cast<uint8_t>((v >> (i * 8)) & 0xFF));
+    }
+    void writeBytes(const uint8_t* d, size_t n) { buf.insert(buf.end(), d, d + n); }
+    void writeQByteArray(const std::vector<uint8_t>& a) { writeUInt32BE(static_cast<uint32_t>(a.size())); writeBytes(a.data(), a.size()); }
+    void writeQByteArrayFromString(const std::string& s) { std::vector<uint8_t> v(s.begin(), s.end()); writeQByteArray(v); }
+    void writeQString(const std::string& s) {
+        // QDataStream QString: quint32 length (chars), then UTF-16 BE code units
+        writeUInt32BE(static_cast<uint32_t>(s.size()));
+        for (unsigned char c : s) { writeUInt16BE(static_cast<uint16_t>(c)); }
+    }
+    static bool parseHex(const std::string& hex, uint64_t& out, size_t digits) {
+        if (hex.size() < digits) return false; out = 0; for (size_t i = 0; i < digits; ++i) {
+            char ch = hex[i]; uint8_t val;
+            if (ch >= '0' && ch <= '9') val = ch - '0';
+            else if (ch >= 'a' && ch <= 'f') val = ch - 'a' + 10;
+            else if (ch >= 'A' && ch <= 'F') val = ch - 'A' + 10;
+            else return false; out = (out << 4) | val; }
+        return true;
+    }
+    void writeQUuidFromString(const std::string& uuid) {
+        // UUID string xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+        std::string hex; hex.reserve(32);
+        for (char c : uuid) if (c != '-') hex.push_back(c);
+        if (hex.size() != 32) { // write zeros
+            for (int i = 0; i < 16; ++i) buf.push_back(0); return;
+        }
+        uint64_t d1=0,d2=0,d3=0; // using 64 for parse then cast
+        parseHex(hex.substr(0,8), d1, 8);
+        parseHex(hex.substr(8,4), d2, 4);
+        parseHex(hex.substr(12,4), d3, 4);
+        writeUInt32BE(static_cast<uint32_t>(d1));
+        writeUInt16BE(static_cast<uint16_t>(d2));
+        writeUInt16BE(static_cast<uint16_t>(d3));
+        // remaining 8 bytes
+        for (int i = 0; i < 8; ++i) {
+            uint64_t byteVal=0; parseHex(hex.substr(16 + i*2, 2), byteVal, 2);
+            writeUInt8(static_cast<uint8_t>(byteVal & 0xFF));
+        }
+    }
+};
+
+static std::vector<uint8_t> qCompressLike(const std::vector<uint8_t>& input, int level = Z_BEST_SPEED) {
+    // Produce Qt-like qCompress payload: 4-byte big-endian uncompressed size + zlib deflate stream
+    uLongf destLen = compressBound(input.size());
+    std::vector<uint8_t> comp(destLen);
+    int rc = compress2(comp.data(), &destLen, input.data(), input.size(), level);
+    if (rc != Z_OK) { destLen = 0; }
+    comp.resize(destLen);
+    std::vector<uint8_t> out;
+    out.reserve(4 + comp.size());
+    // 4-byte big-endian uncompressed size
+    out.push_back(static_cast<uint8_t>((input.size() >> 24) & 0xFF));
+    out.push_back(static_cast<uint8_t>((input.size() >> 16) & 0xFF));
+    out.push_back(static_cast<uint8_t>((input.size() >> 8) & 0xFF));
+    out.push_back(static_cast<uint8_t>(input.size() & 0xFF));
+    out.insert(out.end(), comp.begin(), comp.end());
+    return out;
+}
+} // namespace
 
 // Generate a simple UUID-like string for session identification
 static std::string generateUUID() {
@@ -500,65 +577,34 @@ void OverteClient::sendDomainConnectRequest() {
     NLPacket packet(PacketType::DomainConnectRequest, PacketVersions::DomainConnectRequest_SocketTypes, true);
     packet.setSequenceNumber(m_sequenceNumber++);
     
-    // 1. Write connect UUID (16 bytes)
-    // Parse session UUID and write as 16 bytes
-    // Format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-    uint8_t uuidBytes[16] = {0};
-    if (m_sessionUUID.length() >= 36) {
-        // Parse UUID hex string to bytes
-        int byteIdx = 0;
-        for (size_t i = 0; i < m_sessionUUID.length() && byteIdx < 16; i++) {
-            char c = m_sessionUUID[i];
-            if (c == '-') continue;
-            
-            uint8_t nibble = 0;
-            if (c >= '0' && c <= '9') nibble = c - '0';
-            else if (c >= 'a' && c <= 'f') nibble = c - 'a' + 10;
-            else if (c >= 'A' && c <= 'F') nibble = c - 'A' + 10;
-            
-            if (i % 2 == 0 || (i > 0 && m_sessionUUID[i-1] == '-')) {
-                uuidBytes[byteIdx] = nibble << 4;
-            } else {
-                uuidBytes[byteIdx] |= nibble;
-                byteIdx++;
-            }
-        }
-    }
-    packet.write(uuidBytes, 16);
-    
-    // 2. Write protocol version signature (MD5 hash) with length prefix
+    // Build payload using Qt wire format
+    QtStream qs;
+    // UUID
+    qs.writeQUuidFromString(m_sessionUUID);
+    // Protocol signature (QByteArray)
     auto protocolSig = NLPacket::computeProtocolVersionSignature();
-    packet.writeUInt32(static_cast<uint32_t>(protocolSig.size()));  // Length prefix
-    packet.write(protocolSig.data(), protocolSig.size());
-    
-    // 3. Write hardware address (MAC address as QString format)
-    // QString format: uint32 length + UTF-16 chars
-    // We'll use a fake MAC address
-    std::string macAddr = "00:00:00:00:00:00";
-    packet.writeUInt32(static_cast<uint32_t>(macAddr.size()));
-    for (char c : macAddr) {
-        packet.writeUInt16(static_cast<uint16_t>(c));  // UTF-16 encoding
-    }
-    
-    // 4. Write machine fingerprint (QString format)
-    std::string fingerprint = m_sessionUUID;
-    packet.writeUInt32(static_cast<uint32_t>(fingerprint.size()));
-    for (char c : fingerprint) {
-        packet.writeUInt16(static_cast<uint16_t>(c));
-    }
-    
-    // 5. Write compressed system info (QByteArray format)
-    // QByteArray format: uint32 length + data
-    // Minimal JSON system info
-    std::string systemInfo = "{\"computer\":{\"OS\":\"Linux\"},\"cpus\":[{\"model\":\"Stardust\"}]}";
-    packet.writeUInt32(static_cast<uint32_t>(systemInfo.size()));
-    packet.write(systemInfo.data(), systemInfo.size());
-    
-    // 6. Write local socket type (SocketType enum: Public=0, Local=1, Stun=2)
-    packet.writeUInt8(0);  // Public socket
-    
-    // 7. Write public socket type
-    packet.writeUInt8(0);  // Public socket
+    qs.writeQByteArray(protocolSig);
+    // Hardware address (QString) - leave blank for now
+    std::string macAddr = ""; // leave empty if unknown
+    qs.writeQString(macAddr);
+    // Machine fingerprint (QString) - use session UUID as placeholder
+    qs.writeQString(m_sessionUUID);
+    // Timestamp (qint64) for HasTimestamp version stage
+    auto nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    qs.writeUInt64BE(static_cast<uint64_t>(nowMs));
+    // Reason (quint8) for HasReason stage - 0 = Unknown/Other
+    qs.writeUInt8(0);
+    // System info (compressed QByteArray) for HasCompressedSystemInfo
+    std::string sysJson = "{\"computer\":{\"OS\":\"Linux\"},\"cpus\":[{\"model\":\"Stardust\"}],\"nics\":[],\"displays\":[]}";
+    std::vector<uint8_t> sysBytes(sysJson.begin(), sysJson.end());
+    auto sysCompressed = qCompressLike(sysBytes, Z_BEST_SPEED);
+    qs.writeQByteArray(sysCompressed);
+    // Socket types (two quint8): public, local
+    qs.writeUInt8(0); // public
+    qs.writeUInt8(0); // local
+
+    // Append payload to packet
+    if (!qs.buf.empty()) packet.write(qs.buf.data(), qs.buf.size());
     
     const auto& data = packet.getData();
     ssize_t s = ::sendto(m_udpFd, data.data(), data.size(), 0, 
