@@ -575,8 +575,8 @@ void OverteClient::sendDomainListRequest() {
 }
 
 void OverteClient::sendPing(int fd, const sockaddr_storage& addr, socklen_t addrLen) {
-    // Create NLPacket for Ping
-    NLPacket packet(PacketType::Ping, 0, false);  // version 0, not reliable for pings
+    // Create NLPacket for Ping with correct version
+    NLPacket packet(PacketType::Ping, PacketVersions::Ping_IncludeConnectionID, false);
     packet.setSequenceNumber(m_sequenceNumber++);
     
     // Add timestamp (microseconds since epoch)
