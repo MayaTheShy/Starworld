@@ -516,24 +516,26 @@ void OverteClient::sendPing(int fd, const sockaddr_storage& addr, socklen_t addr
 }
 
 void OverteClient::sendEntityQuery() {
-    if (m_entityFd < 0) return;
+    if (m_entityFd < 0 || !m_entityServerReady) return;
     
     const unsigned char PACKET_TYPE_ENTITY_QUERY = 0x15;
     
-    // EntityQuery packet structure:
-    // [PacketType:u8][ConicalViews:bool][CameraPosition:vec3][CameraOrientation:quat][CameraFov:float][CameraAspectRatio:float][CameraNearClip:float][CameraFarClip:float][CameraEyeOffsetPosition:vec3]
-    // Simplified version: just send packet type + false for conical views (requests all entities)
+    // EntityQuery packet structure (simplified):
+    // [PacketType:u8][ConicalViews:bool][CameraFrustum if ConicalViews=true]
+    // For simplicity, send with ConicalViews=false to request all entities
     
-    unsigned char packet[1 + 1]; // PacketType + ConicalViews flag
-    packet[0] = PACKET_TYPE_ENTITY_QUERY;
-    packet[1] = 0; // false - no conical frustum, send all entities
+    std::vector<char> packet;
+    packet.push_back(static_cast<char>(PACKET_TYPE_ENTITY_QUERY));
+    packet.push_back(0); // ConicalViews = false
     
-    ssize_t sent = sendto(m_entityFd, packet, sizeof(packet), 0, 
+    // With ConicalViews=false, we're requesting all entities
+    // Additional octree query parameters can be added here
+    
+    ssize_t sent = sendto(m_entityFd, packet.data(), packet.size(), 0, 
                          reinterpret_cast<const sockaddr*>(&m_entityAddr), m_entityAddrLen);
     
     if (sent > 0) {
-        std::cout << "[OverteClient] Sent EntityQuery (all entities)" << std::endl;
-        m_entityServerReady = true;
+        std::cout << "[OverteClient] Sent EntityQuery to EntityServer" << std::endl;
     } else {
         std::cerr << "[OverteClient] Failed to send EntityQuery: " << strerror(errno) << std::endl;
     }
