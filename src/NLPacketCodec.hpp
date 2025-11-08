@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <vector>
 #include <cstring>
+#include <string>
 
 namespace Overte {
 
