@@ -13,6 +13,7 @@ glam = "0.28"
 lazy_static = "1.4"
 zbus = { version = "5.5.0", features = ["tokio"] }
 serde = { version = "1.0", features = ["derive"] }
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 [dependencies.stardust-xr-asteroids]
 path = "../third_party/asteroids"
