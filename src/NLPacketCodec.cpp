@@ -309,6 +309,7 @@ static void ensureVersionTable(uint8_t& vAvatarRemoveAttachments,
                 }
             }
             s_vEntityLastPacket = entityCount > 0 ? static_cast<uint8_t>(entityCount - 1) : 23;
+            s_vEntityParticleSpin = static_cast<uint8_t>(entity["ParticleSpin"]);
             s_vAssetBakingTextureMeta = static_cast<uint8_t>(asset["BakingTextureMeta"]);
             s_vEntityScriptClientCallable = static_cast<uint8_t>(entScript["ClientCallable"]);
             s_vEntityQueryCbor = static_cast<uint8_t>(entQuery["CborData"]);
@@ -343,9 +344,11 @@ static void ensureVersionTable(uint8_t& vAvatarRemoveAttachments,
     vAvatarRemoveAttachments = s_vAvatarRemoveAttachments;
     vAvatarTraitsAck = s_vAvatarTraitsAck;
     vEntityLastPacket = s_vEntityLastPacket;
+    vEntityParticleSpin = s_vEntityParticleSpin;
     vAssetBakingTextureMeta = s_vAssetBakingTextureMeta;
     vEntityScriptClientCallable = s_vEntityScriptClientCallable;
     vEntityQueryCbor = s_vEntityQueryCbor;
+    vAvatarQueryConical = s_vAvatarQueryConical;
     vDomainServerAddedNodeSocketTypes = s_vDomainServerAddedNodeSocketTypes;
     vDomainListSocketTypes = s_vDomainListSocketTypes;
     vDomainListRequestSocketTypes = s_vDomainListRequestSocketTypes;
