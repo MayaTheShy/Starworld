@@ -286,6 +286,12 @@ static void ensureVersionTable(uint8_t& vAvatarRemoveAttachments,
             s_vAvatarRemoveAttachments = static_cast<uint8_t>(avatar["RemoveAttachments"]);
             s_vAvatarTraitsAck = static_cast<uint8_t>(avatar["AvatarTraitsAck"]);
             s_vAvatarQueryConical = static_cast<uint8_t>(avatarQuery["ConicalFrustums"]);
+            
+            // Debug: print parsed values
+            std::cout << "[DEBUG] Parsed version values:" << std::endl;
+            std::cout << "  RemoveAttachments: " << (int)s_vAvatarRemoveAttachments << std::endl;
+            std::cout << "  AvatarTraitsAck: " << (int)s_vAvatarTraitsAck << std::endl;
+            std::cout << "  ConicalFrustums: " << (int)s_vAvatarQueryConical << std::endl;
             // Entity LAST_PACKET_TYPE is number of entries - 1 before NUM_PACKET_TYPE
             // If parsing map failed to give LAST_PACKET_TYPE, derive from count of entries before NUM_PACKET_TYPE label.
             int entityCount = 0;
