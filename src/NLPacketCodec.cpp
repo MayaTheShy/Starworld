@@ -8,6 +8,7 @@
 #include <sstream>
 #include <unordered_map>
 #include <algorithm>
+#include <iostream>
 
 namespace Overte {
 
@@ -467,11 +468,19 @@ std::vector<uint8_t> NLPacket::computeProtocolVersionSignature() {
     uint8_t numPacketTypes = static_cast<uint8_t>(numPacketTypesInt);
     buffer.push_back(numPacketTypes);
     
+    // Debug: print version table
+    std::cout << "[OverteClient] Computing protocol signature with " << (int)numPacketTypes << " packet types:" << std::endl;
+    
     // Write version for each packet type
     for (uint8_t i = 0; i < numPacketTypes; i++) {
         PacketType type = static_cast<PacketType>(i);
         uint8_t version = versionForPacketType(type);
         buffer.push_back(version);
+        if (i < 20 || i >= numPacketTypes - 10) {  // Print first 20 and last 10
+            std::cout << "  Type " << (int)i << ": version " << (int)version << std::endl;
+        } else if (i == 20) {
+            std::cout << "  ... (middle entries omitted) ..." << std::endl;
+        }
     }
     
     // Compute MD5 hash
