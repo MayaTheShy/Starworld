@@ -37,6 +37,18 @@ bool OverteClient::connect() {
     m_sessionUUID = generateUUID();
     std::cout << "[OverteClient] Session UUID: " << m_sessionUUID << std::endl;
     
+    // Check for authentication credentials from environment
+    const char* usernameEnv = std::getenv("OVERTE_USERNAME");
+    const char* passwordEnv = std::getenv("OVERTE_PASSWORD");
+    if (usernameEnv) m_username = usernameEnv;
+    if (passwordEnv) m_password = passwordEnv;
+    
+    if (!m_username.empty()) {
+        std::cout << "[OverteClient] Using authentication: username=" << m_username << std::endl;
+    } else {
+        std::cout << "[OverteClient] No authentication credentials provided (set OVERTE_USERNAME/OVERTE_PASSWORD)" << std::endl;
+    }
+    
     // Parse ws://host:port
     std::string url = m_domainUrl;
     if (url.empty()) url = "ws://127.0.0.1:40102";
@@ -106,7 +118,9 @@ bool OverteClient::connect() {
     }
     
     // Send domain connect request to initiate handshake
-    sendDomainConnectRequest();
+    // Start with domain list request - simpler packet
+    std::cout << "[OverteClient] Requesting domain list..." << std::endl;
+    sendDomainListRequest();
 
     m_useSimulation = (std::getenv("STARWORLD_SIMULATE") != nullptr);
     if (m_useSimulation) {
@@ -199,8 +213,8 @@ void OverteClient::poll() {
         
         // Request domain list periodically if not connected
         if (!m_domainConnected && std::chrono::duration_cast<std::chrono::seconds>(now - lastDomainList).count() >= 2) {
-            std::cout << "[OverteClient] Retrying domain connection..." << std::endl;
-            sendDomainConnectRequest();
+            std::cout << "[OverteClient] Retrying domain list request..." << std::endl;
+            sendDomainListRequest();
             lastDomainList = now;
         }
     }

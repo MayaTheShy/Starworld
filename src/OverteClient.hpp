@@ -67,6 +67,8 @@ private:
 	bool m_useSimulation{false};
 	bool m_domainConnected{false};
 	std::string m_sessionUUID; // Our client session UUID
+	std::string m_username;     // Domain authentication username
+	std::string m_password;     // Domain authentication password (or token)
 
 	// Very small in-process world state for testing
 	std::unordered_map<std::uint64_t, OverteEntity> m_entities;
