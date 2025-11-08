@@ -1,0 +1,27 @@
+[package]
+name = "stardust_bridge"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "stardust_bridge"
+crate-type = ["cdylib"]
+
+[dependencies]
+tokio = { version = "1.38", features = ["rt", "macros"] }
+glam = "0.28"
+lazy_static = "1.4"
+zbus = { version = "5.5.0", features = ["tokio"] }
+serde = { version = "1.0", features = ["derive"] }
+
+[dependencies.stardust-xr-asteroids]
+git = "https://github.com/StardustXR/asteroids.git"
+branch = "dev"
+
+[dependencies.stardust-xr-fusion]
+git = "https://github.com/StardustXR/core.git"
+branch = "dev"
+
+[features]
+# Feature enabling real StardustXR integration when crates are present.
+real = []
