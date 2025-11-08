@@ -1,6 +1,8 @@
 // NLPacketCodec.cpp
 #include "NLPacketCodec.hpp"
 #include <arpa/inet.h>
+#include <cstring>
+#include <string>
 
 namespace Overte {
 
