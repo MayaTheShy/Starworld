@@ -1,4 +1,5 @@
 #include "OverteClient.hpp"
+#include "NLPacketCodec.hpp"
 
 #include <chrono>
 #include <cmath>
@@ -16,6 +17,7 @@
 #include <cstring>
 
 using namespace std::chrono_literals;
+using namespace Overte;
 
 // Generate a simple UUID-like string for session identification
 static std::string generateUUID() {
