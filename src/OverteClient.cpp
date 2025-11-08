@@ -447,8 +447,38 @@ void OverteClient::handleDomainConnectionDenied(const char* data, size_t len) {
     m_domainConnected = false;
 }
 
+void OverteClient::sendDomainConnectRequest() {
+    if (!m_udpReady || m_udpFd == -1) return;
+    
+    // DomainConnectRequest packet (PacketType 0x04)
+    const unsigned char PACKET_TYPE_DOMAIN_CONNECT_REQUEST = 0x04;
+    
+    // Build packet: [PacketType][ProtocolVersion:string][HardwareAddress:string]
+    std::string protocolVersion = "Starworld-0.1";
+    std::string hardwareAddress = m_sessionUUID;
+    
+    std::vector<char> packet;
+    packet.push_back(static_cast<char>(PACKET_TYPE_DOMAIN_CONNECT_REQUEST));
+    
+    // Add protocol version (length-prefixed string)
+    packet.push_back(static_cast<char>(protocolVersion.size()));
+    packet.insert(packet.end(), protocolVersion.begin(), protocolVersion.end());
+    
+    // Add hardware address (length-prefixed string)
+    packet.push_back(static_cast<char>(hardwareAddress.size()));
+    packet.insert(packet.end(), hardwareAddress.begin(), hardwareAddress.end());
+    
+    ssize_t s = ::sendto(m_udpFd, packet.data(), packet.size(), 0, 
+                         reinterpret_cast<sockaddr*>(&m_udpAddr), m_udpAddrLen);
+    if (s > 0) {
+        std::cout << "[OverteClient] Domain connect request sent" << std::endl;
+    } else {
+        std::cerr << "[OverteClient] Failed to send domain connect request: " << strerror(errno) << std::endl;
+    }
+}
+
 void OverteClient::sendDomainListRequest() {
-    // Send DomainList request packet (PacketType 0x02 typically)
+    // Send DomainList request packet (PacketType 0x02)
     if (!m_udpReady || m_udpFd == -1) return;
     
     const unsigned char PACKET_TYPE_DOMAIN_LIST_REQUEST = 0x02;
@@ -458,6 +488,30 @@ void OverteClient::sendDomainListRequest() {
                          reinterpret_cast<sockaddr*>(&m_udpAddr), m_udpAddrLen);
     if (s > 0) {
         std::cout << "[OverteClient] DomainList request sent" << std::endl;
+    } else {
+        std::cerr << "[OverteClient] Failed to send domain list request: " << strerror(errno) << std::endl;
+    }
+}
+
+void OverteClient::sendPing(int fd, const sockaddr_storage& addr, socklen_t addrLen) {
+    const unsigned char PACKET_TYPE_PING = 0x01;
+    
+    // Ping packet: [PacketType][Timestamp:u64][PingType:u8]
+    char packet[1 + 8 + 1];
+    packet[0] = static_cast<char>(PACKET_TYPE_PING);
+    
+    // Add timestamp (microseconds since epoch)
+    auto now = std::chrono::system_clock::now();
+    auto micros = std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()).count();
+    std::memcpy(packet + 1, &micros, 8);
+    
+    // Ping type (0 = local, 1 = public)
+    packet[9] = 0;
+    
+    ssize_t s = ::sendto(fd, packet, sizeof(packet), 0, 
+                         reinterpret_cast<const sockaddr*>(&addr), addrLen);
+    if (s < 0 && errno != EWOULDBLOCK && errno != EAGAIN) {
+        std::cerr << "[OverteClient] Ping send failed: " << strerror(errno) << std::endl;
     }
 }
 
