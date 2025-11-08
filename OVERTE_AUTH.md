@@ -1,8 +1,47 @@
 # Overte Domain Authentication
 
-## Running with Authentication
+## Current Status
 
-The Stardust-Overte client now supports domain authentication. Use one of the following methods:
+⚠️ **Protocol Compatibility Issue**: The Overte domain server uses the NLPacket protocol format which includes sequence numbers, packet headers, and specific framing that our current implementation doesn't support. The domain server is not responding to our connection requests.
+
+### Working Alternative: Test Environment
+
+The test environment using `tools/inject_test_entities.py` works perfectly because it sends packets directly to our client socket, bypassing the domain server protocol requirements.
+
+**To use the test environment:**
+```bash
+# Terminal 1: Start the client
+./build/stardust-overte-client
+
+# Terminal 2: Inject test entities
+python3 tools/inject_test_entities.py
+```
+
+This demonstrates the full entity lifecycle (create, update, delete) and entities are visible in the Stardust XR headset!
+
+## Full Protocol Implementation (TODO)
+
+To connect to a real Overte domain server, we need to implement:
+
+###  1. NLPacket Format
+Overte uses a custom reliable UDP protocol with:
+- Packet headers (sequence numbers, acks, etc.)
+- Message fragmentation/reassembly
+- Reliable delivery guarantees
+
+### 2. Proper Authentication Flow
+1. Send DomainConnectRequest with NLPacket header
+2. Receive DomainConnectionTokenRequest
+3. Send authentication credentials
+4. Receive DomainList with assignment client endpoints
+5. Connect to each assignment client (EntityServer, Avatar, Audio)
+
+### 3. Assignment Client Protocol
+- Each mixer (EntityServer, AvatarMixer, AudioMixer) has its own handshake
+- EntityServer requires octree-based spatial queries
+- Proper node type identification in packets
+
+## Running with Authentication (When Protocol is Implemented)
 
 ### Method 1: Interactive Script
 ```bash
@@ -24,39 +63,56 @@ export OVERTE_PASSWORD="your_password"
 
 ## Configuration
 
-- **OVERTE_USERNAME**: Your Overte domain username
+- **OVERTE_USERNAME**: Your Overte domain username  
 - **OVERTE_PASSWORD**: Your Overte domain password or access token
 - **OVERTE_UDP_PORT**: Domain server UDP port (default: 40104)
 - **STARWORLD_SIMULATE**: Set to "1" to enable simulation mode with demo entities
 
 ## Troubleshooting
 
-If you're not receiving entities:
+### No Response from Domain Server
 
-1. **Check authentication**: Make sure you've set up a user account in the Overte domain web interface (http://localhost:40102/settings/)
+**This is expected!** The current implementation doesn't include the NLPacket protocol layer that Overte requires. Use the test environment instead:
 
-2. **Check domain server is running**:
-   ```bash
-   ps aux | grep domain-server
-   sudo ss -ulnp | grep domain-server
-   ```
+```bash
+# Works perfectly - bypasses domain server
+python3 tools/inject_test_entities.py
+```
 
-3. **Test with simulation mode first**:
-   ```bash
-   STARWORLD_SIMULATE=1 ./build/stardust-overte-client
-   ```
+### Check Domain Server Status
 
-4. **Check for connection denied messages** in the output
+```bash
+# Check if domain server is running
+ps aux | grep domain-server
+
+# Check UDP port
+sudo ss -ulnp | grep domain-server
+```
+
+### Test with Simulation Mode
+
+```bash
+STARWORLD_SIMULATE=1 ./build/stardust-overte-client
+```
 
 ## Protocol Implementation Status
 
-✅ Domain connection handshake
-✅ Authentication (username/password)
-✅ DomainList request/response
-✅ EntityServer discovery
-✅ EntityQuery packets
-✅ Entity Add/Edit/Erase parsing
-⏳ Full property parsing (position, rotation, dimensions)
-⏳ Octree-based spatial streaming
-⏳ Avatar mixer integration
+✅ Domain UDP socket connection  
+✅ Authentication packet structure  
+✅ DomainList request/response parsing  
+✅ EntityServer discovery logic  
+✅ EntityQuery packets  
+✅ Entity Add/Edit/Erase parsing  
+✅ **Working test environment** (Python injection)  
+❌ NLPacket protocol headers  
+❌ Reliable UDP (sequence numbers, acks)  
+❌ Domain server handshake (not receiving responses)  
+⏳ Full property parsing (position, rotation, dimensions)  
+⏳ Octree-based spatial streaming  
+⏳ Avatar mixer integration  
 ⏳ Audio mixer integration
+
+## Recommendation
+
+**Use the test environment for now** - it demonstrates all the functionality (entities appear in XR headset, update, and delete correctly). Implementing the full NLPacket protocol would require significant reverse engineering or access to Overte's C++ networking library.
+
