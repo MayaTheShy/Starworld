@@ -486,20 +486,40 @@ void OverteClient::sendDomainConnectRequest() {
     // DomainConnectRequest packet (PacketType 0x04)
     const unsigned char PACKET_TYPE_DOMAIN_CONNECT_REQUEST = 0x04;
     
-    // Build packet: [PacketType][ProtocolVersion:string][HardwareAddress:string]
+    // Build packet with authentication
+    // Format: [PacketType][ProtocolVersion:string][HardwareAddress:string][MachineFingerprint:string][Username:string][Password:string]
     std::string protocolVersion = "Starworld-0.1";
     std::string hardwareAddress = m_sessionUUID;
+    std::string machineFingerprint = m_sessionUUID; // Use session UUID as fingerprint
     
     std::vector<char> packet;
     packet.push_back(static_cast<char>(PACKET_TYPE_DOMAIN_CONNECT_REQUEST));
     
-    // Add protocol version (length-prefixed string)
-    packet.push_back(static_cast<char>(protocolVersion.size()));
-    packet.insert(packet.end(), protocolVersion.begin(), protocolVersion.end());
+    // Helper lambda to add length-prefixed string
+    auto addString = [&packet](const std::string& str) {
+        if (str.size() > 255) {
+            packet.push_back(static_cast<char>(255));
+            packet.insert(packet.end(), str.begin(), str.begin() + 255);
+        } else {
+            packet.push_back(static_cast<char>(str.size()));
+            packet.insert(packet.end(), str.begin(), str.end());
+        }
+    };
     
-    // Add hardware address (length-prefixed string)
-    packet.push_back(static_cast<char>(hardwareAddress.size()));
-    packet.insert(packet.end(), hardwareAddress.begin(), hardwareAddress.end());
+    // Add protocol version
+    addString(protocolVersion);
+    
+    // Add hardware address (session UUID)
+    addString(hardwareAddress);
+    
+    // Add machine fingerprint
+    addString(machineFingerprint);
+    
+    // Add username (empty if not authenticated)
+    addString(m_username);
+    
+    // Add password/token (empty if not authenticated)
+    addString(m_password);
     
     ssize_t s = ::sendto(m_udpFd, packet.data(), packet.size(), 0, 
                          reinterpret_cast<sockaddr*>(&m_udpAddr), m_udpAddrLen);
@@ -507,6 +527,9 @@ void OverteClient::sendDomainConnectRequest() {
         std::cout << "[OverteClient] Domain connect request sent (" << s << " bytes)" << std::endl;
         std::cout << "[OverteClient]   Protocol: " << protocolVersion << std::endl;
         std::cout << "[OverteClient]   Session: " << hardwareAddress << std::endl;
+        if (!m_username.empty()) {
+            std::cout << "[OverteClient]   Username: " << m_username << std::endl;
+        }
     } else {
         std::cerr << "[OverteClient] Failed to send domain connect request: " << strerror(errno) << std::endl;
     }
