@@ -168,7 +168,16 @@ pub extern "C" fn sdxr_start(app_id: *const std::os::raw::c_char) -> i32 {
             
             // Run the client - asteroids will manage the projector and call reify() each frame
             // This blocks until the client disconnects or is shut down
-            ast::client::run::<BridgeState>(&[]).await;
+            match stardust_xr_fusion::client::Client::connect().await {
+                Ok(client) => {
+                    println!("[bridge] Connected to Stardust server successfully");
+                    // Now try to run the full asteroids client
+                    ast::client::run::<BridgeState>(&[]).await;
+                },
+                Err(e) => {
+                    println!("[bridge] Failed to connect to Stardust server: {:?}", e);
+                }
+            }
             
             println!("[bridge] Client disconnected");
             let _ = cmd_task;
