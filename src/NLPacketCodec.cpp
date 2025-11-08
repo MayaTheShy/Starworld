@@ -259,8 +259,8 @@ static void ensureVersionTable(uint8_t& vAvatarRemoveAttachments,
 {
     static bool inited = false;
     static uint8_t s_vAvatarRemoveAttachments, s_vAvatarTraitsAck, s_vEntityLastPacket,
-                   s_vAssetBakingTextureMeta, s_vEntityScriptClientCallable, s_vEntityQueryCbor,
-                   s_vDomainServerAddedNodeSocketTypes, s_vDomainListSocketTypes,
+                   s_vEntityParticleSpin, s_vAssetBakingTextureMeta, s_vEntityScriptClientCallable, s_vEntityQueryCbor,
+                   s_vAvatarQueryConical, s_vDomainServerAddedNodeSocketTypes, s_vDomainListSocketTypes,
                    s_vDomainListRequestSocketTypes, s_vDomainConnectionDeniedExtraInfo,
                    s_vPingIncludeConnID, s_vIcePingSendPeerID, s_vAudioStopInjectors;
     static int s_numPacketTypes;
