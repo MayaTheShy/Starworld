@@ -143,6 +143,8 @@ void OverteClient::poll() {
         ssize_t r = ::recvfrom(m_udpFd, buf, sizeof(buf), 0, reinterpret_cast<sockaddr*>(&from), &fromlen);
         if (r > 0) {
             // Parse as potential domain/avatar packets
+            std::cout << "[OverteClient] Domain UDP packet received (" << r << " bytes, type=0x" 
+                      << std::hex << (int)(unsigned char)buf[0] << std::dec << ")" << std::endl;
             parseEntityPacket(buf, static_cast<size_t>(r));
         }
     }
@@ -171,6 +173,8 @@ void OverteClient::parseNetworkPackets() {
         sockaddr_storage from{}; socklen_t fromlen = sizeof(from);
         ssize_t r = ::recvfrom(m_entityFd, buf, sizeof(buf), 0, reinterpret_cast<sockaddr*>(&from), &fromlen);
         if (r > 0) {
+            std::cout << "[OverteClient] EntityServer packet received (" << r << " bytes, type=0x" 
+                      << std::hex << (int)(unsigned char)buf[0] << std::dec << ")" << std::endl;
             parseEntityPacket(buf, static_cast<size_t>(r));
         }
     }
