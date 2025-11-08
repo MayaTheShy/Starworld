@@ -80,10 +80,11 @@ lazy_static::lazy_static! {
     static ref CTRL: Mutex<Ctrl> = Mutex::new(Ctrl::default());
 }
 
-#[derive(Default)]
+#[derive(Default, Clone, serde::Serialize, serde::Deserialize)]
 struct Node {
     id: u64,
     name: String,
+    #[serde(skip)]
     transform: Mat4,
 }
 
