@@ -1,9 +1,11 @@
-// OverteClient.cpp
 #include "OverteClient.hpp"
 
 #include <chrono>
 #include <cmath>
 #include <iostream>
+#include <random>
+#include <sstream>
+#include <iomanip>
 #include <glm/gtc/matrix_transform.hpp>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -15,7 +17,26 @@
 
 using namespace std::chrono_literals;
 
+// Generate a simple UUID-like string for session identification
+static std::string generateUUID() {
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> dis(0, 255);
+    
+    std::stringstream ss;
+    ss << std::hex << std::setfill('0');
+    for (int i = 0; i < 16; ++i) {
+        if (i == 4 || i == 6 || i == 8 || i == 10) ss << '-';
+        ss << std::setw(2) << dis(gen);
+    }
+    return ss.str();
+}
+
 bool OverteClient::connect() {
+    // Generate session UUID
+    m_sessionUUID = generateUUID();
+    std::cout << "[OverteClient] Session UUID: " << m_sessionUUID << std::endl;
+    
     // Parse ws://host:port
     std::string url = m_domainUrl;
     if (url.empty()) url = "ws://127.0.0.1:40102";
@@ -76,6 +97,9 @@ bool OverteClient::connect() {
         std::cerr << "OverteClient: failed to connect one or more mixers" << std::endl;
         return false;
     }
+    
+    // Send domain connect request to initiate handshake
+    sendDomainConnectRequest();
 
     m_useSimulation = (std::getenv("STARWORLD_SIMULATE") != nullptr);
     if (m_useSimulation) {

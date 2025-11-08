@@ -49,9 +49,13 @@ public:
 private:
 	void parseNetworkPackets(); // standards-aligned parsing (scaffold)
 	void parseEntityPacket(const char* data, size_t len);
+	void parseDomainPacket(const char* data, size_t len);
 	void handleDomainListReply(const char* data, size_t len);
+	void handleDomainConnectionDenied(const char* data, size_t len);
 	void sendDomainListRequest();
+	void sendDomainConnectRequest();
 	void sendEntityQuery();
+	void sendPing(int fd, const sockaddr_storage& addr, socklen_t addrLen);
 
 	std::string m_domainUrl;
 	std::string m_host{"127.0.0.1"};
@@ -61,6 +65,8 @@ private:
 	bool m_entityServer{false};
 	bool m_audioMixer{false};
 	bool m_useSimulation{false};
+	bool m_domainConnected{false};
+	std::string m_sessionUUID; // Our client session UUID
 
 	// Very small in-process world state for testing
 	std::unordered_map<std::uint64_t, OverteEntity> m_entities;
