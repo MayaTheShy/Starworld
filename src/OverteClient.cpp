@@ -542,6 +542,12 @@ void OverteClient::sendDomainConnectRequest() {
         if (!m_username.empty()) {
             std::cout << "[OverteClient]   Username: " << m_username << std::endl;
         }
+        // Hex dump first 32 bytes
+        std::cout << "[OverteClient] >>> Hex: ";
+        for (size_t i = 0; i < std::min(size_t(32), packet.size()); ++i) {
+            printf("%02x ", (unsigned char)packet[i]);
+        }
+        std::cout << std::endl;
     } else {
         std::cerr << "[OverteClient] Failed to send domain connect request: " << strerror(errno) << std::endl;
     }
