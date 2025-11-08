@@ -168,7 +168,7 @@ static std::unordered_map<std::string, int> parseEnumValues(const std::string& c
     if (startPos == std::string::npos) return values;
     auto bracePos = content.find('{', startPos);
     if (bracePos == std::string::npos) return values;
-    auto endPos = content.find('};', bracePos);
+    auto endPos = content.find("};", bracePos);
     if (endPos == std::string::npos) return values;
     std::string body = content.substr(bracePos + 1, endPos - bracePos - 1);
 
