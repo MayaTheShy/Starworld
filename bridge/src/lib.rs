@@ -85,8 +85,7 @@ pub extern "C" fn sdxr_start(app_id: *const std::os::raw::c_char) -> i32 {
             });
 
             ast::client::run::<BridgeState>(&[]).await;
-            // Ensure command task ends
-            let _ = cmd_task.await;
+            // Do not await cmd_task here; runtime shutdown will cancel it
         });
         drop(rt);
         let _ = res;
