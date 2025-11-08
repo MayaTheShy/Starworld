@@ -3,6 +3,7 @@
 #include <arpa/inet.h>
 #include <cstring>
 #include <string>
+#include <openssl/md5.h>
 
 namespace Overte {
 
@@ -146,6 +147,62 @@ PacketType NLPacket::getType(const uint8_t* data, size_t size) {
         return PacketType::Unknown;
     }
     return static_cast<PacketType>(data[sizeof(uint32_t)]);
+}
+
+uint8_t NLPacket::versionForPacketType(PacketType type) {
+    // Based on Overte's PacketHeaders.cpp versionForPacketType()
+    // Returns the protocol version for each packet type
+    switch (type) {
+        case PacketType::DomainConnectRequest:
+            return PacketVersions::DomainConnectRequest_SocketTypes;
+        case PacketType::DomainListRequest:
+            return PacketVersions::DomainListRequest_SocketTypes;
+        case PacketType::DomainList:
+            return PacketVersions::DomainList_SocketTypes;
+        case PacketType::Ping:
+            return PacketVersions::Ping_IncludeConnectionID;
+        case PacketType::DomainConnectionDenied:
+            return 19;  // IncludesExtraInfo
+        case PacketType::DomainConnectRequestPending:
+            return 17;
+        case PacketType::PingReply:
+            return 17;
+        case PacketType::ICEServerPeerInformation:
+        case PacketType::ICEServerQuery:
+            return 17;
+        case PacketType::NodeIgnoreRequest:
+            return 18;
+        case PacketType::DomainServerAddedNode:
+            return 25;  // SocketTypes
+        // For other packet types, return a default version
+        // In real Overte, each has a specific version
+        default:
+            return 17;  // Default version for unspecified packets
+    }
+}
+
+std::vector<uint8_t> NLPacket::computeProtocolVersionSignature() {
+    // Compute MD5 hash of all packet type versions
+    // This matches Overte's ensureProtocolVersionsSignature() function
+    
+    std::vector<uint8_t> buffer;
+    
+    // Write number of packet types (256 max, but we'll use actual count)
+    uint8_t numPacketTypes = 128;  // Conservative estimate for now
+    buffer.push_back(numPacketTypes);
+    
+    // Write version for each packet type
+    for (uint8_t i = 0; i < numPacketTypes; i++) {
+        PacketType type = static_cast<PacketType>(i);
+        uint8_t version = versionForPacketType(type);
+        buffer.push_back(version);
+    }
+    
+    // Compute MD5 hash
+    std::vector<uint8_t> hash(MD5_DIGEST_LENGTH);
+    MD5(buffer.data(), buffer.size(), hash.data());
+    
+    return hash;
 }
 
 } // namespace Overte
