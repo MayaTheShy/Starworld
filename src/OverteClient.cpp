@@ -76,13 +76,16 @@ bool OverteClient::connect() {
         return false;
     }
 
-    // Seed a couple of demo entities.
-    OverteEntity a{ m_nextEntityId++, "CubeA", glm::mat4(1.0f) };
-    OverteEntity b{ m_nextEntityId++, "CubeB", glm::mat4(1.0f) };
-    m_entities.emplace(a.id, a);
-    m_entities.emplace(b.id, b);
-    m_updateQueue.push_back(a.id);
-    m_updateQueue.push_back(b.id);
+    m_useSimulation = (std::getenv("STARWORLD_SIMULATE") != nullptr);
+    if (m_useSimulation) {
+        // Seed a couple of demo entities.
+        OverteEntity a{ m_nextEntityId++, "CubeA", glm::mat4(1.0f) };
+        OverteEntity b{ m_nextEntityId++, "CubeB", glm::mat4(1.0f) };
+        m_entities.emplace(a.id, a);
+        m_entities.emplace(b.id, b);
+        m_updateQueue.push_back(a.id);
+        m_updateQueue.push_back(b.id);
+    }
     return true;
 }
 
@@ -107,7 +110,7 @@ bool OverteClient::connectAudioMixer() {
 void OverteClient::poll() {
     if (!m_connected) return;
 
-    // Try a lightweight UDP ping if ready
+    // Try a lightweight UDP ping if ready (placeholder for avatar mixer handshake)
     if (m_udpReady && m_udpFd != -1) {
         const char ping[4] = {'P','I','N','G'};
         ssize_t s = ::sendto(m_udpFd, ping, sizeof(ping), 0, reinterpret_cast<sockaddr*>(&m_udpAddr), m_udpAddrLen);
@@ -118,26 +121,35 @@ void OverteClient::poll() {
         sockaddr_storage from{}; socklen_t fromlen = sizeof(from);
         ssize_t r = ::recvfrom(m_udpFd, buf, sizeof(buf), 0, reinterpret_cast<sockaddr*>(&from), &fromlen);
         if (r > 0) {
-            std::cout << "[OverteClient] UDP packet received (" << r << " bytes)" << std::endl;
+            // TODO: feed avatar/audio packets through protocol parser
+            // std::cout << "[OverteClient] UDP packet received (" << r << " bytes)" << std::endl;
         }
     }
 
-    // Simulate entity transforms changing slightly over time.
-    static auto t0 = std::chrono::steady_clock::now();
-    const float t = std::chrono::duration<float>(std::chrono::steady_clock::now() - t0).count();
+    parseNetworkPackets();
 
-    for (auto& [id, e] : m_entities) {
-        const float r = 0.25f + 0.05f * static_cast<float>(id);
-        const float x = std::cos(t * 0.5f + static_cast<float>(id)) * r;
-        const float z = std::sin(t * 0.5f + static_cast<float>(id)) * r;
-        e.transform = glm::translate(glm::mat4(1.0f), glm::vec3{x, 1.25f, z});
-        m_updateQueue.push_back(id);
+    if (m_useSimulation) {
+        // Simulate entity transforms changing slightly over time.
+        static auto t0 = std::chrono::steady_clock::now();
+        const float t = std::chrono::duration<float>(std::chrono::steady_clock::now() - t0).count();
+        for (auto& [id, e] : m_entities) {
+            const float r = 0.25f + 0.05f * static_cast<float>(id);
+            const float x = std::cos(t * 0.5f + static_cast<float>(id)) * r;
+            const float z = std::sin(t * 0.5f + static_cast<float>(id)) * r;
+            e.transform = glm::translate(glm::mat4(1.0f), glm::vec3{x, 1.25f, z});
+            m_updateQueue.push_back(id);
+        }
     }
 }
 
+void OverteClient::parseNetworkPackets() {
+    // Placeholder: implement Overte standards parsing.
+    // Strategy: maintain input buffers per mixer; decode entity add/update/remove messages.
+    // For now, no real network ingestion; this will be replaced by actual protocol integration.
+}
+
 void OverteClient::sendMovementInput(const glm::vec3& linearVelocity) {
-    // TODO: Package and send to AvatarMixer as appropriate (e.g. MyAvatar data).
-    (void)linearVelocity; // silence unused warning in the stub
+    (void)linearVelocity; // TODO: send to avatar mixer
 }
 
 std::vector<OverteEntity> OverteClient::consumeUpdatedEntities() {
@@ -148,5 +160,11 @@ std::vector<OverteEntity> OverteClient::consumeUpdatedEntities() {
         if (it != m_entities.end()) out.push_back(it->second);
     }
     m_updateQueue.clear();
+    return out;
+}
+
+std::vector<std::uint64_t> OverteClient::consumeDeletedEntities() {
+    std::vector<std::uint64_t> out;
+    out.swap(m_deleteQueue); // efficient clear
     return out;
 }
