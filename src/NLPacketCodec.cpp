@@ -434,6 +434,8 @@ uint8_t NLPacket::versionForPacketType(PacketType type) {
             return vAssetBakingTextureMeta;
         case PacketType::EntityScriptCallMethod:
             return vEntityScriptClientCallable;
+        case PacketType::DomainSettings:
+            return 18;
         case PacketType::MixedAudio:
         case PacketType::SilentAudioFrame:
         case PacketType::InjectAudio:
