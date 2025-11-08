@@ -197,9 +197,19 @@ void OverteClient::poll() {
         ssize_t r = ::recvfrom(m_udpFd, buf, sizeof(buf), 0, reinterpret_cast<sockaddr*>(&from), &fromlen);
         if (r > 0) {
             std::cout << "[OverteClient] <<< Received domain packet (" << r << " bytes)" << std::endl;
+            // Hex dump first 32 bytes for debugging
+            std::cout << "[OverteClient] Hex: ";
+            for (int i = 0; i < std::min(32, (int)r); ++i) {
+                printf("%02x ", (unsigned char)buf[i]);
+            }
+            std::cout << std::endl;
             parseDomainPacket(buf, static_cast<size_t>(r));
         } else if (r < 0 && errno != EWOULDBLOCK && errno != EAGAIN) {
-            std::cerr << "[OverteClient] UDP recv error: " << strerror(errno) << std::endl;
+            // Only log errors that aren't "would block"
+            static int errorCount = 0;
+            if (++errorCount <= 3) {
+                std::cerr << "[OverteClient] UDP recv error: " << strerror(errno) << std::endl;
+            }
         }
         
         // Send periodic ping to domain to keep connection alive
