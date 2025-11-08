@@ -594,8 +594,8 @@ void OverteClient::sendDomainConnectRequest() {
     std::string macAddr = "";
     qs.writeQString(macAddr);
     
-    // 4. Machine fingerprint (QString) - use session UUID as stable ID
-    qs.writeQString(m_sessionUUID);
+    // 4. Machine fingerprint (QUuid)
+    qs.writeQUuidFromString(m_sessionUUID);
     
     // 5. Compressed system info (QByteArray)
     std::string sysJson = "{\"computer\":{\"OS\":\"Linux\"},\"cpus\":[{\"model\":\"Stardust\"}],\"memory\":4096,\"nics\":[],\"gpus\":[],\"displays\":[]}";
@@ -603,34 +603,34 @@ void OverteClient::sendDomainConnectRequest() {
     auto sysCompressed = qCompressLike(sysBytes, Z_BEST_SPEED);
     qs.writeQByteArray(sysCompressed);
     
-    // 6. Connect reason (quint8) - 0 = Unknown
-    qs.writeUInt8(0);
+    // 6. Connect reason (quint32) - 0 = Unknown
+    qs.writeUInt32BE(0);
     
     // 7. Previous connection uptime (quint64) - 0 for first connection
     qs.writeUInt64BE(0);
     
-    // 8. Current timestamp in microseconds (quint64)
+    // 8. Current timestamp in microseconds (quint64) as lastPingTimestamp
     auto nowUs = std::chrono::duration_cast<std::chrono::microseconds>(
         std::chrono::system_clock::now().time_since_epoch()).count();
     qs.writeUInt64BE(static_cast<uint64_t>(nowUs));
     
-    // 9. Owner type (quint8) - 0 = Unknown
-    qs.writeUInt8(0);
+    // 9. Node type / owner type (NodeType_t)
+    qs.writeUInt8(static_cast<uint8_t>('I')); // Agent
     
     // 10. Public socket: type (quint8) + address
-    qs.writeUInt8(0); // SocketType::Unknown
+    qs.writeUInt8(1); // SocketType::UDP
     // Public IP and port (we don't know our public IP, use local)
     qs.writeUInt32BE(0x7F000001); // 127.0.0.1 placeholder
     qs.writeUInt16BE(0); // port 0 (unknown)
     
     // 11. Local socket: type (quint8) + address
-    qs.writeUInt8(0); // SocketType::Unknown
+    qs.writeUInt8(1); // SocketType::UDP
     // Local IP and port (use our bound UDP socket info)
     qs.writeUInt32BE(0x7F000001); // 127.0.0.1
     qs.writeUInt16BE(0); // ephemeral port (0 = unknown)
     
-    // 12. Node types of interest (QVector/QList of quint8)
-    // Write as Qt container: size (qint32) + elements
+    // 12. Node types of interest (QList<NodeType_t>)
+    // Write as Qt container: size (qint32) + elements (quint8)
     qs.writeInt32BE(0); // empty list for now
     
     // 13. Place name (QString) - empty
