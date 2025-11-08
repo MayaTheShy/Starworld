@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 option(USE_OVERTE_SDK "Link against Overte SDK if available" OFF)
 option(USE_STARDUST_SDK "Link against StardustXR SDK if available" OFF)
-option(USE_OVERTE_NETWORKING "Link against Overte networking library" ON)
+option(USE_OVERTE_NETWORKING "Link against Overte networking library" OFF)  # Disabled, using custom impl
 
 find_package(glm REQUIRED)
 
@@ -22,6 +22,7 @@ add_executable(stardust-overte-client
     src/OverteClient.cpp
     src/SceneSync.cpp
     src/InputHandler.cpp
+    src/NLPacketCodec.cpp
 )
 
 target_link_libraries(stardust-overte-client PRIVATE glm::glm)
