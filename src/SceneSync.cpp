@@ -21,5 +21,15 @@ void SceneSync::update(StardustBridge& stardust, OverteClient& overte) {
 			stardust.updateNodeTransform(it->second, e.transform);
 		}
 	}
+
+	// Process deletions after updates to avoid create-then-delete thrash.
+	auto deleted = overte.consumeDeletedEntities();
+	for (auto entId : deleted) {
+		auto it = s_entityNodeMap.find(entId);
+		if (it != s_entityNodeMap.end()) {
+			stardust.removeNode(it->second);
+			s_entityNodeMap.erase(it);
+		}
+	}
 }
 
