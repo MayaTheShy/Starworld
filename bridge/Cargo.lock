@@ -2513,6 +2513,7 @@ dependencies = [
  "serde",
  "stardust-xr-asteroids",
  "stardust-xr-fusion",
+ "stardust-xr-molecules",
  "tokio",
  "tracing-subscriber",
  "zbus",
