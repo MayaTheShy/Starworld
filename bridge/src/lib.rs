@@ -13,7 +13,8 @@ use stardust_xr_asteroids::{
     elements::{PlaySpace, Lines},
     Migrate, Reify,
 };
-use stardust_xr_asteroids::{CustomElement, Transformable};
+use stardust_xr_asteroids::{CustomElement, Transformable, Projector, Context};
+use stardust_xr_fusion::objects::connect_client as fusion_connect_client;
 use tokio::runtime::Runtime;
 
 #[derive(Clone, serde::Serialize, serde::Deserialize)]
@@ -61,13 +62,15 @@ impl Reify for BridgeState {
             let vis_scale = glam::Vec3::splat(0.20) * scale.x;
 
             // Build cube edges as 12 line segments
-            use stardust_xr_molecules::lines::{line_from_points, LineExt};
-            use stardust_xr_fusion::values::color::rgba_linear;
+            use stardust_xr_fusion::drawable::{Line, LinePoint};
+            use stardust_xr_fusion::values::{color::rgba_linear, Vector3};
             let t = 0.004; // thickness
             let c = rgba_linear!(0.8, 0.8, 0.9, 1.0);
             let hs = 0.5f32; // half size in model space (unit cube)
-            let mut seg = |a: [f32;3], b: [f32;3]| {
-                line_from_points(vec![a, b]).thickness(t).color(c)
+            let mut seg = |a: [f32;3], b: [f32;3]| -> Line {
+                let p0 = LinePoint { point: Vector3 { x: a[0], y: a[1], z: a[2] }, thickness: t, color: c };
+                let p1 = LinePoint { point: Vector3 { x: b[0], y: b[1], z: b[2] }, thickness: t, color: c };
+                Line { points: vec![p0, p1], cyclic: false }
             };
             let corners = [
                 [-hs, -hs, -hs], [ hs, -hs, -hs], [ hs,  hs, -hs], [-hs,  hs, -hs],
@@ -96,7 +99,7 @@ impl Reify for BridgeState {
 }
 
 static STARTED: AtomicBool = AtomicBool::new(false);
-static CONNECTED: AtomicBool = AtomicBool::new(false);
+static STOP_REQUESTED: AtomicBool = AtomicBool::new(false);
 lazy_static::lazy_static! {
     static ref CTRL: Mutex<Ctrl> = Mutex::new(Ctrl::default());
 }
@@ -151,12 +154,6 @@ pub extern "C" fn sdxr_start(app_id: *const std::os::raw::c_char) -> i32 {
         .build()
         .expect("tokio runtime");
     let handle = std::thread::spawn(move || {
-        // Initialize tracing for debugging
-        let _ = tracing_subscriber::fmt()
-            .with_env_filter(tracing_subscriber::EnvFilter::from_default_env()
-                .add_directive("stardust_xr_fusion=debug".parse().unwrap()))
-            .try_init();
-            
         let res = rt.block_on(async move {
             // Spawn command processor task that updates shared state
             let cmd_task = tokio::spawn(async move {
@@ -179,45 +176,45 @@ pub extern "C" fn sdxr_start(app_id: *const std::os::raw::c_char) -> i32 {
                                 }
                             }
                         }
-                        Command::Shutdown => break,
+                        Command::Shutdown => { STOP_REQUESTED.store(true, Ordering::SeqCst); break; }
                     }
                 }
             });
-
             println!("[bridge] Connecting to Stardust server...");
-            
-            // Debug: try raw socket connection first
-            let socket_path = std::env::var("XDG_RUNTIME_DIR")
-                .map(|dir| format!("{}/stardust-0", dir))
-                .or_else(|_| std::env::var("STARDUST_INSTANCE").map(|inst| format!("/run/user/1000/{}", inst)))
-                .unwrap_or_else(|_| "/run/user/1000/stardust-0".to_string());
-            println!("[bridge] Socket path: {}", socket_path);
-            
-            match tokio::net::UnixStream::connect(&socket_path).await {
-                Ok(_) => println!("[bridge] Raw socket connection OK"),
-                Err(e) => println!("[bridge] Raw socket connection failed: {}", e),
-            }
-            
-            // Run the client - asteroids will manage the projector and call reify() each frame
-            // This blocks until the client disconnects or is shut down
-            match stardust_xr_fusion::client::Client::connect().await {
-                Ok(_client) => {
-                    println!("[bridge] Connected to Stardust server successfully");
-                    // Now try to run the full asteroids client
-                    ast::client::run::<BridgeState>(&[]).await;
-                },
-                Err(e) => {
-                    println!("[bridge] Failed to connect to Stardust server: {:?}", e);
+            let mut client = match stardust_xr_fusion::client::Client::connect().await {
+                Ok(c) => c,
+                Err(e) => { eprintln!("[bridge] Fusion connect failed: {:?}", e); return; }
+            };
+            let dbus_connection = match fusion_connect_client().await {
+                Ok(c) => c,
+                Err(e) => { eprintln!("[bridge] DBus connect failed: {:?}", e); return; }
+            };
+            let accent_color = stardust_xr_molecules::accent_color::AccentColor::new(dbus_connection.clone());
+            let context = Context { dbus_connection, accent_color };
+            let mut state = BridgeState::default();
+            let mut projector = Projector::create(&state, &context, client.get_root().clone().as_spatial_ref(), "/".into());
+            println!("[bridge] Persistent event loop running");
+            let event_loop = client.sync_event_loop(|client, flow| {
+                let mut frames = vec![];
+                while let Some(re) = client.get_root().recv_root_event() {
+                    if let stardust_xr_fusion::root::RootEvent::Frame { info } = re { frames.push(info); }
                 }
-            }
-            
-            println!("[bridge] Client disconnected");
+                if frames.is_empty() { return; }
+                for frame in frames {
+                    if let Ok(ctrl) = CTRL.lock() { if let Some(shared) = &ctrl.shared_state { if let Ok(ss) = shared.lock() { state.nodes = ss.nodes.clone(); } } }
+                    state.on_frame(&frame);
+                    projector.frame(&context, &frame, &mut state);
+                }
+                projector.update(&context, &mut state);
+                if STOP_REQUESTED.load(Ordering::SeqCst) { flow.stop(); }
+            });
+            let _ = event_loop; // waits until stopped
+            println!("[bridge] Event loop terminated");
             let _ = cmd_task;
         });
         drop(rt);
         let _ = res;
         STARTED.store(false, Ordering::SeqCst);
-        CONNECTED.store(false, Ordering::SeqCst);
     });
 
     ctrl.rt = None; // runtime consumed inside thread
@@ -225,24 +222,12 @@ pub extern "C" fn sdxr_start(app_id: *const std::os::raw::c_char) -> i32 {
     // Store the shared state so we can read from it later
     ctrl.shared_state = Some(shared_state);
     
-    // Give the async runtime a moment to attempt connection
-    std::thread::sleep(std::time::Duration::from_millis(100));
-    
-    // If the thread is still alive, assume connection succeeded
-    // (if it failed immediately, STARTED would be false)
-    if STARTED.load(Ordering::SeqCst) {
-        CONNECTED.store(true, Ordering::SeqCst);
-    }
-    
+    STOP_REQUESTED.store(false, Ordering::SeqCst);
     0
 }
 
 #[no_mangle]
-pub extern "C" fn sdxr_poll() -> i32 {
-    if !STARTED.load(Ordering::SeqCst) { return -1; }
-    // Return 0 if connected and running, -1 if disconnected
-    if CONNECTED.load(Ordering::SeqCst) { 0 } else { -1 }
-}
+pub extern "C" fn sdxr_poll() -> i32 { if !STARTED.load(Ordering::SeqCst) { -1 } else { 0 } }
 
 #[no_mangle]
 pub extern "C" fn sdxr_shutdown() {
