@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 use std::ffi::CStr;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use std::thread::JoinHandle;
 
 use glam::Mat4;
@@ -16,8 +16,16 @@ use stardust_xr_asteroids::{
 use stardust_xr_asteroids::CustomElement;
 use tokio::runtime::Runtime;
 
-#[derive(Default, serde::Serialize, serde::Deserialize)]
-struct BridgeState {}
+#[derive(Clone, serde::Serialize, serde::Deserialize)]
+struct BridgeState {
+    nodes: HashMap<u64, Node>,
+}
+
+impl Default for BridgeState {
+    fn default() -> Self {
+        Self { nodes: HashMap::new() }
+    }
+}
 
 enum Command {
     Create { c_id: u64, name: String, transform: Mat4 },
@@ -35,18 +43,13 @@ impl ClientState for BridgeState {
 impl Reify for BridgeState {
     fn reify(&self) -> impl ast::Element<Self> {
         // Root playspace. Attach a visible Axes element per tracked node id.
-        // We read from the global CTRL so the element tree reflects the latest node registry.
-        let nodes = CTRL.lock().ok()
-            .map(|c| c.nodes.clone())
-            .unwrap_or_default();
-
-        let children = nodes.into_iter().map(|(id, node)| {
+        let children = self.nodes.iter().map(|(id, node)| {
             // Decompose transform into TRS
             let (scale, rot, trans) = node.transform.to_scale_rotation_translation();
-            // Axes are small; apply a uniform visual scale multiplier based on TRS scale.x
-            let vis_scale = glam::Vec3::new(scale.x, scale.y, scale.z) * 0.2;
+            // Make axes much larger and visible: default is 1cm, scale up to 20cm
+            let vis_scale = glam::Vec3::splat(20.0) * scale.x;
             (
-                id,
+                *id,
                 Axes::default()
                     .pos(trans)
                     .rot(rot)
