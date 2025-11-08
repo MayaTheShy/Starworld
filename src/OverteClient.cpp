@@ -265,42 +265,48 @@ void OverteClient::parseNetworkPackets() {
 }
 
 void OverteClient::parseDomainPacket(const char* data, size_t len) {
-    if (len < 1) return;
+    if (len < 6) return;  // NLPacket header is minimum 6 bytes
     
-    unsigned char packetType = static_cast<unsigned char>(data[0]);
+    // Parse NLPacket header
+    auto header = NLPacket::parseHeader(data, len);
+    if (!header) {
+        std::cerr << "[OverteClient] Failed to parse NLPacket header" << std::endl;
+        return;
+    }
     
-    // Domain-level packet types
-    const unsigned char PACKET_TYPE_PING = 0x01;
-    const unsigned char PACKET_TYPE_PING_REPLY = 0x02;
-    const unsigned char PACKET_TYPE_DOMAIN_LIST = 0x03;
-    const unsigned char PACKET_TYPE_DOMAIN_CONNECTION_DENIED = 0x06;
-    const unsigned char PACKET_TYPE_DOMAIN_SERVER_REQUIRE_DT = 0x07;
-    const unsigned char PACKET_TYPE_DOMAIN_CONNECT_ACK = 0x0A;
+    PacketType packetType = NLPacket::getType(data, len);
+    std::cout << "[OverteClient] Domain packet type: " << static_cast<int>(packetType) 
+              << " (0x" << std::hex << static_cast<int>(packetType) << std::dec << ")" 
+              << " version: " << (int)header->version << std::endl;
     
-    std::cout << "[OverteClient] Domain packet type: 0x" << std::hex << (int)packetType << std::dec << std::endl;
+    // Payload starts after header (6 bytes base, +2 if has source ID)
+    const char* payload = data + 6;  // Assuming no source ID for now
+    size_t payloadLen = len - 6;
     
     switch (packetType) {
-        case PACKET_TYPE_DOMAIN_LIST:
-            handleDomainListReply(data + 1, len - 1);
+        case PacketType::DomainList:
+            handleDomainListReply(payload, payloadLen);
             break;
             
-        case PACKET_TYPE_DOMAIN_CONNECTION_DENIED:
-            handleDomainConnectionDenied(data + 1, len - 1);
+        case PacketType::DomainConnectionDenied:
+            handleDomainConnectionDenied(payload, payloadLen);
             break;
             
-        case PACKET_TYPE_DOMAIN_CONNECT_ACK:
-            std::cout << "[OverteClient] Domain connection acknowledged!" << std::endl;
-            m_domainConnected = true;
-            // Request domain list after successful connection
-            sendDomainListRequest();
+        case PacketType::DomainServerConnectionDenied:
+            handleDomainConnectionDenied(payload, payloadLen);
             break;
             
-        case PACKET_TYPE_PING_REPLY:
+        case PacketType::DomainServerRequireDTLS:
+            std::cout << "[OverteClient] Domain server requires DTLS (not yet implemented)" << std::endl;
+            break;
+            
+        case PacketType::PingReply:
             // Keep-alive ping reply
+            std::cout << "[OverteClient] Ping reply received" << std::endl;
             break;
             
         default:
-            std::cout << "[OverteClient] Unknown domain packet type: 0x" << std::hex << (int)packetType << std::dec << std::endl;
+            std::cout << "[OverteClient] Unknown domain packet type: " << static_cast<int>(packetType) << std::endl;
             break;
     }
 }
