@@ -67,8 +67,7 @@ private:
 	bool m_useSimulation{false};
 	bool m_domainConnected{false};
 	std::string m_sessionUUID; // Our client session UUID
-	std::string m_username;     // Domain authentication username
-	std::string m_password;     // Domain authentication password (or token)
+	std::string m_username;     // Domain account username (for future signature-based auth)
 	std::uint32_t m_sequenceNumber{0};  // Packet sequence number for NLPacket protocol
 
 	// Very small in-process world state for testing
