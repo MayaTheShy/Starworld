@@ -181,15 +181,27 @@ void OverteClient::poll() {
         sockaddr_storage from{}; socklen_t fromlen = sizeof(from);
         ssize_t r = ::recvfrom(m_udpFd, buf, sizeof(buf), 0, reinterpret_cast<sockaddr*>(&from), &fromlen);
         if (r > 0) {
+            std::cout << "[OverteClient] <<< Received domain packet (" << r << " bytes)" << std::endl;
             parseDomainPacket(buf, static_cast<size_t>(r));
+        } else if (r < 0 && errno != EWOULDBLOCK && errno != EAGAIN) {
+            std::cerr << "[OverteClient] UDP recv error: " << strerror(errno) << std::endl;
         }
         
         // Send periodic ping to domain to keep connection alive
         static auto lastPing = std::chrono::steady_clock::now();
+        static auto lastDomainList = std::chrono::steady_clock::now();
         auto now = std::chrono::steady_clock::now();
+        
         if (std::chrono::duration_cast<std::chrono::seconds>(now - lastPing).count() >= 1) {
             sendPing(m_udpFd, m_udpAddr, m_udpAddrLen);
             lastPing = now;
+        }
+        
+        // Request domain list periodically if not connected
+        if (!m_domainConnected && std::chrono::duration_cast<std::chrono::seconds>(now - lastDomainList).count() >= 2) {
+            std::cout << "[OverteClient] Retrying domain connection..." << std::endl;
+            sendDomainConnectRequest();
+            lastDomainList = now;
         }
     }
 
