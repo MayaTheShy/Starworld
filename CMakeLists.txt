@@ -10,6 +10,7 @@ option(USE_OVERTE_NETWORKING "Link against Overte networking library" OFF)  # Di
 
 find_package(glm REQUIRED)
 find_package(OpenSSL REQUIRED)
+find_package(ZLIB REQUIRED)
 
 # Find Qt5 for Overte networking library
 if(USE_OVERTE_NETWORKING)
@@ -26,7 +27,7 @@ add_executable(stardust-overte-client
     src/NLPacketCodec.cpp
 )
 
-target_link_libraries(stardust-overte-client PRIVATE glm::glm)
+target_link_libraries(stardust-overte-client PRIVATE glm::glm ZLIB::ZLIB)
 target_link_libraries(stardust-overte-client PRIVATE OpenSSL::Crypto)
 
 # Link Overte networking library
