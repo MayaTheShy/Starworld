@@ -273,6 +273,7 @@ static void ensureVersionTable(uint8_t& vAvatarRemoveAttachments,
             auto asset = parseEnumValues(content, "AssetServerPacketVersion");
             auto entScript = parseEnumValues(content, "EntityScriptCallMethodVersion");
             auto entQuery = parseEnumValues(content, "EntityQueryPacketVersion");
+            auto avatarQuery = parseEnumValues(content, "AvatarQueryPacketVersion");
             auto domAdded = parseEnumValues(content, "DomainServerAddedNodeVersion");
             auto domList = parseEnumValues(content, "DomainListVersion");
             auto domListReq = parseEnumValues(content, "DomainListRequestVersion");
