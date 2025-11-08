@@ -9,6 +9,7 @@ option(USE_STARDUST_SDK "Link against StardustXR SDK if available" OFF)
 option(USE_OVERTE_NETWORKING "Link against Overte networking library" OFF)  # Disabled, using custom impl
 
 find_package(glm REQUIRED)
+find_package(OpenSSL REQUIRED)
 
 # Find Qt5 for Overte networking library
 if(USE_OVERTE_NETWORKING)
@@ -26,6 +27,7 @@ add_executable(stardust-overte-client
 )
 
 target_link_libraries(stardust-overte-client PRIVATE glm::glm)
+target_link_libraries(stardust-overte-client PRIVATE OpenSSL::Crypto)
 
 # Link Overte networking library
 if(USE_OVERTE_NETWORKING)
