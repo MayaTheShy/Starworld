@@ -312,9 +312,60 @@ void OverteClient::parseEntityPacket(const char* data, size_t len) {
 
 void OverteClient::handleDomainListReply(const char* data, size_t len) {
     // DomainList packet contains mixer endpoints
-    // Format varies; for now just log receipt
+    // Format: sequence of [NodeType:u8][UUID:16bytes][PublicSocket:sockaddr][LocalSocket:sockaddr]
     std::cout << "[OverteClient] DomainList reply received (" << len << " bytes)" << std::endl;
-    // TODO: parse mixer sockaddr structures and update entity/avatar endpoints
+    
+    if (len < 1) return;
+    
+    // Parse number of nodes
+    size_t offset = 0;
+    
+    while (offset + 1 < len) {
+        unsigned char nodeType = data[offset++];
+        
+        // Skip UUID (16 bytes)
+        if (offset + 16 > len) break;
+        offset += 16;
+        
+        // Read public socket address (sockaddr_in or sockaddr_in6)
+        if (offset + sizeof(sockaddr_in) > len) break;
+        
+        sockaddr_in publicAddr;
+        std::memcpy(&publicAddr, data + offset, sizeof(sockaddr_in));
+        offset += sizeof(sockaddr_in);
+        
+        // Skip local socket (same size)
+        if (offset + sizeof(sockaddr_in) > len) break;
+        offset += sizeof(sockaddr_in);
+        
+        // NodeType values from Overte:
+        // 0 = DomainServer, 1 = EntityServer, 2 = Agent, 3 = AudioMixer, 4 = AvatarMixer, 5 = AssetServer, 6 = MessagesMixer, 7 = EntityScriptServer
+        const unsigned char NODE_TYPE_ENTITY_SERVER = 1;
+        const unsigned char NODE_TYPE_AVATAR_MIXER = 4;
+        const unsigned char NODE_TYPE_AUDIO_MIXER = 3;
+        
+        char addrStr[INET_ADDRSTRLEN];
+        inet_ntop(AF_INET, &publicAddr.sin_addr, addrStr, sizeof(addrStr));
+        int port = ntohs(publicAddr.sin_port);
+        
+        std::cout << "[OverteClient] Mixer discovered: type=" << (int)nodeType 
+                  << " addr=" << addrStr << ":" << port << std::endl;
+        
+        if (nodeType == NODE_TYPE_ENTITY_SERVER && !m_entityServerReady) {
+            // Update EntityServer connection to use discovered address
+            std::cout << "[OverteClient] Using discovered EntityServer at " << addrStr << ":" << port << std::endl;
+            
+            // Update target address for EntityServer
+            sockaddr_in* entityAddr = reinterpret_cast<sockaddr_in*>(&m_entityAddr);
+            entityAddr->sin_family = AF_INET;
+            entityAddr->sin_port = publicAddr.sin_port;
+            entityAddr->sin_addr = publicAddr.sin_addr;
+            m_entityAddrLen = sizeof(sockaddr_in);
+            
+            // Send EntityQuery to request all entities
+            sendEntityQuery();
+        }
+    }
 }
 
 void OverteClient::sendDomainListRequest() {
