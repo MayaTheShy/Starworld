@@ -16,6 +16,7 @@ use stardust_xr_asteroids::{
 use stardust_xr_asteroids::{CustomElement, Transformable, Projector, Context};
 use stardust_xr_molecules::accent_color::AccentColor;
 use stardust_xr_fusion::objects::connect_client as fusion_connect_client;
+use stardust_xr_fusion::node::NodeType;
 use stardust_xr_fusion::root::RootAspect;
 use tokio::runtime::Runtime;
 
@@ -211,9 +212,19 @@ pub extern "C" fn sdxr_start(app_id: *const std::os::raw::c_char) -> i32 {
             let mut projector = Projector::create(&state, &context, client.get_root().clone().as_spatial_ref(), "/".into());
             println!("[bridge] Persistent event loop running");
             let event_loop = client.sync_event_loop(|client, flow| {
+                use stardust_xr_fusion::root::{RootEvent, ClientState as SaveStatePayload};
                 let mut frames = vec![];
                 while let Some(re) = client.get_root().recv_root_event() {
-                    if let stardust_xr_fusion::root::RootEvent::Frame { info } = re { frames.push(info); }
+                    match re {
+                        RootEvent::Ping { response } => {
+                            let _ = response.send_ok(());
+                        }
+                        RootEvent::Frame { info } => frames.push(info),
+                        RootEvent::SaveState { response } => {
+                            let payload = SaveStatePayload { data: None, root: client.get_root().id(), spatial_anchors: Default::default() };
+                            let _ = response.send_ok(payload);
+                        }
+                    }
                 }
                 if frames.is_empty() { return; }
                 for frame in frames {
