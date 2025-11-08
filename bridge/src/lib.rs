@@ -62,9 +62,9 @@ impl Reify for BridgeState {
             (
                 *id,
                 Axes::default()
-                    .pos(trans)
-                    .rot(rot)
-                    .scl(vis_scale)
+                    .pos([trans.x, trans.y, trans.z])
+                    .rot([rot.x, rot.y, rot.z, rot.w])
+                    .scl([vis_scale.x, vis_scale.y, vis_scale.z])
                     .build()
             )
         });
