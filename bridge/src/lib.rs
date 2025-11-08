@@ -211,7 +211,7 @@ pub extern "C" fn sdxr_start(app_id: *const std::os::raw::c_char) -> i32 {
             let mut state = BridgeState::default();
             let mut projector = Projector::create(&state, &context, client.get_root().clone().as_spatial_ref(), "/".into());
             println!("[bridge] Persistent event loop running");
-            let event_loop = client.sync_event_loop(|client, flow| {
+            let event_loop_fut = client.sync_event_loop(|client, flow| {
                 use stardust_xr_fusion::root::{RootEvent, ClientState as SaveStatePayload};
                 let mut frames = vec![];
                 while let Some(re) = client.get_root().recv_root_event() {
@@ -235,7 +235,9 @@ pub extern "C" fn sdxr_start(app_id: *const std::os::raw::c_char) -> i32 {
                 projector.update(&context, &mut state);
                 if STOP_REQUESTED.load(Ordering::SeqCst) { flow.stop(); }
             });
-            let _ = event_loop; // waits until stopped
+            if let Err(e) = event_loop_fut.await {
+                eprintln!("[bridge] Event loop error: {:?}", e);
+            }
             println!("[bridge] Event loop terminated");
             let _ = cmd_task;
         });
