@@ -131,6 +131,12 @@ pub extern "C" fn sdxr_start(app_id: *const std::os::raw::c_char) -> i32 {
         .build()
         .expect("tokio runtime");
     let handle = std::thread::spawn(move || {
+        // Initialize tracing for debugging
+        let _ = tracing_subscriber::fmt()
+            .with_env_filter(tracing_subscriber::EnvFilter::from_default_env()
+                .add_directive("stardust_xr_fusion=debug".parse().unwrap()))
+            .try_init();
+            
         let res = rt.block_on(async move {
             // Spawn command processor task that updates shared state
             let cmd_task = tokio::spawn(async move {
