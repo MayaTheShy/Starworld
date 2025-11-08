@@ -48,6 +48,9 @@ public:
 
 private:
 	void parseNetworkPackets(); // standards-aligned parsing (scaffold)
+	void parseEntityPacket(const char* data, size_t len);
+	void handleDomainListReply(const char* data, size_t len);
+	void sendDomainListRequest();
 
 	std::string m_domainUrl;
 	std::string m_host{"127.0.0.1"};
@@ -69,5 +72,12 @@ private:
 	bool m_udpReady{false};
 	struct sockaddr_storage m_udpAddr{};
 	socklen_t m_udpAddrLen{0};
+	
+	// EntityServer connection
+	int m_entityFd{-1};
+	bool m_entityServerReady{false};
+	sockaddr_storage m_entityAddr{};
+	socklen_t m_entityAddrLen{0};
+	std::vector<char> m_entityBuffer; // accumulate partial packets
 };
 
