@@ -3,6 +3,7 @@
 #include "OverteClient.hpp"
 #include "SceneSync.Hpp"
 #include "InputHandler.hpp"
+#include "DomainDiscovery.hpp"
 
 #include <iostream>
 #include <thread>
@@ -26,13 +27,47 @@ int main(int argc, char** argv) {
 
     // Overte localhost default assumption (can override via OVERTE_URL env or --overte=ws://host:port)
     std::string overteUrl = "ws://127.0.0.1:40102";
+    bool useDiscovery = false;
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
         const std::string ov = "--overte=";
+        const std::string disc = "--discover";
         if (arg.rfind(ov, 0) == 0) overteUrl = arg.substr(ov.size());
+        else if (arg == disc) useDiscovery = true;
     }
     if (const char* envOv = std::getenv("OVERTE_URL")) {
         overteUrl = envOv;
+    }
+    if (const char* envDisc = std::getenv("OVERTE_DISCOVER")) {
+        if (std::string(envDisc) == "1" || std::string(envDisc) == "true") useDiscovery = true;
+    }
+
+    if (useDiscovery) {
+        std::cout << "[Discovery] Querying metaverse directories for public domains..." << std::endl;
+        auto domains = discoverDomains(25);
+        if (domains.empty()) {
+            std::cout << "[Discovery] No domains found via directory; using provided URL: " << overteUrl << std::endl;
+        } else {
+            std::cout << "[Discovery] Found " << domains.size() << " candidate domain(s):" << std::endl;
+            int idx = 0;
+            for (const auto& d : domains) {
+                std::cout << "  [" << idx++ << "] "
+                          << (d.name.empty() ? d.networkHost : d.name)
+                          << " -> ws://" << d.networkHost << ":" << d.httpPort
+                          << " (udp:" << d.udpPort << ")" << std::endl;
+            }
+            // Choose first candidate by default; allow override index via env
+            int choice = 0;
+            if (const char* envIdx = std::getenv("OVERTE_DISCOVER_INDEX")) {
+                try { choice = std::stoi(envIdx); } catch (...) {}
+                if (choice < 0 || choice >= (int)domains.size()) choice = 0;
+            }
+            const auto& pick = domains[choice];
+            overteUrl = std::string("ws://") + pick.networkHost + ":" + std::to_string(pick.httpPort);
+            // Pass UDP override via env for this process lifetime
+            setenv("OVERTE_UDP_PORT", std::to_string(pick.udpPort).c_str(), 1);
+            std::cout << "[Discovery] Selected: " << overteUrl << std::endl;
+        }
     }
     OverteClient overte(overteUrl);
     // Overte is optional; warn if unreachable but continue in offline mode.
