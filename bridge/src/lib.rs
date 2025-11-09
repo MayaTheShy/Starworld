@@ -63,42 +63,174 @@ impl ClientState for BridgeState {
 
 impl Reify for BridgeState {
     fn reify(&self) -> impl ast::Element<Self> {
-        // Root playspace. Attach a visible cube wireframe per tracked node id.
+        use stardust_xr_fusion::drawable::{Line, LinePoint};
+        use stardust_xr_fusion::values::{color::rgba_linear, Vector3};
+        
+        // Root playspace. Create appropriate visuals per entity type
         let children = self.nodes.iter().map(|(id, node)| {
             // Decompose transform into TRS
             let (scale, rot, trans) = node.transform.to_scale_rotation_translation();
-            // Visible cube size: 20cm, scaled by node scale
-            let vis_scale = glam::Vec3::splat(0.20) * scale.x;
-
-            // Build cube edges as 12 line segments
-            use stardust_xr_fusion::drawable::{Line, LinePoint};
-            use stardust_xr_fusion::values::{color::rgba_linear, Vector3};
-            let t = 0.004; // thickness
-            let c = rgba_linear!(0.8, 0.8, 0.9, 1.0);
-            let hs = 0.5f32; // half size in model space (unit cube)
-            let mut seg = |a: [f32;3], b: [f32;3]| -> Line {
-                let p0 = LinePoint { point: Vector3 { x: a[0], y: a[1], z: a[2] }, thickness: t, color: c };
-                let p1 = LinePoint { point: Vector3 { x: b[0], y: b[1], z: b[2] }, thickness: t, color: c };
-                Line { points: vec![p0, p1], cyclic: false }
+            
+            // Use entity dimensions if available, otherwise use transform scale
+            let dims = glam::Vec3::from(node.dimensions);
+            let vis_scale = if dims.length() > 0.001 {
+                dims
+            } else {
+                scale
             };
-            let corners = [
-                [-hs, -hs, -hs], [ hs, -hs, -hs], [ hs,  hs, -hs], [-hs,  hs, -hs],
-                [-hs, -hs,  hs], [ hs, -hs,  hs], [ hs,  hs,  hs], [-hs,  hs,  hs],
-            ];
-            // Edges: 0-1-2-3-0 (bottom), 4-5-6-7-4 (top), verticals 0-4,1-5,2-6,3-7
-            let lines = vec![
-                seg(corners[0], corners[1]), seg(corners[1], corners[2]), seg(corners[2], corners[3]), seg(corners[3], corners[0]),
-                seg(corners[4], corners[5]), seg(corners[5], corners[6]), seg(corners[6], corners[7]), seg(corners[7], corners[4]),
-                seg(corners[0], corners[4]), seg(corners[1], corners[5]), seg(corners[2], corners[6]), seg(corners[3], corners[7]),
-            ];
-            (
-                *id,
-                Lines::new(lines)
-                    .pos([trans.x, trans.y, trans.z])
-                    .rot([rot.x, rot.y, rot.z, rot.w])
-                    .scl([vis_scale.x, vis_scale.y, vis_scale.z])
-                    .build()
-            )
+            
+            // Use entity color if set
+            let node_color = rgba_linear!(node.color[0], node.color[1], node.color[2], node.color[3]);
+            
+            // Entity types: 0=Unknown, 1=Box, 2=Sphere, 3=Model, ...
+            match node.entity_type {
+                1 => {
+                    // Box entity - render as colored wireframe cube
+                    let t = 0.006; // line thickness
+                    let hs = 0.5f32; // half size in model space (unit cube)
+                    let mut seg = |a: [f32;3], b: [f32;3]| -> Line {
+                        let p0 = LinePoint { point: Vector3 { x: a[0], y: a[1], z: a[2] }, thickness: t, color: node_color };
+                        let p1 = LinePoint { point: Vector3 { x: b[0], y: b[1], z: b[2] }, thickness: t, color: node_color };
+                        Line { points: vec![p0, p1], cyclic: false }
+                    };
+                    let corners = [
+                        [-hs, -hs, -hs], [ hs, -hs, -hs], [ hs,  hs, -hs], [-hs,  hs, -hs],
+                        [-hs, -hs,  hs], [ hs, -hs,  hs], [ hs,  hs,  hs], [-hs,  hs,  hs],
+                    ];
+                    // 12 edges of a cube
+                    let lines = vec![
+                        seg(corners[0], corners[1]), seg(corners[1], corners[2]), seg(corners[2], corners[3]), seg(corners[3], corners[0]),
+                        seg(corners[4], corners[5]), seg(corners[5], corners[6]), seg(corners[6], corners[7]), seg(corners[7], corners[4]),
+                        seg(corners[0], corners[4]), seg(corners[1], corners[5]), seg(corners[2], corners[6]), seg(corners[3], corners[7]),
+                    ];
+                    (
+                        *id,
+                        Lines::new(lines)
+                            .pos([trans.x, trans.y, trans.z])
+                            .rot([rot.x, rot.y, rot.z, rot.w])
+                            .scl([vis_scale.x, vis_scale.y, vis_scale.z])
+                            .build()
+                    )
+                },
+                2 => {
+                    // Sphere entity - render as colored wireframe sphere (3 rings)
+                    let t = 0.006;
+                    let r = 0.5f32; // radius in model space
+                    let segments = 24;
+                    
+                    let mut lines = Vec::new();
+                    
+                    // XY plane circle (around Z)
+                    let mut xy_points = Vec::new();
+                    for i in 0..=segments {
+                        let angle = (i as f32 / segments as f32) * std::f32::consts::TAU;
+                        xy_points.push(LinePoint {
+                            point: Vector3 { x: r * angle.cos(), y: r * angle.sin(), z: 0.0 },
+                            thickness: t,
+                            color: node_color,
+                        });
+                    }
+                    lines.push(Line { points: xy_points, cyclic: true });
+                    
+                    // XZ plane circle (around Y)
+                    let mut xz_points = Vec::new();
+                    for i in 0..=segments {
+                        let angle = (i as f32 / segments as f32) * std::f32::consts::TAU;
+                        xz_points.push(LinePoint {
+                            point: Vector3 { x: r * angle.cos(), y: 0.0, z: r * angle.sin() },
+                            thickness: t,
+                            color: node_color,
+                        });
+                    }
+                    lines.push(Line { points: xz_points, cyclic: true });
+                    
+                    // YZ plane circle (around X)
+                    let mut yz_points = Vec::new();
+                    for i in 0..=segments {
+                        let angle = (i as f32 / segments as f32) * std::f32::consts::TAU;
+                        yz_points.push(LinePoint {
+                            point: Vector3 { x: 0.0, y: r * angle.cos(), z: r * angle.sin() },
+                            thickness: t,
+                            color: node_color,
+                        });
+                    }
+                    lines.push(Line { points: yz_points, cyclic: true });
+                    
+                    (
+                        *id,
+                        Lines::new(lines)
+                            .pos([trans.x, trans.y, trans.z])
+                            .rot([rot.x, rot.y, rot.z, rot.w])
+                            .scl([vis_scale.x, vis_scale.y, vis_scale.z])
+                            .build()
+                    )
+                },
+                3 if !node.model_url.is_empty() => {
+                    // Model entity - would load from URL
+                    // For now, render as a distinctive wireframe octahedron to show it's different
+                    let t = 0.006;
+                    let r = 0.5f32;
+                    let mut seg = |a: [f32;3], b: [f32;3]| -> Line {
+                        let p0 = LinePoint { point: Vector3 { x: a[0], y: a[1], z: a[2] }, thickness: t, color: node_color };
+                        let p1 = LinePoint { point: Vector3 { x: b[0], y: b[1], z: b[2] }, thickness: t, color: node_color };
+                        Line { points: vec![p0, p1], cyclic: false }
+                    };
+                    
+                    // Octahedron vertices
+                    let top = [0.0, r, 0.0];
+                    let bottom = [0.0, -r, 0.0];
+                    let front = [0.0, 0.0, r];
+                    let back = [0.0, 0.0, -r];
+                    let right = [r, 0.0, 0.0];
+                    let left = [-r, 0.0, 0.0];
+                    
+                    let lines = vec![
+                        // Top pyramid
+                        seg(top, front), seg(top, right), seg(top, back), seg(top, left),
+                        // Bottom pyramid
+                        seg(bottom, front), seg(bottom, right), seg(bottom, back), seg(bottom, left),
+                        // Middle square
+                        seg(front, right), seg(right, back), seg(back, left), seg(left, front),
+                    ];
+                    
+                    (
+                        *id,
+                        Lines::new(lines)
+                            .pos([trans.x, trans.y, trans.z])
+                            .rot([rot.x, rot.y, rot.z, rot.w])
+                            .scl([vis_scale.x, vis_scale.y, vis_scale.z])
+                            .build()
+                    )
+                },
+                _ => {
+                    // Unknown/default - render as simple wireframe cube
+                    let t = 0.004;
+                    let c = rgba_linear!(0.6, 0.6, 0.6, 0.8); // Gray for unknown
+                    let hs = 0.5f32;
+                    let mut seg = |a: [f32;3], b: [f32;3]| -> Line {
+                        let p0 = LinePoint { point: Vector3 { x: a[0], y: a[1], z: a[2] }, thickness: t, color: c };
+                        let p1 = LinePoint { point: Vector3 { x: b[0], y: b[1], z: b[2] }, thickness: t, color: c };
+                        Line { points: vec![p0, p1], cyclic: false }
+                    };
+                    let corners = [
+                        [-hs, -hs, -hs], [ hs, -hs, -hs], [ hs,  hs, -hs], [-hs,  hs, -hs],
+                        [-hs, -hs,  hs], [ hs, -hs,  hs], [ hs,  hs,  hs], [-hs,  hs,  hs],
+                    ];
+                    let lines = vec![
+                        seg(corners[0], corners[1]), seg(corners[1], corners[2]), seg(corners[2], corners[3]), seg(corners[3], corners[0]),
+                        seg(corners[4], corners[5]), seg(corners[5], corners[6]), seg(corners[6], corners[7]), seg(corners[7], corners[4]),
+                        seg(corners[0], corners[4]), seg(corners[1], corners[5]), seg(corners[2], corners[6]), seg(corners[3], corners[7]),
+                    ];
+                    (
+                        *id,
+                        Lines::new(lines)
+                            .pos([trans.x, trans.y, trans.z])
+                            .rot([rot.x, rot.y, rot.z, rot.w])
+                            .scl([vis_scale.x, vis_scale.y, vis_scale.z])
+                            .build()
+                    )
+                }
+            }
         });
 
         PlaySpace
