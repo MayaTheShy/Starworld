@@ -87,6 +87,8 @@ std::vector<int> findAllInts(const std::string& json, const std::string& key) {
     return out;
 }
 
+} // anonymous namespace
+
 // Heuristic: map fields from common metaverse JSONs
 // Vircadia/Overte often expose entries with fields like name, network_address, domain, ice_server_address, port, etc.
 std::vector<DiscoveredDomain> parseDomains(const std::string& json) {
