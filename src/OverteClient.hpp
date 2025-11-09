@@ -5,6 +5,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <memory>
 
 #include <glm/glm.hpp>
 
@@ -12,6 +13,9 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
+
+// Forward declarations
+class OverteAuth;
 
 // Overte entity types (matching Overte EntityTypes.h)
 enum class EntityType {
