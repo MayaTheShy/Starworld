@@ -133,7 +133,6 @@ std::vector<DiscoveredDomain> parseDomains(const std::string& json) {
     }
     return dedup;
 }
-} // namespace
 
 std::vector<DiscoveredDomain> discoverDomains(int maxDomains) {
     std::vector<DiscoveredDomain> result;
