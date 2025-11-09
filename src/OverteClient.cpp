@@ -1013,10 +1013,10 @@ void OverteClient::sendDomainListRequest() {
 }
 
 void OverteClient::sendPing(int fd, const sockaddr_storage& addr, socklen_t addrLen) {
-    // Create NLPacket for Ping with correct version - sourced if we have a local ID
+    // Create NLPacket for Ping with correct version
     NLPacket packet(PacketType::Ping, PacketVersions::Ping_IncludeConnectionID, false);
+    // Include our local ID if we have one (sourced packet)
     if (m_localID != 0) {
-        packet.setSourced(true);
         packet.setSourceID(m_localID);
     }
     packet.setSequenceNumber(m_sequenceNumber++);
@@ -1042,6 +1042,10 @@ void OverteClient::sendEntityQuery() {
     
     // Create EntityQuery packet (PacketType::EntityQuery = 0x29)
     NLPacket packet(PacketType::EntityQuery, 0, true);
+    // Include our local ID (sourced packet)
+    if (m_localID != 0) {
+        packet.setSourceID(m_localID);
+    }
     packet.setSequenceNumber(m_sequenceNumber++);
     
     // OctreeQuery payload format (from OctreeQuery::getBroadcastData):
