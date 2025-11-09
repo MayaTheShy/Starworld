@@ -617,21 +617,39 @@ void OverteClient::sendDomainConnectRequest() {
     // 9. Node type / owner type (NodeType_t)
     qs.writeUInt8(static_cast<uint8_t>('I')); // Agent
     
-    // 10. Public socket: type (quint8) + address
+    // Determine local UDP socket address/port (bind address if needed)
+    uint32_t localIPv4 = 0x7F000001; // 127.0.0.1 fallback
+    uint16_t localPort = 0;
+    sockaddr_storage localSs{}; socklen_t localLen = sizeof(localSs);
+    if (::getsockname(m_udpFd, reinterpret_cast<sockaddr*>(&localSs), &localLen) == 0) {
+        if (localSs.ss_family == AF_INET) {
+            auto* sin = reinterpret_cast<sockaddr_in*>(&localSs);
+            localIPv4 = ntohl(sin->sin_addr.s_addr);
+            localPort = ntohs(sin->sin_port);
+        }
+    }
+    // Helper lambda to write QHostAddress (IPv4) in QDataStream format: [protocol:quint8=1][IPv4:quint32]
+    auto writeQHostAddressIPv4 = [&qs](uint32_t hostOrderIPv4){
+        qs.writeUInt8(1); // QAbstractSocket::IPv4Protocol
+        qs.writeUInt32BE(hostOrderIPv4); // already host order -> big endian conversion inside writer
+    };
+
+    // 10. Public socket: type (quint8) + SockAddr (QHostAddress + quint16 port, WITHOUT socket type per SockAddr QDataStream operator)
     qs.writeUInt8(1); // SocketType::UDP
-    // Public IP and port (we don't know our public IP, use local)
-    qs.writeUInt32BE(0x7F000001); // 127.0.0.1 placeholder
-    qs.writeUInt16BE(0); // port 0 (unknown)
-    
-    // 11. Local socket: type (quint8) + address
+    writeQHostAddressIPv4(localIPv4); // using local as placeholder for public
+    qs.writeUInt16BE(localPort); // actual local port (might be 0 if not yet bound)
+
+    // 11. Local socket: type (quint8) + SockAddr
     qs.writeUInt8(1); // SocketType::UDP
-    // Local IP and port (use our bound UDP socket info)
-    qs.writeUInt32BE(0x7F000001); // 127.0.0.1
-    qs.writeUInt16BE(0); // ephemeral port (0 = unknown)
+    writeQHostAddressIPv4(localIPv4);
+    qs.writeUInt16BE(localPort);
     
     // 12. Node types of interest (QList<NodeType_t>)
-    // Write as Qt container: size (qint32) + elements (quint8)
-    qs.writeInt32BE(0); // empty list for now
+    // Write as Qt container: size (qint32) + elements (quint8) -- include a few mixers we want
+    // Typical Interface requests at least AvatarMixer, AudioMixer, EntityServer
+    const uint8_t interestList[] = { static_cast<uint8_t>('W'), /* AvatarMixer */ static_cast<uint8_t>('M'), /* AudioMixer */ static_cast<uint8_t>('o') /* EntityServer */ };
+    qs.writeInt32BE(static_cast<int32_t>(sizeof(interestList)));
+    for (auto b : interestList) qs.writeUInt8(b);
     
     // 13. Place name (QString) - empty
     qs.writeQString("");
@@ -645,7 +663,11 @@ void OverteClient::sendDomainConnectRequest() {
     if (s > 0) {
         std::cout << "[OverteClient] DomainConnectRequest sent (" << s << " bytes, seq=" << (m_sequenceNumber-1) << ")" << std::endl;
         std::cout << "[OverteClient]   Session UUID: " << m_sessionUUID << std::endl;
-        std::cout << "[OverteClient]   Protocol signature: " << protocolSig.size() << " bytes (MD5)" << std::endl;
+    // Print MD5 signature in hex for diff against reference Overte client
+    std::ostringstream md5hex; md5hex << std::hex << std::setfill('0');
+    for (uint8_t byte : protocolSig) md5hex << std::setw(2) << (int)byte;
+    std::cout << "[OverteClient]   Protocol signature: " << protocolSig.size() << " bytes (MD5)" << std::endl;
+    std::cout << "[OverteClient]   Protocol signature (hex): " << md5hex.str() << std::endl;
         // Hex dump first 64 bytes
         std::cout << "[OverteClient] >>> NLPacket Hex: ";
         for (size_t i = 0; i < std::min(size_t(64), data.size()); ++i) {
