@@ -83,11 +83,14 @@ impl<State: ast::ValidState> CustomElement<State> for ModelWrapper {
         info: ast::CreateInnerInfo,
         _resource: &mut Self::Resource,
     ) -> Result<Self::Inner, Self::Error> {
+        eprintln!("[bridge/ModelWrapper] Creating model with resource: {:?}", self.resource_id);
         let model = stardust_xr_fusion::drawable::Model::create(
             info.parent_space,
             self.transform,
             &self.resource_id,
         )?;
+        
+        eprintln!("[bridge/ModelWrapper] Model created successfully");
         
         // Try to set color on model parts
         // Note: set_material_parameter doesn't exist in this version, skip for now
