@@ -80,18 +80,30 @@ struct Node {
 
 ### 4. Enhanced Rendering (`bridge/src/lib.rs` - `reify()`)
 
-**Implemented type-specific rendering:**
+**Implemented type-specific wireframe rendering:**
 
-- **Box entities (type 1):** Colored wireframe cubes using entity color
-- **Sphere entities (type 2):** Three orthogonal wireframe circles (XY, XZ, YZ planes) in entity color
-- **Model entities (type 3):** Distinctive octahedron wireframe (placeholder for actual model loading)
+The current implementation uses wireframe visualizations for all entity types, providing a lightweight and performant rendering solution that works with the Stardust Lines API:
+
+- **Box entities (type 1):** Colored wireframe cubes (12 edges) using entity color and dimensions
+- **Sphere entities (type 2):** Three orthogonal wireframe circles (XY, XZ, YZ planes) forming a sphere visualization
+- **Model entities (type 3):** Distinctive octahedron wireframe (12 edges) as a placeholder for 3D models
 - **Unknown types:** Gray wireframe cube as fallback
 
 **Features:**
 - Respects entity dimensions for accurate sizing
-- Uses entity-specific colors
+- Uses entity-specific RGB colors with alpha transparency
 - Applies proper transforms (position, rotation, scale)
 - Maintains visual distinction between entity types
+- Lightweight rendering using the Stardust Lines element
+
+**Note on 3D Model Support:**
+Full 3D model rendering with textures requires:
+1. Downloading Overte model assets (typically GLTF/GLB format)
+2. Caching them locally
+3. Using `Model::direct(PathBuf)` with local file paths
+4. The current implementation uses wireframe placeholders as Overte model URLs are HTTP-based and require asset pipeline integration
+
+Future enhancement: Implement a background asset downloader that fetches Overte models and textures, caches them locally, and dynamically updates the scene graph to replace wireframe placeholders with actual 3D models.
 
 ### 5. StardustBridge C++ Interface (`StardustBridge.hpp/.cpp`)
 
