@@ -357,27 +357,27 @@ This allows you to:
 
 ### Documentation
 - **[README.md](README.md)** - Main documentation (you are here)
-- **[DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md)** - Quick reference for developers
-- **[CHANGELOG.md](CHANGELOG.md)** - Version history and changes
-- **[OVERTE_AUTH.md](OVERTE_AUTH.md)** - OAuth implementation details
-- **[OVERTE_ASSIGNMENT_CLIENT_TASK.md](OVERTE_ASSIGNMENT_CLIENT_TASK.md)** - Protocol implementation
-- **[ENTITY_RENDERING_ENHANCEMENTS.md](ENTITY_RENDERING_ENHANCEMENTS.md)** - Rendering implementation
-- **[MODELCACHE_IMPLEMENTATION.md](MODELCACHE_IMPLEMENTATION.md)** - Asset pipeline details
-- **[CI_SETUP_SUMMARY.md](CI_SETUP_SUMMARY.md)** - Continuous integration setup
+- **[docs/DEVELOPER_GUIDE.md](docs/DEVELOPER_GUIDE.md)** - Quick reference for developers
+- **[docs/CHANGELOG.md](docs/CHANGELOG.md)** - Version history and changes
+- **[docs/OVERTE_AUTH.md](docs/OVERTE_AUTH.md)** - OAuth implementation details
+- **[docs/OVERTE_ASSIGNMENT_CLIENT_TASK.md](docs/OVERTE_ASSIGNMENT_CLIENT_TASK.md)** - Protocol implementation
+- **[docs/ENTITY_RENDERING_ENHANCEMENTS.md](docs/ENTITY_RENDERING_ENHANCEMENTS.md)** - Rendering implementation
+- **[docs/MODELCACHE_IMPLEMENTATION.md](docs/MODELCACHE_IMPLEMENTATION.md)** - Asset pipeline details
+- **[docs/CI_SETUP_SUMMARY.md](docs/CI_SETUP_SUMMARY.md)** - Continuous integration setup
 
 ### Getting Started
-1. Read [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md) for build/run commands
-2. Check [CHANGELOG.md](CHANGELOG.md) for recent changes
-3. Review protocol details in [OVERTE_ASSIGNMENT_CLIENT_TASK.md](OVERTE_ASSIGNMENT_CLIENT_TASK.md)
+1. Read [docs/DEVELOPER_GUIDE.md](docs/DEVELOPER_GUIDE.md) for build/run commands
+2. Check [docs/CHANGELOG.md](docs/CHANGELOG.md) for recent changes
+3. Review protocol details in [docs/OVERTE_ASSIGNMENT_CLIENT_TASK.md](docs/OVERTE_ASSIGNMENT_CLIENT_TASK.md)
 
 ### Development Workflow
 1. Create feature branch: `git checkout -b feature/my-feature`
-2. Make changes and test locally: `./ci-test.sh`
+2. Make changes and test locally: `./scripts/ci-test.sh`
 3. Commit with clear messages
 4. Push and create PR in Gitea
 5. CI will run automated tests
 
-See [CI_SETUP_SUMMARY.md](CI_SETUP_SUMMARY.md) for details on the CI pipeline.
+See [docs/CI_SETUP_SUMMARY.md](docs/CI_SETUP_SUMMARY.md) for details on the CI pipeline.
 
 ## License
 

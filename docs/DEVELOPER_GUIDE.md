@@ -4,7 +4,7 @@
 
 ```bash
 # Full clean build
-./build_and_test.sh
+./scripts/build_and_test.sh
 
 # Build Rust bridge only
 cd bridge && cargo build --release
@@ -42,7 +42,7 @@ RUST_LOG=debug ./build/starworld
 
 ```bash
 # Run all tests
-./ci-test.sh
+./scripts/ci-test.sh
 
 # Run C++ tests only
 ./build/starworld-tests
