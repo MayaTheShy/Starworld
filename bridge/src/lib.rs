@@ -368,10 +368,9 @@ pub extern "C" fn sdxr_start(app_id: *const std::os::raw::c_char) -> i32 {
                     }
                 }
             };
-            let accent_color = AccentColor::new(dbus_connection.clone());
-            let context = Context { dbus_connection, accent_color };
+            
             let mut state = BridgeState::default();
-            let mut projector = Projector::create(&state, &context, client.get_root().clone().as_spatial_ref(), "/".into());
+            
             println!("[bridge] Persistent event loop running");
             let event_loop_fut = client.sync_event_loop(|client, flow| {
                 use stardust_xr_fusion::root::{RootEvent, ClientState as SaveStatePayload};
