@@ -108,31 +108,70 @@ To implement full metaverse authentication:
 
 For now, the implementation correctly handles both authenticated and anonymous modes.
 
-## Context
+## Protocol Implementation Details
 
-We have successfully implemented the Overte domain connection protocol in `src/OverteClient.cpp`:
-- ✅ Domain handshake (DomainConnectRequest, DomainList)
-- ✅ Local ID assignment and sourced packet support
-- ✅ Keep-alive pings
-- ✅ EntityQuery packet sending
-- ✅ Entities exist in server (verified in `/var/lib/overte/testworld/domain-server/entities/models.json.gz`)
+### NLPacket Format
+All Overte network packets use the NLPacket format:
+```
+Header (6+ bytes):
+  [0-3]: Sequence number (uint32 BE)
+  [4]:   Packet type (uint8)
+  [5]:   Version (uint8)
+  [6+]:  Payload (variable length)
+```
 
-However, **EntityData packets are not being received** because we're only connected to the domain server, not the assignment clients.
+### DomainConnectRequest Packet (Type 0x1F)
+```cpp
+// Sent to domain server on UDP port 40104
+225 bytes total:
+- NLPacket header (6 bytes)
+- 11 fields via QDataStream:
+  1. Hardware address (empty QString)
+  2. Machine fingerprint (UUID as 16 bytes)
+  3. Connect reason (QString, typically empty)
+  4. Previous session UUID (16 bytes, null for first connect)
+  5. Protocol version signature (16 byte MD5: eb1600e798dc5e03c755a968dc16b7fc)
+  6. Local ID (2 bytes, 0 for initial request)
+  7. Session local ID (16 bytes, null for first connect)
+  8-11. Domain username/password fields (empty for anonymous)
+```
 
-## Problem
+### DomainList Reply Packet (Type 0x02)
+```cpp
+// Received from domain server
+Variable length:
+- NLPacket header (6 bytes)
+- Domain UUID (16 bytes)
+- Session UUID (16 bytes) - assigned by domain
+- Local ID (2 bytes) - our identifier
+- Permissions (4 bytes)
+- Timestamps (3x8 bytes = 24 bytes)
+- New connection flag (1 byte)
+- Assignment client count (variable int)
+- For each assignment client:
+  - Node type (char: 'o'=EntityServer, 'W'=AvatarMixer, 'M'=AudioMixer)
+  - Node UUID (16 bytes)
+  - Socket type (int)
+  - Public address (QHostAddress)
+  - Public port (uint16)
+  - Local address (QHostAddress)
+  - Local port (uint16)
+  - Permissions (uint32)
+  - Interest flags (bool)
+  - Pool/Replicated flags (2 bools)
+```
 
-In Overte's architecture:
-1. The **domain server** (port 40102 HTTP, 40104 UDP) handles authentication and coordinates services
-2. **Assignment clients** run specialized services on separate UDP ports:
-   - Entity Server (serves entity data)
-   - Avatar Mixer (avatar positions/animations)
-   - Audio Mixer (spatial audio)
-   - Asset Server (3D models, textures)
-   - Messages Mixer (chat/messages)
+### QDataStream Serialization
+Overte uses Qt's QDataStream format (big-endian):
+- **QString**: 4-byte length prefix + UTF-16 characters (2 bytes each)
+- **UUID**: 16 raw bytes
+- **Integers**: Big-endian (use ntohl/be32toh)
+- **QHostAddress**: 1 byte protocol + 4 bytes IPv4 or 16 bytes IPv6
 
-Our current implementation sends EntityQuery to the domain server, but entity data is served by the **Entity Server assignment client** which runs on a different, dynamically-assigned UDP port.
-
-## Current State
+### Implementation Files
+- `src/OverteClient.cpp`: Main protocol implementation
+- `src/NLPacketCodec.cpp`: Packet encoding/decoding
+- `src/QDataStream.cpp`: Qt serialization compatibility
 
 ### What Works
 ```cpp
