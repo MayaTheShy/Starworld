@@ -449,7 +449,7 @@ uint8_t NLPacket::versionForPacketType(PacketType type) {
         // For other packet types, return a default version
         // In real Overte, each has a specific version
             default:
-                return 23;  // Default version for unspecified packets (matches Overte)
+                return 22;  // Default version for unspecified packets (matches Overte PacketHeaders.cpp)
     }
 }
 
