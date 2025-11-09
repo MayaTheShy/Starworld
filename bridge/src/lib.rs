@@ -349,6 +349,7 @@ pub extern "C" fn sdxr_start(app_id: *const std::os::raw::c_char) -> i32 {
                     state.on_frame(&frame);
                     projector.frame(&context, &frame, &mut state);
                 }
+                eprintln!("[bridge/event_loop] Processing {} frames, updating projector with {} nodes", frames.len(), state.nodes.len());
                 projector.update(&context, &mut state);
                 if STOP_REQUESTED.load(Ordering::SeqCst) { flow.stop(); }
             });
