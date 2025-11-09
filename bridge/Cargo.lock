@@ -2409,7 +2409,26 @@ dependencies = [
  "rustc-hash",
  "serde",
  "shiva-color-rs",
- "stardust-xr-schemas",
+ "stardust-xr-schemas 1.5.3",
+ "thiserror 2.0.17",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "stardust-xr"
+version = "0.45.0"
+source = "git+https://github.com/StardustXR/core.git?branch=dev#5176d1e9d26f1e8a4bd774519f3e7d1fddc121a9"
+dependencies = [
+ "color-eyre",
+ "dirs",
+ "global_counter",
+ "mint",
+ "nix 0.27.1",
+ "rustc-hash",
+ "serde",
+ "shiva-color-rs",
+ "stardust-xr-schemas 1.5.3 (git+https://github.com/StardustXR/core.git?branch=dev)",
  "thiserror 2.0.17",
  "tokio",
  "tracing",
@@ -2434,8 +2453,8 @@ dependencies = [
  "rustc-hash",
  "serde",
  "shiva-color-rs",
- "stardust-xr-fusion",
- "stardust-xr-molecules",
+ "stardust-xr-fusion 0.45.0 (git+https://github.com/StardustXR/core.git?branch=dev)",
+ "stardust-xr-molecules 0.45.0 (git+https://github.com/StardustXR/molecules.git?branch=dev)",
  "tokio",
  "tracing",
  "zbus",
@@ -2457,8 +2476,34 @@ dependencies = [
  "rustc-hash",
  "serde",
  "serde_repr",
- "stardust-xr",
- "stardust-xr-schemas",
+ "stardust-xr 0.45.0",
+ "stardust-xr-schemas 1.5.3",
+ "syn 2.0.109",
+ "thiserror 2.0.17",
+ "tokio",
+ "tracing",
+ "zbus",
+]
+
+[[package]]
+name = "stardust-xr-fusion"
+version = "0.45.0"
+source = "git+https://github.com/StardustXR/core.git?branch=dev#5176d1e9d26f1e8a4bd774519f3e7d1fddc121a9"
+dependencies = [
+ "clap",
+ "color-eyre",
+ "convert_case",
+ "glam 0.30.9",
+ "global_counter",
+ "parking_lot 0.12.5",
+ "prettyplease",
+ "proc-macro2",
+ "quote",
+ "rustc-hash",
+ "serde",
+ "serde_repr",
+ "stardust-xr 0.45.0 (git+https://github.com/StardustXR/core.git?branch=dev)",
+ "stardust-xr-schemas 1.5.3 (git+https://github.com/StardustXR/core.git?branch=dev)",
  "syn 2.0.109",
  "thiserror 2.0.17",
  "tokio",
@@ -2478,7 +2523,26 @@ dependencies = [
  "map-range",
  "rustc-hash",
  "serde",
- "stardust-xr-fusion",
+ "stardust-xr-fusion 0.45.0",
+ "tokio",
+ "tracing",
+ "zbus",
+]
+
+[[package]]
+name = "stardust-xr-molecules"
+version = "0.45.0"
+source = "git+https://github.com/StardustXR/molecules.git?branch=dev#53cfb2eecb066faf60a1b0da0b70f84231bae2be"
+dependencies = [
+ "ashpd",
+ "futures-util",
+ "glam 0.30.9",
+ "lazy_static",
+ "lerp",
+ "map-range",
+ "rustc-hash",
+ "serde",
+ "stardust-xr-fusion 0.45.0 (git+https://github.com/StardustXR/core.git?branch=dev)",
  "tokio",
  "tracing",
  "zbus",
@@ -2505,6 +2569,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "stardust-xr-schemas"
+version = "1.5.3"
+source = "git+https://github.com/StardustXR/core.git?branch=dev#5176d1e9d26f1e8a4bd774519f3e7d1fddc121a9"
+dependencies = [
+ "console-subscriber",
+ "flatbuffers",
+ "flexbuffers",
+ "fnv",
+ "kdl",
+ "manifest-dir-macros",
+ "nanoid",
+ "serde",
+ "serde_repr",
+ "thiserror 2.0.17",
+ "tokio",
+ "tokio-stream",
+ "variadics_please",
+ "zbus",
+]
+
+[[package]]
 name = "stardust_bridge"
 version = "0.1.0"
 dependencies = [
@@ -2512,8 +2597,8 @@ dependencies = [
  "lazy_static",
  "serde",
  "stardust-xr-asteroids",
- "stardust-xr-fusion",
- "stardust-xr-molecules",
+ "stardust-xr-fusion 0.45.0",
+ "stardust-xr-molecules 0.45.0",
  "tokio",
  "tracing-subscriber",
  "zbus",
