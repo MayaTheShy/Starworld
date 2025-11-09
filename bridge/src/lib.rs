@@ -177,7 +177,17 @@ pub extern "C" fn sdxr_start(app_id: *const std::os::raw::c_char) -> i32 {
                     match cmd {
                         Command::Create { c_id, name, transform } => {
                             if let Ok(mut state) = shared_for_commands.lock() {
-                                state.nodes.insert(c_id, Node { id: c_id, name: name.clone(), transform });
+                                let node = Node {
+                                    id: c_id,
+                                    name: name.clone(),
+                                    transform,
+                                    entity_type: 1, // Default to Box
+                                    model_url: String::new(),
+                                    texture_url: String::new(),
+                                    color: [1.0, 1.0, 1.0, 1.0], // White
+                                    dimensions: [0.1, 0.1, 0.1], // Default 10cm cube
+                                };
+                                state.nodes.insert(c_id, node);
                                 println!("[bridge] create node id={} name={} (state nodes={})", c_id, name, state.nodes.len());
                             }
                         }
@@ -189,6 +199,46 @@ pub extern "C" fn sdxr_start(app_id: *const std::os::raw::c_char) -> i32 {
                                     // println!("[bridge] update node id={}", c_id);
                                 } else {
                                     println!("[bridge] update for unknown node id={}", c_id);
+                                }
+                            }
+                        }
+                        Command::SetModel { c_id, model_url } => {
+                            if let Ok(mut state) = shared_for_commands.lock() {
+                                if let Some(n) = state.nodes.get_mut(&c_id) {
+                                    n.model_url = model_url.clone();
+                                    println!("[bridge] set model for node id={}: {}", c_id, model_url);
+                                }
+                            }
+                        }
+                        Command::SetTexture { c_id, texture_url } => {
+                            if let Ok(mut state) = shared_for_commands.lock() {
+                                if let Some(n) = state.nodes.get_mut(&c_id) {
+                                    n.texture_url = texture_url.clone();
+                                    println!("[bridge] set texture for node id={}: {}", c_id, texture_url);
+                                }
+                            }
+                        }
+                        Command::SetColor { c_id, color } => {
+                            if let Ok(mut state) = shared_for_commands.lock() {
+                                if let Some(n) = state.nodes.get_mut(&c_id) {
+                                    n.color = color;
+                                    println!("[bridge] set color for node id={}: {:?}", c_id, color);
+                                }
+                            }
+                        }
+                        Command::SetDimensions { c_id, dimensions } => {
+                            if let Ok(mut state) = shared_for_commands.lock() {
+                                if let Some(n) = state.nodes.get_mut(&c_id) {
+                                    n.dimensions = dimensions;
+                                    println!("[bridge] set dimensions for node id={}: {:?}", c_id, dimensions);
+                                }
+                            }
+                        }
+                        Command::SetEntityType { c_id, entity_type } => {
+                            if let Ok(mut state) = shared_for_commands.lock() {
+                                if let Some(n) = state.nodes.get_mut(&c_id) {
+                                    n.entity_type = entity_type;
+                                    println!("[bridge] set entity type for node id={}: {}", c_id, entity_type);
                                 }
                             }
                         }
