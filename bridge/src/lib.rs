@@ -471,7 +471,25 @@ pub extern "C" fn sdxr_start(app_id: *const std::os::raw::c_char) -> i32 {
     ctrl.shared_state = Some(shared_state);
     
     STOP_REQUESTED.store(false, Ordering::SeqCst);
-    0
+    
+    // Wait for connection to succeed or fail (max 6 seconds)
+    let max_wait_iterations = 120; // 120 * 50ms = 6 seconds
+    for _ in 0..max_wait_iterations {
+        if CONNECTION_SUCCESS.load(Ordering::SeqCst) {
+            println!("[bridge] Connection established successfully");
+            return 0; // Success
+        }
+        if CONNECTION_FAILED.load(Ordering::SeqCst) {
+            eprintln!("[bridge] Connection failed - exiting");
+            STARTED.store(false, Ordering::SeqCst);
+            return -1; // Failure
+        }
+        std::thread::sleep(std::time::Duration::from_millis(50));
+    }
+    
+    eprintln!("[bridge] WARNING: Connection status unknown after timeout");
+    0 // Assume success to maintain backwards compatibility if status isn't set
+}
 }
 
 #[no_mangle]
