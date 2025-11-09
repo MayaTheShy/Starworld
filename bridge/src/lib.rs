@@ -392,9 +392,7 @@ pub extern "C" fn sdxr_start(app_id: *const std::os::raw::c_char) -> i32 {
                 for frame in frames {
                     if let Ok(ctrl) = CTRL.lock() { if let Some(shared) = &ctrl.shared_state { if let Ok(ss) = shared.lock() { state.nodes = ss.nodes.clone(); } } }
                     state.on_frame(&frame);
-                    projector.frame(&context, &frame, &mut state);
                 }
-                projector.update(&context, &mut state);
                 if STOP_REQUESTED.load(Ordering::SeqCst) { flow.stop(); }
             });
             if let Err(e) = event_loop_fut.await {
