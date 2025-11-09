@@ -104,6 +104,29 @@ impl Reify for BridgeState {
             }).collect()
         }
         
+        fn create_wireframe_sphere(color_val: stardust_xr_fusion::values::Color, thickness: f32) -> Vec<Line> {
+            let segments = 32;
+            let r = 0.5; // radius
+            let mut lines = Vec::new();
+            
+            // Create 3 orthogonal circles (XY, XZ, YZ planes)
+            for axis in 0..3 {
+                let mut points = Vec::new();
+                for i in 0..=segments {
+                    let angle = (i as f32 / segments as f32) * std::f32::consts::TAU;
+                    let (sin, cos) = angle.sin_cos();
+                    let point = match axis {
+                        0 => Vector3 { x: cos * r, y: sin * r, z: 0.0 }, // XY plane
+                        1 => Vector3 { x: cos * r, y: 0.0, z: sin * r }, // XZ plane
+                        _ => Vector3 { x: 0.0, y: cos * r, z: sin * r }, // YZ plane
+                    };
+                    points.push(LinePoint { point, thickness, color: color_val });
+                }
+                lines.push(Line { points, cyclic: true });
+            }
+            lines
+        }
+        
         let children = self.nodes.iter().filter_map(|(id, node)| {
             let dims = glam::Vec3::from(node.dimensions);
             if dims.length() < 0.001 {
@@ -120,55 +143,49 @@ impl Reify for BridgeState {
             let scale_array = [vis_scale.x, vis_scale.y, vis_scale.z];
             let transform = stardust_xr_fusion::spatial::Transform::from_translation_rotation_scale(trans_array, rot_array, scale_array);
             
-            // Create appropriate visual based on entity type - wrap all in Spatial for type consistency
+            // Create appropriate visual based on entity type
             match node.entity_type {
                 1 => {
-                    // Box - use cube model with color
-                    eprintln!("[bridge/reify] Creating box model for node {}", id);
+                    // Box - use wireframe cube with color
+                    eprintln!("[bridge/reify] Creating box (wireframe) for node {}", id);
+                    let cube_lines = create_wireframe_cube(node_color, 0.005);
                     Some((*id, Spatial::default()
                         .transform(transform)
                         .build()
-                        .child(
-                            Model::namespaced("fusion", "tex_cube")
-                                .part(
-                                    ModelPart::new("Cube")
-                                        .mat_param("color", MaterialParameter::Color(node_color))
-                                ).build()
-                        )))
+                        .child(Lines::new(cube_lines).build())))
                 }
                 2 => {
-                    // Sphere - use sphere model with color
-                    eprintln!("[bridge/reify] Creating sphere model for node {}", id);
+                    // Sphere - use wireframe sphere with color
+                    eprintln!("[bridge/reify] Creating sphere (wireframe) for node {}", id);
+                    let sphere_lines = create_wireframe_sphere(node_color, 0.005);
                     Some((*id, Spatial::default()
                         .transform(transform)
                         .build()
-                        .child(
-                            Model::namespaced("fusion", "tex_sphere")
-                                .part(
-                                    ModelPart::new("Sphere")
-                                        .mat_param("color", MaterialParameter::Color(node_color))
-                                ).build()
-                        )))
+                        .child(Lines::new(sphere_lines).build())))
                 }
                 3 => {
-                    // Model - use model URL if available, fallback to cube
-                    eprintln!("[bridge/reify] Creating gyro model for node {}", id);
-                    // For now, use a fallback model since we can't load arbitrary URLs yet
-                    // TODO: Implement model loading and caching
-                    Some((*id, Spatial::default()
-                        .transform(transform)
-                        .build()
-                        .child(
-                            Model::namespaced("fusion", "gyro")
-                                .part(
-                                    ModelPart::new("Gem")
-                                        .mat_param("color", MaterialParameter::Color(node_color))
-                                ).build()
-                        )))
+                    // Model - attempt to load from URL if provided, fallback to wireframe
+                    if !node.model_url.is_empty() {
+                        eprintln!("[bridge/reify] Creating model for node {} from URL: {}", id, node.model_url);
+                        // For now, we can't easily load arbitrary HTTP URLs in the Overte format
+                        // Fall back to wireframe octahedron as a distinct placeholder
+                        let oct_lines = create_octahedron_wireframe(node_color, 0.005);
+                        Some((*id, Spatial::default()
+                            .transform(transform)
+                            .build()
+                            .child(Lines::new(oct_lines).build())))
+                    } else {
+                        eprintln!("[bridge/reify] Creating model placeholder for node {} (no URL)", id);
+                        let oct_lines = create_octahedron_wireframe(node_color, 0.005);
+                        Some((*id, Spatial::default()
+                            .transform(transform)
+                            .build()
+                            .child(Lines::new(oct_lines).build())))
+                    }
                 }
                 _ => {
-                    // Unknown or unsupported type - render as wireframe
-                    eprintln!("[bridge/reify] Creating wireframe for node {} type={}", id, node.entity_type);
+                    // Unknown or unsupported type - render as wireframe cube
+                    eprintln!("[bridge/reify] Creating wireframe for unknown node {} type={}", id, node.entity_type);
                     let cube_lines = create_wireframe_cube(node_color, 0.003);
                     Some((*id, Spatial::default()
                         .transform(transform)
@@ -177,6 +194,37 @@ impl Reify for BridgeState {
                 }
             }
         });
+        
+        fn create_octahedron_wireframe(color_val: stardust_xr_fusion::values::Color, thickness: f32) -> Vec<Line> {
+            use stardust_xr_fusion::values::Vector3;
+            let r = 0.5;
+            // 6 vertices of octahedron
+            let verts = [
+                Vector3 { x: 0.0, y: r, z: 0.0 },    // top
+                Vector3 { x: r, y: 0.0, z: 0.0 },    // +X
+                Vector3 { x: 0.0, y: 0.0, z: r },    // +Z
+                Vector3 { x: -r, y: 0.0, z: 0.0 },   // -X
+                Vector3 { x: 0.0, y: 0.0, z: -r },   // -Z
+                Vector3 { x: 0.0, y: -r, z: 0.0 },   // bottom
+            ];
+            
+            // 12 edges
+            let edges = [
+                (0, 1), (0, 2), (0, 3), (0, 4), // top pyramid
+                (5, 1), (5, 2), (5, 3), (5, 4), // bottom pyramid
+                (1, 2), (2, 3), (3, 4), (4, 1), // equator
+            ];
+            
+            edges.iter().map(|(a, b)| {
+                Line {
+                    points: vec![
+                        LinePoint { point: verts[*a], thickness, color: color_val },
+                        LinePoint { point: verts[*b], thickness, color: color_val },
+                    ],
+                    cyclic: false,
+                }
+            }).collect()
+        }
 
         PlaySpace.build().stable_children(children)
     }
