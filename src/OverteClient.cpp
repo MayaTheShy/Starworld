@@ -439,7 +439,17 @@ void OverteClient::parseDomainPacket(const char* data, size_t len) {
             break;
             
         default:
-            std::cout << "[OverteClient] Unknown domain packet type: " << static_cast<int>(packetType) << std::endl;
+            // Log all unknown packet types to see what we're missing
+            std::cout << "[OverteClient] Unknown/unhandled packet type: " << static_cast<int>(packetType) 
+                      << " (0x" << std::hex << static_cast<int>(packetType) << std::dec << ")"
+                      << " payload=" << payloadLen << " bytes" << std::endl;
+            if (payloadLen > 0 && payloadLen <= 64) {
+                std::cout << "[OverteClient] Payload hex: ";
+                for (size_t i = 0; i < payloadLen; i++) {
+                    printf("%02x ", (unsigned char)payload[i]);
+                }
+                std::cout << std::endl;
+            }
             break;
     }
 }
