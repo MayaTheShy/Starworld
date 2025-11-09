@@ -823,105 +823,194 @@ void OverteClient::handleDomainListReply(const char* data, size_t len) {
     
     std::cout << "[OverteClient] Authenticated: " << (authenticated ? "yes" : "no") << std::endl;
     
-    // Now mark as connected since we got a valid DomainList
-    m_domainConnected = true;
-    
-    // Send EntityQuery to request entity data from the server
-    std::cout << "[OverteClient] Domain connected! Sending entity query..." << std::endl;
-    std::cout << "[OverteClient] Waiting to receive entities from server..." << std::endl;
-    sendEntityQuery();
-    
-    // Read number of nodes - Qt QDataStream format (signed int32, big-endian)
-    // But for node list, Overte uses a special encoding
-    // Looking at the packet: ff 01 00 06 43 23...
-    // 0xFF might be a marker, or this might be encoded differently
-    // Let's try reading it as a signed int32
-    if (offset + 4 > len) return;
-    int32_t numNodesRaw = static_cast<int32_t>(ntohl(*reinterpret_cast<const uint32_t*>(data + offset)));
-    
-    std::cout << "[OverteClient] Number of assignment clients (raw): 0x" << std::hex << numNodesRaw << std::dec 
-              << " (" << numNodesRaw << ")" << std::endl;
-    
-    // If the high byte is 0xFF, this might be a QList with custom size encoding
-    // For now, let's skip the node list and just note we're connected
-    uint32_t numNodes = (numNodesRaw < 0 || numNodesRaw > 100) ? 0 : static_cast<uint32_t>(numNodesRaw);
-    offset += 4;
-    
-    std::cout << "[OverteClient] Parsed node count: " << numNodes << std::endl;
-    
-    if (numNodesRaw < 0 || numNodesRaw > 100) {
-        std::cout << "[OverteClient] Warning: Unusual node count encoding, skipping node list parsing" << std::endl;
-        // Dump remaining bytes for analysis
-        std::cout << "[OverteClient] Remaining bytes: ";
-        for (size_t i = offset - 4; i < std::min(offset + 20, len); i++) {
-            printf("%02x ", (unsigned char)data[i]);
-        }
-        std::cout << std::endl;
+    // Read additional timing/metadata fields (from Overte's DomainServer::sendDomainListToNode)
+    // These fields were added after the authenticated flag
+    if (offset + 8 > len) {
+        std::cout << "[OverteClient] Packet too short for timing fields" << std::endl;
         return;
     }
     
-    for (uint32_t i = 0; i < numNodes && offset < len; ++i) {
-        // Read NodeType
-        if (offset + 1 > len) break;
-        unsigned char nodeType = static_cast<unsigned char>(data[offset++]);
+    // lastDomainCheckinTimestamp (uint64)
+    uint64_t lastCheckinTimestamp;
+    std::memcpy(&lastCheckinTimestamp, data + offset, 8);
+    lastCheckinTimestamp = be64toh(lastCheckinTimestamp);
+    offset += 8;
+    
+    if (offset + 8 > len) return;
+    // currentTimestamp (uint64)
+    uint64_t currentTimestamp;
+    std::memcpy(&currentTimestamp, data + offset, 8);
+    currentTimestamp = be64toh(currentTimestamp);
+    offset += 8;
+    
+    if (offset + 8 > len) return;
+    // processingTime (uint64)
+    uint64_t processingTime;
+    std::memcpy(&processingTime, data + offset, 8);
+    processingTime = be64toh(processingTime);
+    offset += 8;
+    
+    if (offset + 1 > len) return;
+    // newConnection (bool)
+    bool newConnection = data[offset++];
+    
+    std::cout << "[OverteClient] New connection: " << (newConnection ? "yes" : "no") << std::endl;
+    
+    // Now mark as connected since we got a valid DomainList
+    m_domainConnected = true;
+    
+    // Clear previous assignment client list
+    m_assignmentClients.clear();
+    m_entityServerPort = 0;
+    
+    // Parse assignment client nodes from the packet
+    // Each node is serialized using QDataStream format (see Node.cpp operator<<)
+    // Format per node:
+    // - NodeType (qint8/char)
+    // - UUID (16 bytes)
+    // - PublicSocket.type (quint8)
+    // - PublicSocket (QHostAddress [1 byte protocol + 4 bytes IPv4] + quint16 port)
+    // - LocalSocket.type (quint8)
+    // - LocalSocket (QHostAddress + quint16 port)
+    // - Permissions (quint32)
+    // - isReplicated (bool)
+    // - localID (quint16)
+    // - connectionSecretUUID (16 bytes) - added by DomainList packet
+    
+    std::cout << "[OverteClient] Parsing assignment clients..." << std::endl;
+    
+    while (offset < len) {
+        AssignmentClient ac;
         
-        // Skip UUID (16 bytes)
+        // Read NodeType (qint8)
+        if (offset + 1 > len) break;
+        ac.type = static_cast<uint8_t>(data[offset++]);
+        
+        // Read UUID (16 bytes)
         if (offset + 16 > len) break;
+        std::memcpy(ac.uuid.data(), data + offset, 16);
         offset += 16;
         
-        // Read public socket address
-        if (offset + sizeof(sockaddr_in) > len) break;
+        // Read PublicSocket.type (quint8)
+        if (offset + 1 > len) break;
+        uint8_t publicSocketType = static_cast<uint8_t>(data[offset++]);
         
-        sockaddr_in publicAddr;
-        std::memcpy(&publicAddr, data + offset, sizeof(sockaddr_in));
-        offset += sizeof(sockaddr_in);
+        // Read PublicSocket.address (QHostAddress)
+        if (offset + 1 > len) break;
+        uint8_t addressProtocol = static_cast<uint8_t>(data[offset++]);
         
-        // Skip local socket (same size)
-        if (offset + sizeof(sockaddr_in) > len) break;
-        offset += sizeof(sockaddr_in);
+        if (addressProtocol == 1) { // IPv4
+            if (offset + 4 > len) break;
+            uint32_t ipv4Addr;
+            std::memcpy(&ipv4Addr, data + offset, 4);
+            ipv4Addr = ntohl(ipv4Addr);
+            offset += 4;
+            
+            // Read PublicSocket.port (quint16)
+            if (offset + 2 > len) break;
+            uint16_t publicPort = ntohs(*reinterpret_cast<const uint16_t*>(data + offset));
+            offset += 2;
+            
+            // Store address
+            sockaddr_in* addr = reinterpret_cast<sockaddr_in*>(&ac.address);
+            addr->sin_family = AF_INET;
+            addr->sin_addr.s_addr = htonl(ipv4Addr);
+            addr->sin_port = htons(publicPort);
+            ac.addressLen = sizeof(sockaddr_in);
+            ac.port = publicPort;
+            
+        } else {
+            std::cout << "[OverteClient] Unsupported address protocol: " << (int)addressProtocol << std::endl;
+            break;
+        }
         
-        // NodeType values from Overte:
-        // 0 = DomainServer, 1 = EntityServer, 2 = Agent, 3 = AudioMixer, 
-        // 4 = AvatarMixer, 5 = AssetServer, 6 = MessagesMixer, 7 = EntityScriptServer
-        const unsigned char NODE_TYPE_ENTITY_SERVER = 1;
-        const unsigned char NODE_TYPE_AVATAR_MIXER = 4;
-        const unsigned char NODE_TYPE_AUDIO_MIXER = 3;
+        // Read LocalSocket.type (quint8)
+        if (offset + 1 > len) break;
+        uint8_t localSocketType = static_cast<uint8_t>(data[offset++]);
+        (void)localSocketType; // unused for now
         
-        char addrStr[INET_ADDRSTRLEN];
-        inet_ntop(AF_INET, &publicAddr.sin_addr, addrStr, sizeof(addrStr));
-        int port = ntohs(publicAddr.sin_port);
+        // Read LocalSocket.address (QHostAddress)
+        if (offset + 1 > len) break;
+        uint8_t localAddressProtocol = static_cast<uint8_t>(data[offset++]);
+        
+        if (localAddressProtocol == 1) { // IPv4
+            if (offset + 4 > len) break;
+            offset += 4; // Skip local IP
+            
+            // Read LocalSocket.port (quint16)
+            if (offset + 2 > len) break;
+            offset += 2; // Skip local port
+        } else {
+            std::cout << "[OverteClient] Unsupported local address protocol: " << (int)localAddressProtocol << std::endl;
+            break;
+        }
+        
+        // Read Permissions (quint32)
+        if (offset + 4 > len) break;
+        offset += 4; // Skip permissions
+        
+        // Read isReplicated (bool)
+        if (offset + 1 > len) break;
+        offset++; // Skip isReplicated
+        
+        // Read localID (quint16)
+        if (offset + 2 > len) break;
+        offset += 2; // Skip localID
+        
+        // Read connectionSecretUUID (16 bytes) - this is added by DomainList packet
+        if (offset + 16 > len) break;
+        offset += 16; // Skip connectionSecretUUID
+        
+        // Store this assignment client
+        m_assignmentClients.push_back(ac);
+        
+        // NodeType mapping (from Overte NodeType.h):
+        // 'D' (0x44) = DomainServer
+        // 'o' (0x6F) = EntityServer
+        // 'I' (0x49) = Agent
+        // 'M' (0x4D) = AudioMixer
+        // 'W' (0x57) = AvatarMixer
+        // 'A' (0x41) = AssetServer
+        // 'm' (0x6D) = MessagesMixer
+        // 'S' (0x53) = EntityScriptServer
         
         const char* nodeTypeName = "Unknown";
-        switch (nodeType) {
-            case 0: nodeTypeName = "DomainServer"; break;
-            case NODE_TYPE_ENTITY_SERVER: nodeTypeName = "EntityServer"; break;
-            case 2: nodeTypeName = "Agent"; break;
-            case NODE_TYPE_AUDIO_MIXER: nodeTypeName = "AudioMixer"; break;
-            case NODE_TYPE_AVATAR_MIXER: nodeTypeName = "AvatarMixer"; break;
-            case 5: nodeTypeName = "AssetServer"; break;
-            case 6: nodeTypeName = "MessagesMixer"; break;
-            case 7: nodeTypeName = "EntityScriptServer"; break;
+        switch (ac.type) {
+            case 'D': nodeTypeName = "DomainServer"; break;
+            case 'o': nodeTypeName = "EntityServer"; break;
+            case 'I': nodeTypeName = "Agent"; break;
+            case 'M': nodeTypeName = "AudioMixer"; break;
+            case 'W': nodeTypeName = "AvatarMixer"; break;
+            case 'A': nodeTypeName = "AssetServer"; break;
+            case 'm': nodeTypeName = "MessagesMixer"; break;
+            case 'S': nodeTypeName = "EntityScriptServer"; break;
         }
         
-        std::cout << "[OverteClient] Assignment: " << nodeTypeName 
-                  << " at " << addrStr << ":" << port << std::endl;
+        char addrStr[INET_ADDRSTRLEN];
+        sockaddr_in* addr = reinterpret_cast<sockaddr_in*>(&ac.address);
+        inet_ntop(AF_INET, &addr->sin_addr, addrStr, sizeof(addrStr));
         
-        if (nodeType == NODE_TYPE_ENTITY_SERVER) {
-            // Update EntityServer connection to use discovered address
-            std::cout << "[OverteClient] Connecting to EntityServer at " << addrStr << ":" << port << std::endl;
+        std::cout << "[OverteClient] Assignment client: " << nodeTypeName 
+                  << " at " << addrStr << ":" << ac.port << std::endl;
+        
+        // If this is the EntityServer, store its address for EntityQuery
+        if (ac.type == 'o') { // EntityServer
+            m_entityServerAddr = ac.address;
+            m_entityServerAddrLen = ac.addressLen;
+            m_entityServerPort = ac.port;
             
-            // Update target address for EntityServer
-            sockaddr_in* entityAddr = reinterpret_cast<sockaddr_in*>(&m_entityAddr);
-            entityAddr->sin_family = AF_INET;
-            entityAddr->sin_port = publicAddr.sin_port;
-            entityAddr->sin_addr = publicAddr.sin_addr;
-            m_entityAddrLen = sizeof(sockaddr_in);
-            
-            m_entityServerReady = true;
-            
-            // Send EntityQuery to request all entities
-            sendEntityQuery();
+            std::cout << "[OverteClient] Entity server found at " << addrStr << ":" << ac.port << std::endl;
         }
+    }
+    
+    std::cout << "[OverteClient] Parsed " << m_assignmentClients.size() << " assignment clients" << std::endl;
+    
+    // Now send EntityQuery to the EntityServer (if we found one)
+    if (m_entityServerPort != 0) {
+        std::cout << "[OverteClient] Domain connected! Sending entity query to entity-server..." << std::endl;
+        sendEntityQuery();
+    } else {
+        std::cout << "[OverteClient] Warning: No EntityServer found in assignment client list" << std::endl;
     }
 }
 
