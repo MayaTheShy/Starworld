@@ -139,6 +139,9 @@ std::vector<DiscoveredDomain> discoverDomains(int maxDomains) {
     std::vector<DiscoveredDomain> result;
     curl_global_init(CURL_GLOBAL_DEFAULT);
 
+    // Check if verbose logging is enabled
+    bool verbose = (std::getenv("OVERTE_DISCOVER_VERBOSE") != nullptr);
+
     // Allow override of endpoint via env
     std::vector<std::string> endpoints;
     if (const char* custom = std::getenv("METAVERSE_DISCOVERY_URL")) {
@@ -154,10 +157,28 @@ std::vector<DiscoveredDomain> discoverDomains(int maxDomains) {
     const char* paths[] = {"/api/domains?status=online","/api/domains","/api/v1/domains?status=online","/api/v1/domains"};
     for (auto& b : bases) for (auto p : paths) endpoints.emplace_back(b + std::string(p));
 
+    if (verbose) {
+        std::cout << "[Discovery] Trying " << endpoints.size() << " directory endpoints..." << std::endl;
+    }
+
     for (const auto& url : endpoints) {
+        if (verbose) {
+            std::cout << "[Discovery] Querying: " << url << std::endl;
+        }
         auto body = httpGet(url);
-        if (!body) continue;
+        if (!body) {
+            if (verbose) {
+                std::cout << "[Discovery]   -> Failed (timeout or HTTP error)" << std::endl;
+            }
+            continue;
+        }
+        if (verbose) {
+            std::cout << "[Discovery]   -> Got " << body->size() << " bytes" << std::endl;
+        }
         auto list = parseDomains(*body);
+        if (verbose) {
+            std::cout << "[Discovery]   -> Parsed " << list.size() << " domains" << std::endl;
+        }
         for (auto& d : list) {
             result.emplace_back(std::move(d));
             if ((int)result.size() >= maxDomains) break;
