@@ -271,21 +271,35 @@ This allows you to:
 - [ ] Material color application to models
 - [ ] Texture loading and mapping
 
-### Phase 3: Entity System (Current Focus)
-- [ ] Apply entity colors to model materials ⏭️ NEXT
+### Phase 3: Network & Protocol ✅ COMPLETE
+- [x] Domain connection via UDP
+- [x] NLPacket protocol implementation
+- [x] DomainConnectRequest / DomainList handshake
+- [x] QDataStream parsing for Overte packets
+- [x] Assignment client list parsing
+- [x] EntityQuery packet implementation
+- [x] Session UUID generation
+- [x] Protocol signature verification (MD5)
+- [x] Domain address parsing (host:port/position/orientation)
+- [ ] OAuth 2.0 authentication (infrastructure ready, needs web flow) ⏭️ NEXT
+- [ ] Assignment client direct connections
+- [ ] Token persistence and refresh
+
+### Phase 4: Entity System (Current Focus)
+- [ ] Apply entity colors to model materials
 - [ ] All entity types (Text, Image, Light, Zone, etc.)
 - [ ] Entity property updates (real-time position, rotation, color changes)
 - [ ] Entity deletion handling
 - [ ] Parent/child entity hierarchies
 - [ ] Entity query/filtering by distance
 
-### Phase 4: Interaction & Multi-User
+### Phase 5: Interaction & Multi-User
 - [ ] Avatar representation and sync
 - [ ] Input forwarding (XR controllers → Overte)
 - [ ] Audio spatial rendering
 - [ ] Voice chat integration
 
-### Phase 5: Advanced Features
+### Phase 6: Advanced Features
 - [ ] Script integration
 - [ ] Physics simulation
 - [ ] Particle effects
