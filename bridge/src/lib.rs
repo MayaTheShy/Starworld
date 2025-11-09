@@ -18,6 +18,8 @@ use stardust_xr_molecules::accent_color::AccentColor;
 use stardust_xr_fusion::objects::connect_client as fusion_connect_client;
 use stardust_xr_fusion::node::NodeType;
 use stardust_xr_fusion::root::RootAspect;
+use stardust_xr_fusion::drawable::MaterialParameter;
+use stardust_xr_fusion::values::ResourceID;
 use tokio::runtime::Runtime;
 
 #[derive(Clone, serde::Serialize, serde::Deserialize)]
