@@ -121,6 +121,22 @@ static std::string generateUUID() {
     return ss.str();
 }
 
+bool OverteClient::login(const std::string& username, const std::string& password, const std::string& metaverseUrl) {
+    if (!m_auth) {
+        m_auth = std::make_unique<OverteAuth>();
+    }
+    
+    bool success = m_auth->login(username, password, metaverseUrl);
+    if (success) {
+        m_username = username;
+    }
+    return success;
+}
+
+bool OverteClient::isAuthenticated() const {
+    return m_auth && m_auth->isAuthenticated();
+}
+
 bool OverteClient::connect() {
     // Generate session UUID
     m_sessionUUID = generateUUID();
@@ -128,10 +144,20 @@ bool OverteClient::connect() {
     
     // Check for authentication credentials from environment
     const char* usernameEnv = std::getenv("OVERTE_USERNAME");
-    if (usernameEnv) m_username = usernameEnv;
+    const char* passwordEnv = std::getenv("OVERTE_PASSWORD");
+    const char* metaverseEnv = std::getenv("OVERTE_METAVERSE");
     
-    if (!m_username.empty()) {
-        std::cout << "[OverteClient] Username present (signature auth not yet implemented)" << std::endl;
+    if (usernameEnv && passwordEnv) {
+        std::string metaverseUrl = metaverseEnv ? metaverseEnv : "https://mv.overte.org";
+        std::cout << "[OverteClient] Attempting login as " << usernameEnv << "..." << std::endl;
+        if (login(usernameEnv, passwordEnv, metaverseUrl)) {
+            std::cout << "[OverteClient] Successfully authenticated!" << std::endl;
+        } else {
+            std::cerr << "[OverteClient] Authentication failed, continuing as anonymous" << std::endl;
+        }
+    } else if (usernameEnv) {
+        m_username = usernameEnv;
+        std::cout << "[OverteClient] Username set (no password provided, signature auth not yet implemented)" << std::endl;
     }
     
     // Parse ws://host:port
