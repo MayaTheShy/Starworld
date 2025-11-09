@@ -19,6 +19,8 @@ use stardust_xr_fusion::objects::connect_client as fusion_connect_client;
 use stardust_xr_fusion::node::NodeType;
 use stardust_xr_fusion::root::RootAspect;
 use stardust_xr_fusion::drawable::MaterialParameter;
+use stardust_xr_fusion::values::ResourceID;
+use stardust_xr_fusion::spatial::Transform;
 use tokio::runtime::Runtime;
 
 #[derive(Clone, serde::Serialize, serde::Deserialize)]
@@ -29,6 +31,86 @@ struct BridgeState {
 impl Default for BridgeState {
     fn default() -> Self {
         Self { nodes: HashMap::new() }
+    }
+}
+
+// Custom element wrapper for fusion Model that can be used with model URLs
+#[derive(Clone, Debug, PartialEq)]
+struct ModelWrapper {
+    resource_id: ResourceID,
+    transform: Transform,
+    color: stardust_xr_fusion::values::Color,
+}
+
+impl ModelWrapper {
+    fn new(url: &str, transform: Transform, color: stardust_xr_fusion::values::Color) -> Self {
+        // Try to parse as a direct file path or URL
+        let resource_id = if url.starts_with("http://") || url.starts_with("https://") {
+            // For HTTP URLs, we'd need to download and cache - for now use a built-in as fallback
+            ResourceID::new_namespaced("fusion", "tex_cube")
+        } else if url.starts_with("/") || url.ends_with(".glb") || url.ends_with(".gltf") {
+            // Try as direct path
+            ResourceID::new_direct(url).unwrap_or_else(|_| ResourceID::new_namespaced("fusion", "tex_cube"))
+        } else {
+            // Default fallback
+            ResourceID::new_namespaced("fusion", "tex_cube")
+        };
+        
+        Self { resource_id, transform, color }
+    }
+    
+    fn builtin(name: &str, transform: Transform, color: stardust_xr_fusion::values::Color) -> Self {
+        Self {
+            resource_id: ResourceID::new_namespaced("fusion", name),
+            transform,
+            color,
+        }
+    }
+}
+
+struct ModelWrapperInner {
+    model: stardust_xr_fusion::drawable::Model,
+}
+
+impl<State: ast::ValidState> CustomElement<State> for ModelWrapper {
+    type Inner = ModelWrapperInner;
+    type Resource = ();
+    type Error = stardust_xr_fusion::node::NodeError;
+
+    fn create_inner(
+        &self,
+        _context: &Context,
+        info: ast::CreateInnerInfo,
+        _resource: &mut Self::Resource,
+    ) -> Result<Self::Inner, Self::Error> {
+        let model = stardust_xr_fusion::drawable::Model::create(
+            info.parent_space,
+            self.transform,
+            &self.resource_id,
+        )?;
+        
+        // Try to set color on model parts
+        // Note: set_material_parameter doesn't exist in this version, skip for now
+        
+        Ok(ModelWrapperInner { model })
+    }
+
+    fn diff(&self, _old_self: &Self, _inner: &mut Self::Inner, _resource: &mut Self::Resource) {
+        // Update logic would go here - skip for now as models are recreated each frame
+    }
+    
+    fn spatial_aspect(&self, inner: &Self::Inner) -> stardust_xr_fusion::spatial::SpatialRef {
+        use stardust_xr_fusion::spatial::SpatialAspect;
+        inner.model.clone().as_spatial().as_spatial_ref()
+    }
+}
+
+impl Transformable for ModelWrapper {
+    fn transform(&self) -> &Transform {
+        &self.transform
+    }
+    fn transform_mut(&mut self) -> &mut Transform {
+        &mut self.transform
     }
 }
 
@@ -72,8 +154,6 @@ impl ClientState for BridgeState {
 impl Reify for BridgeState {
     fn reify(&self) -> impl ast::Element<Self> {
         use stardust_xr_fusion::values::color::rgba_linear;
-        use stardust_xr_fusion::drawable::{Line, LinePoint};
-        use stardust_xr_fusion::values::Vector3;
         
         eprintln!("[bridge/reify] Reifying {} nodes", self.nodes.len());
         
@@ -101,37 +181,44 @@ impl Reify for BridgeState {
             // Use entity color if set
             let node_color = rgba_linear!(node.color[0], node.color[1], node.color[2], node.color[3]);
             
-            // Simple wireframe cube for all entities for now - each entity gets its own Lines element
-            let t = 0.008; // line thickness
-            let hs = 0.5f32; // half size in model space (unit cube)
+            // Create transform using Transform::from_translation_rotation_scale
+            let transform = Transform::from_translation_rotation_scale(trans, rot, vis_scale);
             
-            // Create a line for each edge
-            let seg = |a: [f32;3], b: [f32;3]| -> Line {
-                let p0 = LinePoint { point: Vector3 { x: a[0], y: a[1], z: a[2] }, thickness: t, color: node_color };
-                let p1 = LinePoint { point: Vector3 { x: b[0], y: b[1], z: b[2] }, thickness: t, color: node_color };
-                Line { points: vec![p0, p1], cyclic: false }
-            };
-            
-            let corners = [
-                [-hs, -hs, -hs], [ hs, -hs, -hs], [ hs,  hs, -hs], [-hs,  hs, -hs],
-                [-hs, -hs,  hs], [ hs, -hs,  hs], [ hs,  hs,  hs], [-hs,  hs,  hs],
-            ];
-            
-            // 12 edges of a cube
-            let lines = vec![
-                seg(corners[0], corners[1]), seg(corners[1], corners[2]), seg(corners[2], corners[3]), seg(corners[3], corners[0]),
-                seg(corners[4], corners[5]), seg(corners[5], corners[6]), seg(corners[6], corners[7]), seg(corners[7], corners[4]),
-                seg(corners[0], corners[4]), seg(corners[1], corners[5]), seg(corners[2], corners[6]), seg(corners[3], corners[7]),
-            ];
-            
-            Some((
-                *id,
-                Lines::new(lines)
-                    .pos([trans.x, trans.y, trans.z])
-                    .rot([rot.x, rot.y, rot.z, rot.w])
-                    .scl([vis_scale.x, vis_scale.y, vis_scale.z])
-                    .build()
-            ))
+            // Entity types: 0=Unknown, 1=Box, 2=Sphere, 3=Model
+            match node.entity_type {
+                1 => {
+                    // Box entity - use tex_cube model
+                    Some((
+                        *id,
+                        ModelWrapper::builtin("tex_cube", transform, node_color).build()
+                    ))
+                },
+                2 => {
+                    // Sphere entity - use tex_cube with uniform scale to approximate
+                    let avg_scale = (vis_scale.x + vis_scale.y + vis_scale.z) / 3.0;
+                    let uniform_scale = glam::Vec3::splat(avg_scale);
+                    let sphere_transform = Transform::from_translation_rotation_scale(trans, rot, uniform_scale);
+                    Some((
+                        *id,
+                        ModelWrapper::builtin("tex_cube", sphere_transform, node_color).build()
+                    ))
+                },
+                3 if !node.model_url.is_empty() => {
+                    // Model entity - use gyro as placeholder (or try to load from URL)
+                    Some((
+                        *id,
+                        ModelWrapper::builtin("gyro", transform, node_color).build()
+                    ))
+                },
+                _ => {
+                    // Unknown/default - gray cube
+                    let default_color = rgba_linear!(0.6, 0.6, 0.6, 0.8);
+                    Some((
+                        *id,
+                        ModelWrapper::builtin("tex_cube", transform, default_color).build()
+                    ))
+                }
+            }
         });
 
         PlaySpace
