@@ -25,9 +25,11 @@ add_executable(stardust-overte-client
     src/SceneSync.cpp
     src/InputHandler.cpp
     src/NLPacketCodec.cpp
+    src/DomainDiscovery.cpp
 )
 
-target_link_libraries(stardust-overte-client PRIVATE glm::glm ZLIB::ZLIB)
+find_package(CURL REQUIRED)
+target_link_libraries(stardust-overte-client PRIVATE glm::glm ZLIB::ZLIB CURL::libcurl)
 target_link_libraries(stardust-overte-client PRIVATE OpenSSL::Crypto)
 
 # Link Overte networking library
