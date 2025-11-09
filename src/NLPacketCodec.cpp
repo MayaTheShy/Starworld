@@ -158,15 +158,17 @@ PacketType NLPacket::getType(const uint8_t* data, size_t size) {
     return static_cast<PacketType>(data[sizeof(uint32_t)]);
 }
 
+namespace {
+
 // --- Helpers to parse Overte header enums to ensure exact version numbers ---
-static std::string readFileToString(const std::string& path) {
+std::string readFileToString(const std::string& path) {
     std::ifstream in(path);
     if (!in.is_open()) return {};
     std::ostringstream ss; ss << in.rdbuf();
     return ss.str();
 }
 
-static std::unordered_map<std::string, int> parseEnumValues(const std::string& content, const std::string& enumName) {
+std::unordered_map<std::string, int> parseEnumValues(const std::string& content, const std::string& enumName) {
     std::unordered_map<std::string, int> values;
     std::string startToken = "enum class " + enumName;
     auto startPos = content.find(startToken);
@@ -217,7 +219,7 @@ static std::unordered_map<std::string, int> parseEnumValues(const std::string& c
     return values;
 }
 
-static int parsePacketTypeCount(const std::string& content) {
+int parsePacketTypeCount(const std::string& content) {
     // Count identifiers in PacketTypeEnum::Value until NUM_PACKET_TYPE
     auto pos = content.find("enum class Value : uint8_t");
     if (pos == std::string::npos) return 106; // fallback
