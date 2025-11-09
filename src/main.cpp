@@ -54,24 +54,31 @@ int main(int argc, char** argv) {
             return 1;
         } else {
             std::cout << "[Discovery] Found " << domains.size() << " candidate domain(s):" << std::endl;
-            int idx = 0;
-            for (const auto& d : domains) {
-                std::cout << "  [" << idx++ << "] "
+            
+            // Limit display to first 10
+            int displayLimit = std::min(10, (int)domains.size());
+            for (int idx = 0; idx < displayLimit; ++idx) {
+                const auto& d = domains[idx];
+                std::cout << "  [" << idx << "] "
                           << (d.name.empty() ? d.networkHost : d.name)
                           << " -> ws://" << d.networkHost << ":" << d.httpPort
                           << " (udp:" << d.udpPort << ")" << std::endl;
             }
+            if ((int)domains.size() > displayLimit) {
+                std::cout << "  ... and " << (domains.size() - displayLimit) << " more domains" << std::endl;
+            }
             
-            // Probe for reachability unless disabled
-            bool probeEnabled = true;
+            // Probe for reachability unless disabled (disabled by default for large lists)
+            bool probeEnabled = false; // Default: disabled for performance
             if (const char* envProbe = std::getenv("OVERTE_DISCOVER_PROBE")) {
-                if (std::string(envProbe) == "0" || std::string(envProbe) == "false") probeEnabled = false;
+                if (std::string(envProbe) == "1" || std::string(envProbe) == "true") probeEnabled = true;
             }
             
             int choice = -1;
             if (probeEnabled) {
-                std::cout << "[Discovery] Probing domains for reachability..." << std::endl;
-                for (size_t i = 0; i < domains.size(); ++i) {
+                std::cout << "[Discovery] Probing domains for reachability (limit 20)..." << std::endl;
+                int probeLimit = std::min(20, (int)domains.size());
+                for (int i = 0; i < probeLimit; ++i) {
                     std::cout << "[Discovery] Probing [" << i << "] " << domains[i].networkHost << ":" << domains[i].httpPort << "... " << std::flush;
                     if (probeDomain(domains[i])) {
                         std::cout << "REACHABLE" << std::endl;
@@ -82,11 +89,12 @@ int main(int argc, char** argv) {
                     }
                 }
                 if (choice < 0) {
-                    std::cout << "[Discovery] No reachable domains found; using first candidate anyway." << std::endl;
+                    std::cout << "[Discovery] No reachable domains found in first " << probeLimit << "; using first candidate." << std::endl;
                     choice = 0;
                 }
             } else {
                 std::cout << "[Discovery] Probing disabled; selecting first candidate." << std::endl;
+                std::cout << "[Discovery] Set OVERTE_DISCOVER_PROBE=1 to enable reachability testing." << std::endl;
                 choice = 0;
             }
             
