@@ -233,12 +233,24 @@ This allows you to:
 
 ## Known Limitations
 
-1. **Entity types**: Only Box, Sphere, Model supported. Need Text, Image, Light, Zone, etc.
-2. **Model colors**: Entity colors are parsed but not yet applied to materials
-3. **No texture support**: Models render without textures, entity.textureUrl parsing ready
-4. **Limited entity updates**: Entities created but updates/deletions need work
-5. **UDP only**: WebSocket transport not implemented
-6. **Single user**: No avatar or multi-user support yet
+1. **OAuth Authentication**: Web-based OAuth flow not yet implemented (see OVERTE_AUTH.md)
+   - Anonymous connection works perfectly
+   - Assignment client discovery limited without authentication
+   - Domain server used as fallback for entity queries
+   
+2. **Entity types**: Only Box, Sphere, Model supported. Need Text, Image, Light, Zone, etc.
+
+3. **Model colors**: Entity colors are parsed but not yet applied to materials
+
+4. **No texture support**: Models render without textures, entity.textureUrl parsing ready
+
+5. **Limited entity updates**: Entities created but real-time updates/deletions need work
+
+6. **UDP only**: All communication via UDP (HTTP used for diagnostics only)
+
+7. **Single user**: No avatar or multi-user support yet
+
+8. **NAT/Firewall**: External connections require port forwarding for self-hosted domains
 
 ## Roadmap
 
