@@ -335,9 +335,29 @@ This allows you to:
 
 ## Contributing
 
-See [ENTITY_RENDERING_ENHANCEMENTS.md](ENTITY_RENDERING_ENHANCEMENTS.md) for implementation details.
+### Documentation
+- **[README.md](README.md)** - Main documentation (you are here)
+- **[DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md)** - Quick reference for developers
+- **[CHANGELOG.md](CHANGELOG.md)** - Version history and changes
+- **[OVERTE_AUTH.md](OVERTE_AUTH.md)** - OAuth implementation details
+- **[OVERTE_ASSIGNMENT_CLIENT_TASK.md](OVERTE_ASSIGNMENT_CLIENT_TASK.md)** - Protocol implementation
+- **[ENTITY_RENDERING_ENHANCEMENTS.md](ENTITY_RENDERING_ENHANCEMENTS.md)** - Rendering implementation
+- **[MODELCACHE_IMPLEMENTATION.md](MODELCACHE_IMPLEMENTATION.md)** - Asset pipeline details
+- **[CI_SETUP_SUMMARY.md](CI_SETUP_SUMMARY.md)** - Continuous integration setup
 
-For CI/test setup, see [CI_SETUP_SUMMARY.md](CI_SETUP_SUMMARY.md).
+### Getting Started
+1. Read [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md) for build/run commands
+2. Check [CHANGELOG.md](CHANGELOG.md) for recent changes
+3. Review protocol details in [OVERTE_ASSIGNMENT_CLIENT_TASK.md](OVERTE_ASSIGNMENT_CLIENT_TASK.md)
+
+### Development Workflow
+1. Create feature branch: `git checkout -b feature/my-feature`
+2. Make changes and test locally: `./ci-test.sh`
+3. Commit with clear messages
+4. Push and create PR in Gitea
+5. CI will run automated tests
+
+See [CI_SETUP_SUMMARY.md](CI_SETUP_SUMMARY.md) for details on the CI pipeline.
 
 ## License
 
