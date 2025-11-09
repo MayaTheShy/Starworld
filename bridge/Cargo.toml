@@ -19,10 +19,12 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 path = "../third_party/asteroids"
 
 [dependencies.stardust-xr-fusion]
-path = "../third_party/core/fusion"
+git = "https://github.com/StardustXR/core.git"
+branch = "dev"
 
 [dependencies.stardust-xr-molecules]
-path = "../third_party/molecules"
+git = "https://github.com/StardustXR/molecules.git"
+branch = "dev"
 
 [features]
 # Feature enabling real StardustXR integration when crates are present.
