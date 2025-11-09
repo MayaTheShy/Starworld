@@ -1,14 +1,14 @@
-# Entity Rendering Enhancements for Starworld
+# Entity Rendering Implementation for Starworld
 
 ## Overview
 
-This document describes the enhancements made to starworld to support rendering complex Overte entities with full visual properties including models, textures, colors, and different geometric primitives.
+This document describes the entity rendering system in Starworld, which loads and displays Overte entities as 3D GLTF/GLB models in the StardustXR compositor.
 
-## Changes Made
+## Current Implementation
 
-### 1. Enhanced Entity Data Structure (`OverteClient.hpp`)
+### 1. Entity Data Structure (`OverteClient.hpp`)
 
-**Added `EntityType` enum:**
+**`EntityType` enum:**
 ```cpp
 enum class EntityType {
     Unknown, Box, Sphere, Model, Shape, Light, Text, 
@@ -16,14 +16,14 @@ enum class EntityType {
 };
 ```
 
-**Extended `OverteEntity` structure:**
+**`OverteEntity` structure:**
 ```cpp
 struct OverteEntity {
     std::uint64_t id{0};
     std::string name;
     glm::mat4 transform{1.0f};
     
-    // NEW: Visual properties
+    // Visual properties
     EntityType type{EntityType::Box};
     std::string modelUrl;      // For Model type entities
     std::string textureUrl;    // Texture/material URL
@@ -33,9 +33,9 @@ struct OverteEntity {
 };
 ```
 
-### 2. Enhanced Entity Packet Parser (`OverteClient.cpp`)
+### 2. Entity Packet Parser (`OverteClient.cpp`)
 
-**Updated `parseEntityPacket()` to extract:**
+The `parseEntityPacket()` function extracts:
 - Entity type classification
 - Model URLs (for 3D models)
 - Texture URLs
@@ -43,14 +43,14 @@ struct OverteEntity {
 - Dimensions/scale
 - Alpha transparency
 
-**Enhanced simulation mode** with diverse entity types:
+Simulation mode creates diverse entity types:
 - Red cube (Box type)
 - Green sphere (Sphere type)  
-- Blue model placeholder (Model type)
+- Blue suzanne model (Model type)
 
-### 3. Rust Bridge Visual Properties (`bridge/src/lib.rs`)
+### 3. Rust Bridge Node Structure (`bridge/src/lib.rs`)
 
-**Extended `Node` structure:**
+**`Node` structure with entity data:**
 ```rust
 struct Node {
     id: u64,
@@ -64,40 +64,44 @@ struct Node {
 }
 ```
 
-**Added new command types:**
-- `SetModel` - Set 3D model URL
-- `SetTexture` - Set texture/material URL
-- `SetColor` - Set RGBA color
-- `SetDimensions` - Set xyz dimensions
-- `SetEntityType` - Set geometric primitive type
+**C-ABI export functions:**
+- `sdxr_set_node_model(id, model_url)` - Set model URL
+- `sdxr_set_node_texture(id, texture_url)` - Set texture URL
+- `sdxr_set_node_color(id, r, g, b, a)` - Set RGBA color
+- `sdxr_set_node_dimensions(id, x, y, z)` - Set dimensions
+- `sdxr_set_node_entity_type(id, type)` - Set entity type
 
-**New C-ABI export functions:**
-- `sdxr_set_node_model(id, model_url)`
-- `sdxr_set_node_texture(id, texture_url)`
-- `sdxr_set_node_color(id, r, g, b, a)`
-- `sdxr_set_node_dimensions(id, x, y, z)`
-- `sdxr_set_node_entity_type(id, type)`
+### 4. 3D Model Rendering (`bridge/src/lib.rs` - `reify()`)
 
-### 4. Enhanced Rendering (`bridge/src/lib.rs` - `reify()`)
+**Current implementation uses GLTF/GLB model loading:**
 
-**Implemented type-specific wireframe rendering:**
+The rendering system loads pre-generated primitive models based on entity type:
 
-The current implementation uses wireframe visualizations for all entity types, providing a lightweight and performant rendering solution that works with the Stardust Lines API:
+```rust
+fn get_model_path(entity_type: u8) -> Option<PathBuf> {
+    let cache_dir = dirs::cache_dir()?.join("starworld/primitives");
+    let filename = match entity_type {
+        1 => "cube.glb",      // Box
+        2 => "sphere.glb",    // Sphere  
+        3 => "model.glb",     // Model (Suzanne placeholder)
+        _ => return None,
+    };
+    // ...
+}
+```
 
-- **Box entities (type 1):** Colored wireframe cubes (12 edges) using entity color and dimensions
-- **Sphere entities (type 2):** Three orthogonal wireframe circles (XY, XZ, YZ planes) forming a sphere visualization
-- **Model entities (type 3):** Distinctive octahedron wireframe (12 edges) as a placeholder for 3D models
-- **Unknown types:** Gray wireframe cube as fallback
+**Model Loading Process:**
+1. Determine entity type (Box, Sphere, Model)
+2. Look up corresponding GLTF/GLB file in cache
+3. Load model using `Model::direct(PathBuf)`
+4. Apply transform (position, rotation, scale from dimensions)
+5. Render in StardustXR scene
 
 **Features:**
-- Respects entity dimensions for accurate sizing
-- Uses entity-specific RGB colors with alpha transparency
+- Respects entity dimensions for sizing
 - Applies proper transforms (position, rotation, scale)
-- Maintains visual distinction between entity types
-- Lightweight rendering using the Stardust Lines element
-
-**Note on 3D Model Support:**
-Full 3D model rendering with textures requires:
+- Loads models asynchronously
+- Provides error logging for missing models
 1. Downloading Overte model assets (typically GLTF/GLB format)
 2. Caching them locally
 3. Using `Model::direct(PathBuf)` with local file paths
