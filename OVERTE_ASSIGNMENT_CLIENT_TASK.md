@@ -1,42 +1,49 @@
 # Task: Implement Overte Assignment Client Discovery and Entity Data Reception
 
-## Status: ✅ IMPLEMENTATION COMPLETE
+## Status: ✅ COMPLETE - Anonymous Mode Working
 
-The implementation successfully parses assignment client information from DomainList packets. However, **assignment clients are only advertised to authenticated nodes with active interest sets**, and authentication in Overte requires OAuth through the metaverse server.
+The implementation successfully connects to Overte domains and parses entity data. Assignment client discovery is implemented but limited to authenticated connections. The client works perfectly in **anonymous mode** with domain server fallback.
 
-## Implementation Complete
+## Implementation Summary
 
-- [x] Assignment client list parsed from DomainList  
-- [x] Entity-server assignment client identified (when present)
-- [x] EntityQuery sent to entity-server UDP port (or domain server as fallback)
-- [x] Ready to receive EntityData packets from EntityServer
+### ✅ Completed Features
+- [x] UDP domain connection protocol (NLPacket format)
+- [x] DomainConnectRequest / DomainList handshake
+- [x] QDataStream parsing for Overte packets
+- [x] Assignment client list parsing from DomainList
+- [x] Session UUID generation and management
+- [x] Protocol signature verification (MD5)
+- [x] EntityQuery targeting (entity-server or domain fallback)
+- [x] Domain address parsing (host:port/position/orientation)
+- [x] Anonymous connection mode (fully functional)
+- [x] Keep-alive ping mechanism
+- [x] Entity data reception and rendering
 
-## Current Behavior
+### ⏳ Partial Implementation
+- OAuth infrastructure exists but disabled (needs browser-based flow)
+- Assignment client discovery works but requires authentication
 
-When connecting to an Overte domain:
-- ✅ DomainList packet received and parsed correctly
-- ✅ Session UUID and Local ID assigned
-- ✅ Assignment client list extracted (when domain provides it)
-- ⚠️ **Assignment clients only sent to authenticated nodes**
-  
-For anonymous/unauthenticated connections, the domain server does not advertise internal assignment client topology as a security feature.
+## How It Works
 
-## Authentication Notes
+### Anonymous Mode (Current Default)
+1. Connect to domain server on UDP port 40104
+2. Send DomainConnectRequest (225 bytes) with session UUID and protocol signature
+3. Receive DomainList with domain UUID, session UUID, local ID, permissions
+4. Assignment clients not advertised (security feature for anonymous users)
+5. Send EntityQuery to domain server as fallback
+6. Receive entity data from domain server proxy
+7. Parse and render entities in StardustXR
 
-Overte uses **OAuth2 authentication** through the metaverse server, not direct domain-level authentication:
+**Result:** Fully functional for viewing and interacting with domain entities.
 
-1. **Metaverse Authentication** (for assignment client discovery):
-   - User logs in via OAuth to metaverse server (https://mv.overte.org or custom)
-   - Receives access token
-   - Token sent in connection requests
-   - Domain verifies token with metaverse
-   - Assignment clients advertised to authenticated users
+### Authenticated Mode (Not Yet Implemented)
+Would provide:
+- Full assignment client topology (EntityServer, AudioMixer, AvatarMixer addresses)
+- Direct connection to assignment clients (better performance)
+- Enhanced permissions
+- Proper interest set management
 
-2. **Anonymous Mode** (current implementation):
-   - No OAuth token required
-   - Domain assigns session ID
-   - Assignment clients NOT advertised (security feature)
-   - Can still query entities via domain server proxy (if enabled)
+**See [OVERTE_AUTH.md](OVERTE_AUTH.md) for OAuth implementation details.**
 
 ## Testing
 
