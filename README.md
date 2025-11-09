@@ -6,7 +6,7 @@
 
 Starworld is an Overte client that renders virtual world entities inside the StardustXR compositor. It bridges Overte's entity protocol with Stardust's spatial computing environment, allowing you to view and interact with Overte domains in XR.
 
-**Current Status:** Wireframe rendering with full transform, color, and dimension support. See [RENDERING_FIX_SUMMARY.md](RENDERING_FIX_SUMMARY.md) for details on the rendering pipeline.
+**Current Status:** ✨ **3D colored model rendering** with full transform, color, and dimension support! Entities render as solid GLTF models with PBR materials. See [RENDERING_FIX_SUMMARY.md](RENDERING_FIX_SUMMARY.md) for implementation details.
 
 ## Quick Start
 
@@ -45,7 +45,10 @@ export STARWORLD_BRIDGE_PATH=./bridge/target/release
 ./build/stardust-overte-client
 ```
 
-This creates three demo entities (red cube, green sphere, blue octahedron).
+This creates three demo entities rendered as colored 3D models:
+- **Red cube** (0.2m) - smooth shaded cube with PBR material
+- **Green sphere** (0.15m) - UV sphere with 32 segments
+- **Blue icosphere** (0.25m) - Geodesic sphere placeholder for Model entities
 
 ### Connect to Overte Server
 ```bash
@@ -73,19 +76,24 @@ The Rust bridge provides the StardustXR client implementation, exposing a C ABI 
 
 ## Entity Rendering
 
-Starworld currently renders entities using **wireframe visualizations**:
+Starworld renders Overte entities as **3D colored models**:
 
-- **Box** (type 1): 12-edge cube wireframe
-- **Sphere** (type 2): 3 orthogonal circles forming a sphere
-- **Model** (type 3): Octahedron wireframe (placeholder)
-- **Unknown**: Default cube wireframe
+- **Box** (type 1): Smooth-shaded cube with colored PBR material
+- **Sphere** (type 2): UV sphere (32 segments) with colored PBR material
+- **Model** (type 3): Icosphere placeholder (downloads coming soon)
+- **Other types**: Coming soon (Text, Image, Light, etc.)
 
-All entities respect:
-- Position, rotation, scale (full transform matrix)
-- RGB color with alpha transparency
-- Dimensions (xyz size in meters)
+**Current Support:**
+- ✅ Position, rotation, scale (full transform matrix)
+- ✅ RGB color with PBR materials (roughness, metallic)
+- ✅ Dimensions (xyz size in meters)
+- ✅ GLTF/GLB model loading from local cache
+- ⏳ Model URL downloading (in progress)
+- ⏳ Texture application (planned)
 
-For details on the rendering implementation and future 3D model support, see [ENTITY_RENDERING_ENHANCEMENTS.md](ENTITY_RENDERING_ENHANCEMENTS.md).
+Models are loaded from `~/.cache/starworld/primitives/` with fallback to built-in primitives. Generated using Blender with `tools/blender_export_simple.py`.
+
+For implementation details, see [ENTITY_RENDERING_ENHANCEMENTS.md](ENTITY_RENDERING_ENHANCEMENTS.md).
 
 ## Rust Bridge
 
