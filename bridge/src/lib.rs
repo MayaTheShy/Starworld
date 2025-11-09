@@ -34,6 +34,11 @@ impl Default for BridgeState {
 enum Command {
     Create { c_id: u64, name: String, transform: Mat4 },
     Update { c_id: u64, transform: Mat4 },
+    SetModel { c_id: u64, model_url: String },
+    SetTexture { c_id: u64, texture_url: String },
+    SetColor { c_id: u64, color: [f32; 4] }, // RGBA
+    SetDimensions { c_id: u64, dimensions: [f32; 3] },
+    SetEntityType { c_id: u64, entity_type: u8 },
     Remove { c_id: u64 },
     Shutdown,
 }
