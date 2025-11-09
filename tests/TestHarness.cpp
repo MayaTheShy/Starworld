@@ -36,7 +36,8 @@ int main(){
         std::string b64 = b64Of(sig);
         std::cout << "[TEST] Protocol signature hex=" << hex << " base64=" << b64 << "\n";
         // Expected values based on current repository state/logs
-        const std::string expectedHex = "2977ddf4352e7264b6a45767087b45ba";
+        // Updated 2025-11-08 after entity enhancement changes
+        const std::string expectedHex = "eb1600e798dc5e03c755a968dc16b7fc";
         if (hex != expectedHex) {
             std::cerr << "[FAIL] Signature hex mismatch: got " << hex << " expected " << expectedHex << "\n";
             ++failures;
