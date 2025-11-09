@@ -70,11 +70,70 @@ impl ClientState for BridgeState {
 
 impl Reify for BridgeState {
     fn reify(&self) -> impl ast::Element<Self> {
-        eprintln!("[bridge/reify] Reifying {} nodes - START", self.nodes.len());
+        use stardust_xr_fusion::values::color::rgba_linear;
+        use stardust_xr_fusion::drawable::{Line, LinePoint};
+        use stardust_xr_fusion::values::Vector3;
         
-        // Temporary: just return empty PlaySpace to test
-        eprintln!("[bridge/reify] Returning empty PlaySpace");
-        PlaySpace.build()
+        eprintln!("[bridge/reify] Reifying {} nodes", self.nodes.len());
+        
+        // Create simple wireframe cubes (12 edges)
+        fn create_wireframe_cube(color: stardust_xr_fusion::values::Color, thickness: f32) -> Vec<Line> {
+            let h = 0.5; // half size
+            let points = [
+                [-h, -h, -h], [h, -h, -h], [h, h, -h], [-h, h, -h], // back face
+                [-h, -h, h], [h, -h, h], [h, h, h], [-h, h, h], // front face
+            ];
+            
+            // 12 edges of the cube
+            let edges = [
+                (0, 1), (1, 2), (2, 3), (3, 0), // back face
+                (4, 5), (5, 6), (6, 7), (7, 4), // front face
+                (0, 4), (1, 5), (2, 6), (3, 7), // connecting edges
+            ];
+            
+            edges.iter().map(|(a, b)| {
+                let pa = points[*a];
+                let pb = points[*b];
+                Line {
+                    points: vec![
+                        LinePoint { point: Vector3 { x: pa[0], y: pa[1], z: pa[2] }, thickness, color },
+                        LinePoint { point: Vector3 { x: pb[0], y: pb[1], z: pb[2] }, thickness, color },
+                    ],
+                    cyclic: false,
+                }
+            }).collect()
+        }
+        
+        let children = self.nodes.iter().filter_map(|(id, node)| {
+            let dims = glam::Vec3::from(node.dimensions);
+            if dims.length() < 0.001 {
+                eprintln!("[bridge/reify] Skipping node {} (zero dimensions)", id);
+                return None;
+            }
+            
+            eprintln!("[bridge/reify] Creating wireframe for node {} type={}", id, node.entity_type);
+            
+            let (scale, rot, trans) = node.transform.to_scale_rotation_translation();
+            let vis_scale = if dims.length() > 0.001 { dims } else { scale };
+            let node_color = rgba_linear!(node.color[0], node.color[1], node.color[2], node.color[3]);
+            
+            let trans_array = [trans.x, trans.y, trans.z];
+            let rot_array = [rot.x, rot.y, rot.z, rot.w];
+            let scale_array = [vis_scale.x, vis_scale.y, vis_scale.z];
+            let transform = stardust_xr_fusion::spatial::Transform::from_translation_rotation_scale(trans_array, rot_array, scale_array);
+            
+            let cube_lines = create_wireframe_cube(node_color, 0.003);
+            
+            Some((
+                *id,
+                Spatial::default()
+                    .transform(transform)
+                    .build()
+                    .child(Lines::new(cube_lines).build())
+            ))
+        });
+
+        PlaySpace.build().stable_children(children)
     }
 }
 
