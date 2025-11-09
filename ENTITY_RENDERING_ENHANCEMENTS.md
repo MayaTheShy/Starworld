@@ -102,16 +102,41 @@ fn get_model_path(entity_type: u8) -> Option<PathBuf> {
 - Applies proper transforms (position, rotation, scale)
 - Loads models asynchronously
 - Provides error logging for missing models
-1. Downloading Overte model assets (typically GLTF/GLB format)
-2. Caching them locally
-3. Using `Model::direct(PathBuf)` with local file paths
-4. The current implementation uses wireframe placeholders as Overte model URLs are HTTP-based and require asset pipeline integration
+- Uses cached primitives for Box, Sphere, Model types
+- Model entity type loads Suzanne (Blender monkey head) as placeholder
 
-Future enhancement: Implement a background asset downloader that fetches Overte models and textures, caches them locally, and dynamically updates the scene graph to replace wireframe placeholders with actual 3D models.
+**Primitive Model Generation:**
 
-### 5. StardustBridge C++ Interface (`StardustBridge.hpp/.cpp`)
+Models are generated using `tools/blender_export_simple.py`:
+- Creates cube.glb, sphere.glb, model.glb (Suzanne)
+- Exports to `~/.cache/starworld/primitives/`
+- Run: `blender --background --python tools/blender_export_simple.py`
 
-**Added methods:**
+### 5. HTTP Asset Downloading (`ModelCache.cpp/.hpp`)
+
+**ModelCache singleton** handles HTTP/HTTPS model downloads:
+
+```cpp
+ModelCache::instance().requestModel(
+    "https://example.com/models/chair.glb",
+    [](const std::string& url, bool success, const std::string& localPath) {
+        if (success) {
+            // Pass localPath to bridge for rendering
+        }
+    }
+);
+```
+
+**Features:**
+- SHA256-based filename hashing for cache
+- Async downloads with libcurl
+- Progress callbacks
+- Caches to `~/.cache/starworld/models/`
+- Thread-safe resource tracking
+
+### 6. StardustBridge C++ Interface (`StardustBridge.hpp/.cpp`)
+
+**Bridge methods:**
 ```cpp
 bool setNodeModel(NodeId id, const std::string& modelUrl);
 bool setNodeTexture(NodeId id, const std::string& textureUrl);
@@ -120,11 +145,15 @@ bool setNodeDimensions(NodeId id, const glm::vec3& dimensions);
 bool setNodeEntityType(NodeId id, uint8_t entityType);
 ```
 
-**Updated dynamic library loader** to resolve new function pointers from Rust bridge.
+**HTTP model handling:**
+- Detects http:// and https:// URLs
+- Requests download via ModelCache
+- Passes local cached path to Rust bridge
+- Fallback to direct URLs for file://, atp://, etc.
 
-### 6. SceneSync Integration (`SceneSync.cpp`)
+### 7. SceneSync Integration (`SceneSync.cpp`)
 
-**Enhanced entity synchronization:**
+**Entity synchronization:**
 - Propagates entity type on creation/update
 - Sets color and alpha properties
 - Configures dimensions
@@ -139,13 +168,13 @@ Run with simulation mode to see example entities:
 
 ```bash
 export STARWORLD_SIMULATE=1
-./build/stardust-overte-client
+./build/starworld
 ```
 
 This creates three demo entities:
-- **CubeA** - Red wireframe cube (20cm)
-- **SphereB** - Green wireframe sphere (15cm)
-- **ModelC** - Blue octahedron representing a model entity (25cm)
+- **CubeA** - Red cube model (20cm)
+- **SphereB** - Green sphere model (15cm)
+- **ModelC** - Blue Suzanne model (25cm)
 
 ### Live Overte Connection
 
