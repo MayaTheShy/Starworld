@@ -181,12 +181,11 @@ impl Reify for BridgeState {
             // Use entity color if set
             let node_color = rgba_linear!(node.color[0], node.color[1], node.color[2], node.color[3]);
             
-            // Create transform - convert glam types to fusion types
-            use stardust_xr_fusion::values::{Vector3, Quaternion};
-            let translation_vec = Vector3 { x: trans.x, y: trans.y, z: trans.z };
-            let rotation_quat = Quaternion { x: rot.x, y: rot.y, z: rot.z, w: rot.w };
-            let scale_vec = Vector3 { x: vis_scale.x, y: vis_scale.y, z: vis_scale.z };
-            let transform = Transform::from_translation_rotation_scale(translation_vec, rotation_quat, scale_vec);
+            // Create transform - convert glam Vec3/Quat to [f32; 3]/[f32; 4] which implement Into
+            let trans_array = [trans.x, trans.y, trans.z];
+            let rot_array = [rot.x, rot.y, rot.z, rot.w];
+            let scale_array = [vis_scale.x, vis_scale.y, vis_scale.z];
+            let transform = Transform::from_translation_rotation_scale(trans_array, rot_array, scale_array);
             
             // Entity types: 0=Unknown, 1=Box, 2=Sphere, 3=Model
             match node.entity_type {
@@ -199,12 +198,11 @@ impl Reify for BridgeState {
                 },
                 2 => {
                     // Sphere entity - use tex_cube with uniform scale to approximate
-                    use stardust_xr_fusion::values::{Vector3, Quaternion};
                     let avg_scale = (vis_scale.x + vis_scale.y + vis_scale.z) / 3.0;
-                    let translation_vec = Vector3 { x: trans.x, y: trans.y, z: trans.z };
-                    let rotation_quat = Quaternion { x: rot.x, y: rot.y, z: rot.z, w: rot.w };
-                    let uniform_scale_vec = Vector3 { x: avg_scale, y: avg_scale, z: avg_scale };
-                    let sphere_transform = Transform::from_translation_rotation_scale(translation_vec, rotation_quat, uniform_scale_vec);
+                    let trans_array = [trans.x, trans.y, trans.z];
+                    let rot_array = [rot.x, rot.y, rot.z, rot.w];
+                    let uniform_scale_array = [avg_scale, avg_scale, avg_scale];
+                    let sphere_transform = Transform::from_translation_rotation_scale(trans_array, rot_array, uniform_scale_array);
                     Some((
                         *id,
                         ModelWrapper::builtin("tex_cube", sphere_transform, node_color).build()
