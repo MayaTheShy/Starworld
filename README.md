@@ -379,10 +379,6 @@ This allows you to:
 
 See [docs/CI_SETUP_SUMMARY.md](docs/CI_SETUP_SUMMARY.md) for details on the CI pipeline.
 
-## License
-
-[Add your license here]
-
 ## References & Resources
 
 ### StardustXR
