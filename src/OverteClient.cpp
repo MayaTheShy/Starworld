@@ -630,7 +630,8 @@ void OverteClient::sendDomainConnectRequest() {
     }
     // Helper lambda to write QHostAddress (IPv4) in QDataStream format: [protocol:quint8=1][IPv4:quint32]
     auto writeQHostAddressIPv4 = [&qs](uint32_t hostOrderIPv4){
-        qs.writeUInt8(1); // QAbstractSocket::IPv4Protocol
+        // QDataStream for QHostAddress writes a protocol tag (quint8). In Qt5, IPv4Protocol serializes as 0.
+        qs.writeUInt8(0); // IPv4Protocol tag in Qt's QDataStream format
         qs.writeUInt32BE(hostOrderIPv4); // already host order -> big endian conversion inside writer
     };
 
