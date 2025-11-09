@@ -3,12 +3,14 @@
 
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
 echo "=== Starworld Build & Test Script ==="
 echo
 
 # 1. Build the Rust bridge
 echo "[1/3] Building Rust bridge..."
-cd "$(dirname "$0")/bridge"
+cd "$SCRIPT_DIR/bridge"
 cargo build --release
 echo "✓ Rust bridge built successfully"
 echo
