@@ -109,7 +109,7 @@ impl Reify for BridgeState {
             // Create 3 orthogonal circles (XY, XZ, YZ planes)
             for axis in 0..3 {
                 let mut points = Vec::new();
-                for i in 0..=segments {
+                for i in 0..segments {  // Changed from 0..=segments to avoid duplicate at 0 and segments
                     let angle = (i as f32 / segments as f32) * std::f32::consts::TAU;
                     let (sin, cos) = angle.sin_cos();
                     let point = match axis {
