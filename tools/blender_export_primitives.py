@@ -39,8 +39,6 @@ bpy.ops.export_scene.gltf(
 )
 print(f"Exported sphere.glb (GREEN) to {output_dir}")
 
-print(f"Exported sphere.glb (GREEN) to {output_dir}")
-
 # Delete sphere and create cube with RED material
 bpy.ops.object.delete()
 bpy.ops.mesh.primitive_cube_add(size=1.0, location=(0, 0, 0))
@@ -55,8 +53,6 @@ bpy.ops.export_scene.gltf(
     export_format='GLB',
     use_selection=True
 )
-print(f"Exported cube.glb (RED) to {output_dir}")
-
 print(f"Exported cube.glb (RED) to {output_dir}")
 
 # Delete cube and create ico sphere for the "model" placeholder with BLUE material
