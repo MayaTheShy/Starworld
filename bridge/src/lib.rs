@@ -10,16 +10,13 @@ use glam::Mat4;
 use stardust_xr_asteroids as ast; // alias for brevity
 use stardust_xr_asteroids::{
     client::ClientState,
-    elements::{PlaySpace, Spatial, Lines, Model, ModelPart},
+    elements::{PlaySpace, Spatial, Lines},
     Migrate, Reify, CustomElement, Projector, Context,
 };
 use stardust_xr_molecules::accent_color::AccentColor;
 use stardust_xr_fusion::objects::connect_client as fusion_connect_client;
 use stardust_xr_fusion::node::NodeType;
 use stardust_xr_fusion::root::RootAspect;
-use stardust_xr_fusion::spatial::Transform;
-use stardust_xr_fusion::drawable::MaterialParameter;
-use stardust_xr_fusion::values::ResourceID;
 use tokio::runtime::Runtime;
 
 #[derive(Clone, serde::Serialize, serde::Deserialize)]
@@ -400,7 +397,7 @@ pub extern "C" fn sdxr_start(app_id: *const std::os::raw::c_char) -> i32 {
                 }
             };
             
-            let dbus_connection = match stardust_xr_fusion::objects::connect_client().await {
+            let _dbus_connection = match stardust_xr_fusion::objects::connect_client().await {
                 Ok(conn) => conn,
                 Err(_) => {
                     eprintln!("[bridge] Failed to connect to D-Bus, using fallback");
