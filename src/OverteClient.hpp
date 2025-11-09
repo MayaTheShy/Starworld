@@ -72,6 +72,10 @@ public:
 	const std::unordered_map<std::uint64_t, OverteEntity>& entities() const { return m_entities; }
 	std::vector<OverteEntity> consumeUpdatedEntities();
 	std::vector<std::uint64_t> consumeDeletedEntities();
+	
+	// Entity creation
+	void createEntity(const std::string& name, EntityType type, const glm::vec3& position, 
+	                  const glm::vec3& dimensions, const glm::vec3& color);
 
 private:
 	void parseNetworkPackets(); // standards-aligned parsing (scaffold)
