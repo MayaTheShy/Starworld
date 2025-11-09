@@ -36,7 +36,7 @@ Starworld is an [Overte](https://overte.org) client that renders virtual world e
 
 ### Build Everything
 ```bash
-./build_and_test.sh
+./scripts/build_and_test.sh
 ```
 
 Or manually:
@@ -213,7 +213,10 @@ Starworld/
 │   ├── src/lib.rs
 │   └── Cargo.toml
 ├── tests/            # Test harness
-└── tools/            # Python utilities
+├── tools/            # Python utilities
+├── scripts/          # Build and utility scripts
+├── docs/             # Documentation files
+└── examples/         # Example configurations and models
 ```
 
 ### Debugging
