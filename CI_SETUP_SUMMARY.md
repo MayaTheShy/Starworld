@@ -55,7 +55,7 @@ Fixed the protocol signature test in `tests/TestHarness.cpp`:
 
 ### Rust Bridge
 - ✅ Successful compilation
-- ⚠️ 4 warnings (unused imports/functions - not blocking)
+- ✅ Clean build (no warnings in release mode)
 
 ## How to Use
 
@@ -75,7 +75,7 @@ cmake .. -DCMAKE_BUILD_TYPE=Debug
 make
 
 # Run tests
-./build/stardust-tests
+./build/starworld-tests
 ```
 
 ### Check Code Quality
