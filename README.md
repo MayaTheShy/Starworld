@@ -205,16 +205,18 @@ This allows you to:
 - [x] **GLTF/GLB model loading**
 - [x] **PBR material support**
 
-### Phase 2: Asset Pipeline (Current Focus)
+### Phase 2: Asset Pipeline ✅ COMPLETE
 - [x] Local asset cache (`~/.cache/starworld/primitives/`)
-- [ ] **HTTP model downloader** ⏭️ NEXT
-- [ ] Download models from entity.modelUrl
+- [x] **HTTP model downloader with ModelCache** 🎉
+- [x] Download models from entity.modelUrl (http/https)
+- [x] SHA256-based caching with libcurl
+- [x] Async download callbacks
+- [ ] ATP protocol support (Overte asset server)
 - [ ] Texture loading and application
-- [ ] Model caching and invalidation
-- [ ] Progress/error handling
+- [ ] Progress indicators in VR
 
-### Phase 3: Entity System
-- [ ] All entity types (Text, Image, Light, Zone, etc.)
+### Phase 3: Entity System (Current Focus)
+- [ ] All entity types (Text, Image, Light, Zone, etc.) ⏭️ NEXT
 - [ ] Entity property updates (position, rotation, color changes)
 - [ ] Entity deletion handling
 - [ ] Parent/child entity hierarchies
