@@ -39,9 +39,6 @@ Starworld is an [Overte](https://overte.org) client that renders virtual world e
 ```bash
 # Start StardustXR server (in a separate terminal)
 stardust-xr-server
-
-# Or as a systemd service
-systemctl --user start stardust
 ```
 
 ### Build Everything
