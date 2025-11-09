@@ -4,6 +4,7 @@
 #include "SceneSync.Hpp"
 #include "InputHandler.hpp"
 #include "DomainDiscovery.hpp"
+#include "OverteAuth.hpp"
 
 #include <iostream>
 #include <thread>
@@ -12,13 +13,68 @@
 int main(int argc, char** argv) {
     // Simple CLI: --socket=/path/to.sock or --abstract=name
     std::string socketOverride;
+    bool useAuth = false;
+    std::string authUsername, authPassword;
+    
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
         const std::string so = "--socket=";
         const std::string ab = "--abstract=";
+        const std::string authFlag = "--auth";
+        const std::string userFlag = "--username=";
+        const std::string passFlag = "--password=";
+        
         if (arg.rfind(so, 0) == 0) socketOverride = arg.substr(so.size());
         else if (arg.rfind(ab, 0) == 0) socketOverride = '@' + arg.substr(ab.size());
+        else if (arg == authFlag) useAuth = true;
+        else if (arg.rfind(userFlag, 0) == 0) authUsername = arg.substr(userFlag.size());
+        else if (arg.rfind(passFlag, 0) == 0) authPassword = arg.substr(passFlag.size());
     }
+    
+    // Handle OAuth authentication if requested
+    OverteAuth auth;
+    if (useAuth) {
+        std::string metaverseUrl = "https://mv.overte.org";
+        if (const char* env = std::getenv("OVERTE_METAVERSE")) {
+            metaverseUrl = env;
+        }
+        
+        std::cout << "[Auth] ===================================" << std::endl;
+        std::cout << "[Auth] Overte OAuth Authentication" << std::endl;
+        std::cout << "[Auth] Metaverse: " << metaverseUrl << std::endl;
+        std::cout << "[Auth] ===================================" << std::endl;
+        
+        bool authenticated = false;
+        
+        // Try loading saved token first
+        if (auth.loadTokenFromFile()) {
+            if (auth.isAuthenticated()) {
+                std::cout << "[Auth] Using saved token for " << auth.getUsername() << std::endl;
+                authenticated = true;
+            }
+        }
+        
+        if (!authenticated) {
+            if (!authUsername.empty() && !authPassword.empty()) {
+                // Use provided credentials (less secure, not recommended)
+                std::cout << "[Auth] Authenticating with username/password..." << std::endl;
+                authenticated = auth.login(authUsername, authPassword, metaverseUrl);
+            } else {
+                // Use browser OAuth flow (recommended)
+                std::cout << "[Auth] Starting browser-based authentication..." << std::endl;
+                authenticated = auth.loginWithBrowser(metaverseUrl);
+            }
+        }
+        
+        if (!authenticated) {
+            std::cerr << "[Auth] Authentication failed: " << auth.getLastError() << std::endl;
+            std::cerr << "[Auth] Continuing in anonymous mode..." << std::endl;
+        } else {
+            std::cout << "[Auth] ✓ Successfully authenticated!" << std::endl;
+            std::cout << "[Auth] Username: " << auth.getUsername() << std::endl;
+        }
+    }
+    
     StardustBridge stardust;
     if (!stardust.connect(socketOverride)) {
         std::cerr << "Failed to connect to StardustXR compositor.\n";
