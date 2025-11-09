@@ -83,12 +83,15 @@ static std::vector<int> findAllInts(const std::string& json, const std::string& 
 // Vircadia/Overte often expose entries with fields like name, network_address, domain, ice_server_address, port, etc.
 std::vector<DiscoveredDomain> parseDomains(const std::string& json) {
     std::vector<DiscoveredDomain> out;
-    auto names = findAllStrings(json, "name");
-    auto hostsA = findAllStrings(json, "network_address");
-    auto hostsB = findAllStrings(json, "ice_server_address");
-    auto hostsC = findAllStrings(json, "domain");
-    auto httpPorts = findAllInts(json, "http_port");
-    auto udpPorts = findAllInts(json, "udp_port");
+    auto names    = findAllStrings(json, "name");
+    auto hostsA   = findAllStrings(json, "network_address");
+    auto hostsB   = findAllStrings(json, "ice_server_address");
+    auto hostsC   = findAllStrings(json, "domain");
+    auto hostsD   = findAllStrings(json, "address"); // alternative key
+    auto httpPorts  = findAllInts(json, "http_port");
+    auto httpPorts2 = findAllInts(json, "domain_http_port");
+    auto udpPorts   = findAllInts(json, "udp_port");
+    auto udpPorts2  = findAllInts(json, "domain_udp_port");
 
     // Gather candidates from each host list
     auto addHostList = [&](const std::vector<std::string>& hosts) {
@@ -96,14 +99,18 @@ std::vector<DiscoveredDomain> parseDomains(const std::string& json) {
             DiscoveredDomain d;
             d.name = (i < names.size()) ? names[i] : std::string();
             d.networkHost = hosts[i];
-            d.httpPort = (i < httpPorts.size() && httpPorts[i] > 0) ? httpPorts[i] : 40102;
-            d.udpPort = (i < udpPorts.size() && udpPorts[i] > 0) ? udpPorts[i] : 40104;
+            int hp = (i < httpPorts.size() && httpPorts[i] > 0) ? httpPorts[i]
+                   : (i < httpPorts2.size() && httpPorts2[i] > 0) ? httpPorts2[i] : 40102;
+            int up = (i < udpPorts.size() && udpPorts[i] > 0) ? udpPorts[i]
+                   : (i < udpPorts2.size() && udpPorts2[i] > 0) ? udpPorts2[i] : 40104;
+            d.httpPort = hp; d.udpPort = up;
             out.emplace_back(std::move(d));
         }
     };
     addHostList(hostsA);
     addHostList(hostsB);
     addHostList(hostsC);
+    addHostList(hostsD);
 
     // Dedup by host:port
     std::vector<DiscoveredDomain> dedup;
@@ -127,10 +134,15 @@ std::vector<DiscoveredDomain> discoverDomains(int maxDomains) {
     if (const char* custom = std::getenv("METAVERSE_DISCOVERY_URL")) {
         endpoints.emplace_back(custom);
     }
-    // Common candidate endpoints
-    endpoints.emplace_back("https://metaverse.vircadia.com/api/domains");
-    endpoints.emplace_back("https://metaverse.overte.org/api/domains");
-    endpoints.emplace_back("https://overte.org/api/domains");
+    // Build fuller list of endpoints using base + path permutations
+    std::vector<std::string> bases;
+    if (const char* base = std::getenv("OVERTE_METAVERSE_BASE")) bases.emplace_back(base);
+    bases.emplace_back("https://metaverse.vircadia.com");
+    bases.emplace_back("https://metaverse.overte.org");
+    bases.emplace_back("https://metaverse.overte.dev");
+    bases.emplace_back("https://overte.org");
+    const char* paths[] = {"/api/domains?status=online","/api/domains","/api/v1/domains?status=online","/api/v1/domains"};
+    for (auto& b : bases) for (auto p : paths) endpoints.emplace_back(b + std::string(p));
 
     for (const auto& url : endpoints) {
         auto body = httpGet(url);
