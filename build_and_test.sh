@@ -28,7 +28,7 @@ echo
 
 # 3. Verify the bridge library exists
 echo "[3/3] Verifying build artifacts..."
-BRIDGE_PATH="$(dirname "$0")/bridge/target/release/libstardust_bridge.so"
+BRIDGE_PATH="$SCRIPT_DIR/bridge/target/release/libstardust_bridge.so"
 if [ -f "$BRIDGE_PATH" ]; then
     echo "✓ Bridge library found: $BRIDGE_PATH"
     ls -lh "$BRIDGE_PATH"
@@ -37,7 +37,7 @@ else
     exit 1
 fi
 
-CLIENT_PATH="$(dirname "$0")/build/stardust-overte-client"
+CLIENT_PATH="$SCRIPT_DIR/build/stardust-overte-client"
 if [ -f "$CLIENT_PATH" ]; then
     echo "✓ Client executable found: $CLIENT_PATH"
     ls -lh "$CLIENT_PATH"
@@ -51,10 +51,10 @@ echo "=== Build Complete! ==="
 echo
 echo "To test with simulation mode:"
 echo "  export STARWORLD_SIMULATE=1"
-echo "  export STARWORLD_BRIDGE_PATH=$(dirname "$0")/bridge/target/release"
-echo "  $(dirname "$0")/build/stardust-overte-client"
+echo "  export STARWORLD_BRIDGE_PATH=$SCRIPT_DIR/bridge/target/release"
+echo "  $SCRIPT_DIR/build/stardust-overte-client"
 echo
 echo "To connect to an Overte server:"
-echo "  export STARWORLD_BRIDGE_PATH=$(dirname "$0")/bridge/target/release"
-echo "  $(dirname "$0")/build/stardust-overte-client ws://domain.example.com:40102"
+echo "  export STARWORLD_BRIDGE_PATH=$SCRIPT_DIR/bridge/target/release"
+echo "  $SCRIPT_DIR/build/stardust-overte-client ws://domain.example.com:40102"
 echo
