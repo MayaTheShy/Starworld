@@ -399,3 +399,27 @@ export OVERTE_TOKEN="eyJ0eXAiOiJKV1QiLCJhbGc..."
 **Estimated Effort:** 8-16 hours for full implementation
 
 **Alternative:** Wait for Overte to document/expose a simpler API auth method, or use local domain servers without metaverse authentication.
+
+## References
+
+### Overte OAuth Implementation
+- **AccountManager Source**: https://github.com/overte-org/overte/blob/master/libraries/networking/src/AccountManager.cpp
+- **OAuth Endpoints**: Lines 586-655 (requestAccessTokenWithAuthCode, refreshAccessToken)
+- **NodeList Integration**: https://github.com/overte-org/overte/blob/master/libraries/networking/src/NodeList.cpp
+- **Domain Server Validation**: https://github.com/overte-org/overte/blob/master/domain-server/src/DomainServer.cpp
+
+### OAuth 2.0 Standards
+- **RFC 6749**: https://www.rfc-editor.org/rfc/rfc6749.html - OAuth 2.0 Authorization Framework
+- **RFC 7636**: https://www.rfc-editor.org/rfc/rfc7636.html - PKCE (Proof Key for Code Exchange)
+- **Authorization Code Flow**: https://oauth.net/2/grant-types/authorization-code/
+
+### Overte Metaverse API
+- **Main Metaverse**: https://mv.overte.org
+- **OAuth Authorization**: https://mv.overte.org/oauth/authorize
+- **Token Endpoint**: https://mv.overte.org/oauth/token
+- **User Profile API**: https://mv.overte.org/api/v1/user/profile
+
+### Development Resources
+- **Overte Discord**: https://discord.gg/overte - Ask about OAuth implementation
+- **Overte Forums**: https://forums.overte.org - Technical discussions
+- **Developer Docs**: https://docs.overte.org/developer - Official developer guides
