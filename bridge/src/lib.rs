@@ -72,43 +72,78 @@ impl ClientState for BridgeState {
 impl Reify for BridgeState {
     fn reify(&self) -> impl ast::Element<Self> {
         use stardust_xr_fusion::values::color::rgba_linear;
+        use stardust_xr_fusion::drawable::{Line, LinePoint};
+        use stardust_xr_fusion::values::Vector3;
         
         eprintln!("[bridge/reify] Reifying {} nodes", self.nodes.len());
         
-        // Helper function to create cube wireframe or filled visualization
-        fn create_cube_lines(half_size: glam::Vec3, _color: stardust_xr_fusion::values::Color) -> Vec<([f32; 3], [f32; 3])> {
+        // Helper function to create cube lines with proper Line/LinePoint structs
+        fn create_cube_lines(half_size: glam::Vec3, color: stardust_xr_fusion::values::Color, thickness: f32) -> Vec<Line> {
             let mut lines = Vec::new();
             
             // Create a dense grid of lines to make it look more solid
-            let steps = 5; // More lines = more solid appearance
+            let steps = 8; // More lines = more solid appearance
             for i in 0..=steps {
                 let t = (i as f32) / (steps as f32) * 2.0 - 1.0;
                 
                 // Lines parallel to X axis
                 for j in 0..=steps {
                     let u = (j as f32) / (steps as f32) * 2.0 - 1.0;
-                    lines.push((
-                        [- half_size.x, t * half_size.y, u * half_size.z],
-                        [half_size.x, t * half_size.y, u * half_size.z],
-                    ));
+                    lines.push(Line {
+                        points: vec![
+                            LinePoint {
+                                point: Vector3 { x: -half_size.x, y: t * half_size.y, z: u * half_size.z },
+                                thickness,
+                                color,
+                            },
+                            LinePoint {
+                                point: Vector3 { x: half_size.x, y: t * half_size.y, z: u * half_size.z },
+                                thickness,
+                                color,
+                            },
+                        ],
+                        cyclic: false,
+                    });
                 }
                 
                 // Lines parallel to Y axis
                 for j in 0..=steps {
                     let u = (j as f32) / (steps as f32) * 2.0 - 1.0;
-                    lines.push((
-                        [t * half_size.x, -half_size.y, u * half_size.z],
-                        [t * half_size.x, half_size.y, u * half_size.z],
-                    ));
+                    lines.push(Line {
+                        points: vec![
+                            LinePoint {
+                                point: Vector3 { x: t * half_size.x, y: -half_size.y, z: u * half_size.z },
+                                thickness,
+                                color,
+                            },
+                            LinePoint {
+                                point: Vector3 { x: t * half_size.x, y: half_size.y, z: u * half_size.z },
+                                thickness,
+                                color,
+                            },
+                        ],
+                        cyclic: false,
+                    });
                 }
                 
                 // Lines parallel to Z axis
                 for j in 0..=steps {
                     let u = (j as f32) / (steps as f32) * 2.0 - 1.0;
-                    lines.push((
-                        [t * half_size.x, u * half_size.y, -half_size.z],
-                        [t * half_size.x, u * half_size.y, half_size.z],
-                    ));
+                    lines.push(Line {
+                        points: vec![
+                            LinePoint {
+                                point: Vector3 { x: t * half_size.x, y: u * half_size.y, z: -half_size.z },
+                                thickness,
+                                color,
+                            },
+                            LinePoint {
+                                point: Vector3 { x: t * half_size.x, y: u * half_size.y, z: half_size.z },
+                                thickness,
+                                color,
+                            },
+                        ],
+                        cyclic: false,
+                    });
                 }
             }
             
@@ -147,19 +182,14 @@ impl Reify for BridgeState {
             
             // Create a dense cube mesh for a more solid appearance
             let half_size = glam::Vec3::splat(0.5); // Lines will be scaled by transform
-            let cube_lines = create_cube_lines(half_size, node_color);
+            let cube_lines = create_cube_lines(half_size, node_color, 0.005);
             
             // Entity types: 0=Unknown, 1=Box, 2=Sphere, 3=Model
             // For now, render all as dense wireframe cubes (which we know works)
             Some((
                 *id,
                 Spatial::from(transform).build().child(
-                    Lines {
-                        transform: Transform::none(),
-                        lines: cube_lines,
-                        color: node_color,
-                        thickness: 0.005, // Thicker lines for more solid appearance
-                    }.build()
+                    Lines::new(cube_lines).build()
                 )
             ))
         });
