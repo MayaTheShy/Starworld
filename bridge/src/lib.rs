@@ -373,6 +373,7 @@ pub extern "C" fn sdxr_start(app_id: *const std::os::raw::c_char) -> i32 {
                 match stardust_xr_fusion::client::Client::connect().await {
                     Ok(c) => {
                         println!("[bridge] Successfully connected to Stardust compositor");
+                        CONNECTION_SUCCESS.store(true, Ordering::SeqCst);
                         break c;
                     }
                     Err(e) => {
@@ -383,6 +384,7 @@ pub extern "C" fn sdxr_start(app_id: *const std::os::raw::c_char) -> i32 {
                             eprintln!("[bridge] Make sure the Stardust server is running:");
                             eprintln!("[bridge]   systemctl --user start stardust");
                             eprintln!("[bridge]   or: stardust-xr-server");
+                            CONNECTION_FAILED.store(true, Ordering::SeqCst);
                             return; // Exit the async block, which will cause sdxr_start to return error
                         }
                         eprintln!("[bridge] Fusion connect failed (attempt {}/{}): {:?}; retrying...", retry_count, max_retries, e);
