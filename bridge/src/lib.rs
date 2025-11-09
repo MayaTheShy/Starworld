@@ -262,6 +262,10 @@ pub extern "C" fn sdxr_start(app_id: *const std::os::raw::c_char) -> i32 {
     if STARTED.swap(true, Ordering::SeqCst) { return 0; }
     let _name = unsafe { CStr::from_ptr(app_id) }.to_string_lossy().to_string();
 
+    // Reset connection status flags
+    CONNECTION_SUCCESS.store(false, Ordering::SeqCst);
+    CONNECTION_FAILED.store(false, Ordering::SeqCst);
+
     let mut ctrl = CTRL.lock().unwrap();
     ctrl.next_id = 1;
     let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<Command>();
