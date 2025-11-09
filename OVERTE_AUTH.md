@@ -72,13 +72,13 @@ This will prompt you for username and password.
 
 ### Method 2: Environment Variables
 ```bash
-OVERTE_USERNAME="your_username" ./build/stardust-overte-client
+OVERTE_USERNAME="your_username" ./build/starworld
 ```
 
 ### Method 3: Export Variables
 ```bash
 export OVERTE_USERNAME="your_username"
-./build/stardust-overte-client
+./build/starworld
 ```
 
 ## Configuration
@@ -111,7 +111,7 @@ sudo ss -ulnp | grep domain-server
 ### Test with Simulation Mode
 
 ```bash
-STARWORLD_SIMULATE=1 ./build/stardust-overte-client
+STARWORLD_SIMULATE=1 ./build/starworld
 ```
 
 ## Protocol Implementation Status
