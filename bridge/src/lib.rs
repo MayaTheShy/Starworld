@@ -66,9 +66,6 @@ impl ClientState for BridgeState {
 
 impl Reify for BridgeState {
     fn reify(&self) -> impl ast::Element<Self> {
-        use stardust_xr_fusion::drawable::{Line, LinePoint};
-        use stardust_xr_fusion::values::{color::rgba_linear, Vector3};
-        
         // Root playspace. Create appropriate visuals per entity type
         let children = self.nodes.iter().map(|(id, node)| {
             // Decompose transform into TRS
@@ -82,7 +79,8 @@ impl Reify for BridgeState {
                 scale
             };
             
-            // Use entity color if set
+            // Use entity color if set - use rgba_linear macro from asteroids
+            use ast::client::values::color::rgba_linear;
             let node_color = rgba_linear!(node.color[0], node.color[1], node.color[2], node.color[3]);
             
             // Entity types: 0=Unknown, 1=Box, 2=Sphere, 3=Model, ...
@@ -206,6 +204,7 @@ impl Reify for BridgeState {
                     )
                 },
                 _ => {
+                    use ast::client::values::color::rgba_linear;
                     // Unknown/default - render as simple wireframe cube
                     let t = 0.004;
                     let c = rgba_linear!(0.6, 0.6, 0.6, 0.8); // Gray for unknown
