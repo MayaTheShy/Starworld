@@ -13,10 +13,37 @@
 #include <netinet/in.h>
 #include <netdb.h>
 
+// Overte entity types (matching Overte EntityTypes.h)
+enum class EntityType {
+	Unknown,
+	Box,
+	Sphere,
+	Model,
+	Shape,
+	Light,
+	Text,
+	Zone,
+	Web,
+	ParticleEffect,
+	Line,
+	PolyLine,
+	Grid,
+	Gizmo,
+	Material
+};
+
 struct OverteEntity {
 	std::uint64_t id{0};
 	std::string name;
 	glm::mat4 transform{1.0f};
+	
+	// Visual properties
+	EntityType type{EntityType::Box};
+	std::string modelUrl;      // For Model type entities
+	std::string textureUrl;    // Texture/material URL
+	glm::vec3 color{1.0f, 1.0f, 1.0f};  // RGB color (0-1 range)
+	glm::vec3 dimensions{0.1f, 0.1f, 0.1f};  // Size/scale in meters
+	float alpha{1.0f};         // Transparency (0-1)
 };
 
 // Lightweight client for Overte mixers/entities. Designed to follow Overte's
