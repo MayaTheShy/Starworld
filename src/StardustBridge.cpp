@@ -291,9 +291,13 @@ bool StardustBridge::loadBridge() {
         m_fnPoll = reinterpret_cast<fn_poll_t>(req("sdxr_poll"));
         m_fnShutdown = reinterpret_cast<fn_shutdown_t>(req("sdxr_shutdown"));
         m_fnCreateNode = reinterpret_cast<fn_create_node_t>(req("sdxr_create_node"));
-        m_fnCreateNode = reinterpret_cast<fn_create_node_t>(req("sdxr_create_node"));
         m_fnUpdateNode = reinterpret_cast<fn_update_node_t>(req("sdxr_update_node"));
         m_fnRemoveNode = reinterpret_cast<fn_remove_node_t>(req("sdxr_remove_node"));
+        m_fnSetModel = reinterpret_cast<fn_set_model_t>(req("sdxr_set_node_model"));
+        m_fnSetTexture = reinterpret_cast<fn_set_texture_t>(req("sdxr_set_node_texture"));
+        m_fnSetColor = reinterpret_cast<fn_set_color_t>(req("sdxr_set_node_color"));
+        m_fnSetDimensions = reinterpret_cast<fn_set_dimensions_t>(req("sdxr_set_node_dimensions"));
+        m_fnSetEntityType = reinterpret_cast<fn_set_entity_type_t>(req("sdxr_set_node_entity_type"));
         if (m_fnStart && m_fnPoll && m_fnCreateNode && m_fnUpdateNode) {
             m_bridgeHandle = h;
             std::cout << "[StardustBridge] Loaded Rust bridge: " << path << std::endl;
