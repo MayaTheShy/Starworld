@@ -187,35 +187,50 @@ This allows you to:
 
 ## Known Limitations
 
-1. **Wireframe-only rendering**: Full 3D models require asset download pipeline (see roadmap)
-2. **No texture support**: Material/texture application needs model loading
-3. **UDP only**: WebSocket transport not yet implemented
-4. **Entity types**: Limited to basic primitives (box, sphere, model placeholder)
+1. **Entity types**: Only Box, Sphere, Model supported. Need Text, Image, Light, Zone, etc.
+2. **Static models**: Uses cached primitives, doesn't download from entity.modelUrl yet
+3. **No texture support**: Models use base colors only, no texture mapping
+4. **One-way sync**: Entities created but not updated or removed yet
+5. **UDP only**: WebSocket transport not implemented
+6. **Single user**: No avatar or multi-user support yet
 
 ## Roadmap
 
-### Phase 1: Rendering ✅ (Current)
+### Phase 1: Core Rendering ✅ COMPLETE
 - [x] Wireframe entity visualization
-- [x] Transform, color, dimension support
+- [x] Transform, color, dimension support  
 - [x] Entity type differentiation
+- [x] **3D colored model rendering** 🎉
+- [x] **GLTF/GLB model loading**
+- [x] **PBR material support**
 
-### Phase 2: Assets (Planned)
-- [ ] HTTP model downloader
-- [ ] Local asset cache
-- [ ] GLTF/GLB model loading
-- [ ] Dynamic model replacement
-- [ ] Texture application
+### Phase 2: Asset Pipeline (Current Focus)
+- [x] Local asset cache (`~/.cache/starworld/primitives/`)
+- [ ] **HTTP model downloader** ⏭️ NEXT
+- [ ] Download models from entity.modelUrl
+- [ ] Texture loading and application
+- [ ] Model caching and invalidation
+- [ ] Progress/error handling
 
-### Phase 3: Interaction
-- [ ] Input forwarding (pointer, hand tracking)
-- [ ] Avatar representation
+### Phase 3: Entity System
+- [ ] All entity types (Text, Image, Light, Zone, etc.)
+- [ ] Entity property updates (position, rotation, color changes)
+- [ ] Entity deletion handling
+- [ ] Parent/child entity hierarchies
+- [ ] Entity query/filtering by distance
+
+### Phase 4: Interaction & Multi-User
+- [ ] Avatar representation and sync
+- [ ] Input forwarding (XR controllers → Overte)
 - [ ] Audio spatial rendering
+- [ ] Voice chat integration
 
-### Phase 4: Advanced Features
+### Phase 5: Advanced Features
 - [ ] Script integration
-- [ ] Zone/environment support
+- [ ] Physics simulation
 - [ ] Particle effects
-- [ ] Lighting
+- [ ] Animation playback
+- [ ] Material/texture overrides
 
 ## Troubleshooting
 
