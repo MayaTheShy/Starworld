@@ -191,35 +191,35 @@ This allows you to:
 ## Known Limitations
 
 1. **Entity types**: Only Box, Sphere, Model supported. Need Text, Image, Light, Zone, etc.
-2. **Static models**: Uses cached primitives, doesn't download from entity.modelUrl yet
-3. **No texture support**: Models use base colors only, no texture mapping
-4. **One-way sync**: Entities created but not updated or removed yet
+2. **Model colors**: Entity colors are parsed but not yet applied to materials
+3. **No texture support**: Models render without textures, entity.textureUrl parsing ready
+4. **Limited entity updates**: Entities created but updates/deletions need work
 5. **UDP only**: WebSocket transport not implemented
 6. **Single user**: No avatar or multi-user support yet
 
 ## Roadmap
 
 ### Phase 1: Core Rendering ✅ COMPLETE
-- [x] Wireframe entity visualization
-- [x] Transform, color, dimension support  
 - [x] Entity type differentiation
-- [x] **3D colored model rendering** 🎉
-- [x] **GLTF/GLB model loading**
-- [x] **PBR material support**
+- [x] **3D model rendering with GLTF/GLB** 🎉
+- [x] Transform support (position, rotation, scale)
+- [x] Dimension support (xyz sizing)
 
 ### Phase 2: Asset Pipeline ✅ COMPLETE
 - [x] Local asset cache (`~/.cache/starworld/primitives/`)
+- [x] Blender primitive generation (`tools/blender_export_simple.py`)
 - [x] **HTTP model downloader with ModelCache** 🎉
 - [x] Download models from entity.modelUrl (http/https)
 - [x] SHA256-based caching with libcurl
-- [x] Async download callbacks
+- [x] Async download callbacks with progress
 - [ ] ATP protocol support (Overte asset server)
-- [ ] Texture loading and application
-- [ ] Progress indicators in VR
+- [ ] Material color application to models
+- [ ] Texture loading and mapping
 
 ### Phase 3: Entity System (Current Focus)
-- [ ] All entity types (Text, Image, Light, Zone, etc.) ⏭️ NEXT
-- [ ] Entity property updates (position, rotation, color changes)
+- [ ] Apply entity colors to model materials ⏭️ NEXT
+- [ ] All entity types (Text, Image, Light, Zone, etc.)
+- [ ] Entity property updates (real-time position, rotation, color changes)
 - [ ] Entity deletion handling
 - [ ] Parent/child entity hierarchies
 - [ ] Entity query/filtering by distance
