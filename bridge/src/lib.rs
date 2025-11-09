@@ -181,8 +181,12 @@ impl Reify for BridgeState {
             // Use entity color if set
             let node_color = rgba_linear!(node.color[0], node.color[1], node.color[2], node.color[3]);
             
-            // Create transform using Transform::from_translation_rotation_scale
-            let transform = Transform::from_translation_rotation_scale(trans, rot, vis_scale);
+            // Create transform - convert glam types to fusion types
+            use stardust_xr_fusion::values::{Vector3, Quaternion};
+            let translation_vec = Vector3 { x: trans.x, y: trans.y, z: trans.z };
+            let rotation_quat = Quaternion { x: rot.x, y: rot.y, z: rot.z, w: rot.w };
+            let scale_vec = Vector3 { x: vis_scale.x, y: vis_scale.y, z: vis_scale.z };
+            let transform = Transform::from_translation_rotation_scale(translation_vec, rotation_quat, scale_vec);
             
             // Entity types: 0=Unknown, 1=Box, 2=Sphere, 3=Model
             match node.entity_type {
