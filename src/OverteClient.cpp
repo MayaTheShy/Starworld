@@ -1187,3 +1187,138 @@ std::vector<std::uint64_t> OverteClient::consumeDeletedEntities() {
     out.swap(m_deleteQueue); // efficient clear
     return out;
 }
+
+void OverteClient::createEntity(const std::string& name, EntityType type, const glm::vec3& position,
+                                const glm::vec3& dimensions, const glm::vec3& color) {
+    if (!m_udpReady || m_udpFd == -1) {
+        std::cerr << "[OverteClient] Cannot create entity: not connected" << std::endl;
+        return;
+    }
+    
+    if (m_localID == 0) {
+        std::cerr << "[OverteClient] Cannot create entity: no local ID assigned yet" << std::endl;
+        return;
+    }
+    
+    std::cout << "[OverteClient] Creating entity: " << name << " at (" 
+              << position.x << ", " << position.y << ", " << position.z << ")" << std::endl;
+    
+    // Create EntityAdd packet (PacketType::EntityAdd = 0x3A)
+    NLPacket packet(PacketType::EntityAdd, 0, true);
+    packet.setSourceID(m_localID);
+    packet.setSequenceNumber(m_sequenceNumber++);
+    
+    // EntityAdd packet format (simplified - basic properties only):
+    // 1. Entity type (uint8)
+    // 2. Creation time (uint64 microseconds since epoch)
+    // 3. Last edited time (uint64)
+    // 4. Entity ID flags (uint8) - 0x00 for server-generated ID
+    // 5. Entity properties encoded as key-value pairs
+    
+    std::vector<uint8_t> payload;
+    
+    // Helper lambdas for writing data in network byte order
+    auto writeU8 = [&](uint8_t v) { payload.push_back(v); };
+    auto writeU16 = [&](uint16_t v) {
+        payload.push_back((v >> 8) & 0xFF);
+        payload.push_back(v & 0xFF);
+    };
+    auto writeU32 = [&](uint32_t v) {
+        payload.push_back((v >> 24) & 0xFF);
+        payload.push_back((v >> 16) & 0xFF);
+        payload.push_back((v >> 8) & 0xFF);
+        payload.push_back(v & 0xFF);
+    };
+    auto writeU64 = [&](uint64_t v) {
+        for (int i = 7; i >= 0; --i) {
+            payload.push_back((v >> (i * 8)) & 0xFF);
+        }
+    };
+    auto writeF32 = [&](float v) {
+        uint32_t bits;
+        std::memcpy(&bits, &v, sizeof(float));
+        writeU32(bits);
+    };
+    auto writeVec3 = [&](const glm::vec3& v) {
+        writeF32(v.x);
+        writeF32(v.y);
+        writeF32(v.z);
+    };
+    auto writeString = [&](const std::string& s) {
+        writeU16(static_cast<uint16_t>(s.length()));
+        for (char c : s) {
+            payload.push_back(static_cast<uint8_t>(c));
+        }
+    };
+    
+    // 1. Entity type - convert our EntityType to Overte's entity type codes
+    uint8_t overtypeType = 0;
+    switch (type) {
+        case EntityType::Box: overtypeType = 1; break;
+        case EntityType::Sphere: overtypeType = 2; break;
+        case EntityType::Model: overtypeType = 3; break;
+        case EntityType::Shape: overtypeType = 4; break;
+        default: overtypeType = 1; break; // Default to Box
+    }
+    writeU8(overtypeType);
+    
+    // 2. Creation time (current time in microseconds)
+    auto now = std::chrono::system_clock::now();
+    auto micros = std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()).count();
+    writeU64(static_cast<uint64_t>(micros));
+    
+    // 3. Last edited time (same as creation time)
+    writeU64(static_cast<uint64_t>(micros));
+    
+    // 4. Entity ID flags - 0x00 means let server assign ID
+    writeU8(0x00);
+    
+    // 5. Entity properties (encoded as a property list)
+    // Property encoding format: property ID (uint16) + property data
+    // Common property IDs (from EntityItemProperties.h):
+    // - PROP_POSITION = 0x01
+    // - PROP_DIMENSIONS = 0x02
+    // - PROP_ROTATION = 0x03
+    // - PROP_COLOR = 0x0C
+    // - PROP_NAME = 0x1F
+    
+    // For simplicity, we'll encode a minimal set of properties
+    // Overte uses a compact property encoding with flags, but we'll use a simpler approach
+    
+    // Name property (PROP_NAME = 0x1F = 31)
+    writeU16(0x1F);
+    writeString(name);
+    
+    // Position property (PROP_POSITION = 0x01 = 1)
+    writeU16(0x01);
+    writeVec3(position);
+    
+    // Dimensions property (PROP_DIMENSIONS = 0x02 = 2)
+    writeU16(0x02);
+    writeVec3(dimensions);
+    
+    // Color property (PROP_COLOR = 0x0C = 12)
+    // Overte uses RGB values 0-255
+    writeU16(0x0C);
+    writeU8(static_cast<uint8_t>(color.r * 255.0f));
+    writeU8(static_cast<uint8_t>(color.g * 255.0f));
+    writeU8(static_cast<uint8_t>(color.b * 255.0f));
+    
+    // End of properties marker (property ID = 0xFFFF)
+    writeU16(0xFFFF);
+    
+    // Write payload to packet
+    if (!payload.empty()) {
+        packet.write(payload.data(), payload.size());
+    }
+    
+    const auto& data = packet.getData();
+    ssize_t s = ::sendto(m_udpFd, data.data(), data.size(), 0,
+                         reinterpret_cast<sockaddr*>(&m_udpAddr), m_udpAddrLen);
+    
+    if (s > 0) {
+        std::cout << "[OverteClient] Sent EntityAdd (" << s << " bytes, seq=" << (m_sequenceNumber-1) << ")" << std::endl;
+    } else {
+        std::cerr << "[OverteClient] Failed to send EntityAdd: " << strerror(errno) << std::endl;
+    }
+}
