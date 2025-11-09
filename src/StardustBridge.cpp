@@ -171,6 +171,51 @@ bool StardustBridge::removeNode(NodeId id) {
     return true;
 }
 
+bool StardustBridge::setNodeModel(NodeId id, const std::string& modelUrl) {
+    auto it = m_nodes.find(id);
+    if (it == m_nodes.end()) return false;
+    if (m_fnSetModel) {
+        return m_fnSetModel(id, modelUrl.c_str()) == 0;
+    }
+    return true;
+}
+
+bool StardustBridge::setNodeTexture(NodeId id, const std::string& textureUrl) {
+    auto it = m_nodes.find(id);
+    if (it == m_nodes.end()) return false;
+    if (m_fnSetTexture) {
+        return m_fnSetTexture(id, textureUrl.c_str()) == 0;
+    }
+    return true;
+}
+
+bool StardustBridge::setNodeColor(NodeId id, const glm::vec3& color, float alpha) {
+    auto it = m_nodes.find(id);
+    if (it == m_nodes.end()) return false;
+    if (m_fnSetColor) {
+        return m_fnSetColor(id, color.r, color.g, color.b, alpha) == 0;
+    }
+    return true;
+}
+
+bool StardustBridge::setNodeDimensions(NodeId id, const glm::vec3& dimensions) {
+    auto it = m_nodes.find(id);
+    if (it == m_nodes.end()) return false;
+    if (m_fnSetDimensions) {
+        return m_fnSetDimensions(id, dimensions.x, dimensions.y, dimensions.z) == 0;
+    }
+    return true;
+}
+
+bool StardustBridge::setNodeEntityType(NodeId id, uint8_t entityType) {
+    auto it = m_nodes.find(id);
+    if (it == m_nodes.end()) return false;
+    if (m_fnSetEntityType) {
+        return m_fnSetEntityType(id, entityType) == 0;
+    }
+    return true;
+}
+
 void StardustBridge::poll() {
     if (!m_connected) return;
 
