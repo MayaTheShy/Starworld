@@ -145,17 +145,10 @@ std::vector<DiscoveredDomain> discoverDomains(int maxDomains) {
     std::vector<std::string> endpoints;
     if (const char* custom = std::getenv("METAVERSE_DISCOVERY_URL")) {
         endpoints.emplace_back(custom);
+    } else {
+        // Only query the known working endpoint
+        endpoints.emplace_back("https://mv.overte.org/server/api/v1/places");
     }
-    // Build fuller list of endpoints using base + path permutations
-    std::vector<std::string> bases;
-    if (const char* base = std::getenv("OVERTE_METAVERSE_BASE")) bases.emplace_back(base);
-    bases.emplace_back("https://metaverse.vircadia.com");
-    bases.emplace_back("https://mv.overte.org");
-    bases.emplace_back("https://metaverse.overte.org");
-    bases.emplace_back("https://metaverse.overte.dev");
-    bases.emplace_back("https://overte.org");
-    const char* paths[] = {"/api/domains?status=online","/api/domains","/api/v1/domains?status=online","/api/v1/domains","/server/api/v1/places"};
-    for (auto& b : bases) for (auto p : paths) endpoints.emplace_back(b + std::string(p));
 
     if (verbose) {
         std::cout << "[Discovery] Trying " << endpoints.size() << " directory endpoints..." << std::endl;
