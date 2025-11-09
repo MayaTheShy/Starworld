@@ -67,6 +67,11 @@ public:
 	explicit OverteClient(std::string domainUrl)
 		: m_domainUrl(std::move(domainUrl)) {}
 
+	// Authentication
+	bool login(const std::string& username, const std::string& password,
+	           const std::string& metaverseUrl = "https://mv.overte.org");
+	bool isAuthenticated() const;
+	
 	// High-level connect that brings up key mixers.
 	bool connect();
 
