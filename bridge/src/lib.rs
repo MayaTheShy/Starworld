@@ -343,13 +343,17 @@ pub extern "C" fn sdxr_start(app_id: *const std::os::raw::c_char) -> i32 {
                     }
                 }
                 if frames.is_empty() { return; }
-                eprintln!("[bridge/event_loop] Processing {} frames, state has {} nodes", frames.len(), state.nodes.len());
-                for frame in frames {
-                    if let Ok(ctrl) = CTRL.lock() { if let Some(shared) = &ctrl.shared_state { if let Ok(ss) = shared.lock() { state.nodes = ss.nodes.clone(); } } }
-                    state.on_frame(&frame);
-                    projector.frame(&context, &frame, &mut state);
+                
+                // Lock shared_state and work with it
+                if let Ok(mut state) = shared_state.lock() {
+                    eprintln!("[bridge/event_loop] Processing {} frames, state has {} nodes", frames.len(), state.nodes.len());
+                    for frame in frames {
+                        state.on_frame(&frame);
+                        projector.frame(&context, &frame, &mut *state);
+                    }
+                    projector.update(&context, &mut *state);
                 }
-                projector.update(&context, &mut state);
+                
                 if STOP_REQUESTED.load(Ordering::SeqCst) { flow.stop(); }
             });
             if let Err(e) = event_loop_fut.await {
