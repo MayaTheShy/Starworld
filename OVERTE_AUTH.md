@@ -2,7 +2,15 @@
 
 ## Current Status
 
-⚠️ **Protocol Compatibility Issue**: The Overte domain server uses the NLPacket protocol format which includes sequence numbers, packet headers, and specific framing that our current implementation doesn't support. The domain server is not responding to our connection requests.
+✅ **Handshake Working!** The client successfully connects to the Overte domain server on the correct UDP port and exchanges packets. The server responds with `DomainConnectionDenied` due to protocol signature mismatch, which is expected when the client and server are built from different commits.
+
+**Key Achievements:**
+- UDP communication established with domain server (port auto-discovered: 42757)
+- DomainConnectRequest packets properly formatted and sent
+- DomainConnectionDenied response received and parsed
+- Protocol version mismatch identified (client: 2977ddf4..., server: dev build)
+
+⚠️ **Next Step**: Protocol signature needs to match the exact server build. This can be solved by either building against the same Overte version or implementing dynamic protocol version negotiation.
 
 ### Working Alternative: Test Environment
 
