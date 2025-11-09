@@ -184,13 +184,12 @@ impl Reify for BridgeState {
             
             // Entity types: 0=Unknown, 1=Box, 2=Sphere, 3=Model
             // For now, render all as dense wireframe cubes (which we know works)
-            let mut spatial = Spatial::default();
-            spatial.set_transform(transform);
             Some((
                 *id,
-                spatial.build().child(
-                    Lines::new(cube_lines).build()
-                )
+                Spatial::default()
+                    .transform(transform)
+                    .build()
+                    .child(Lines::new(cube_lines).build())
             ))
         });
 
