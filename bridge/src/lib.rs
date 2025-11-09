@@ -72,7 +72,8 @@ impl ClientState for BridgeState {
 impl Reify for BridgeState {
     fn reify(&self) -> impl ast::Element<Self> {
         use stardust_xr_fusion::values::color::rgba_linear;
-        use stardust_xr_asteroids::elements::ModelPart;
+        use stardust_xr_fusion::drawable::{Line, LinePoint};
+        use stardust_xr_fusion::values::Vector3;
         
         eprintln!("[bridge/reify] Reifying {} nodes", self.nodes.len());
         
@@ -100,59 +101,37 @@ impl Reify for BridgeState {
             // Use entity color if set
             let node_color = rgba_linear!(node.color[0], node.color[1], node.color[2], node.color[3]);
             
-            // Entity types: 0=Unknown, 1=Box, 2=Sphere, 3=Model, ...
-            match node.entity_type {
-                1 => {
-                    // Box entity - render as solid colored cube using built-in model
-                    Some((
-                        *id,
-                        Model::namespaced("fusion", "tex_cube")
-                            .part(ModelPart::new("Cube").mat_param("color", MaterialParameter::Color(node_color)))
-                            .pos([trans.x, trans.y, trans.z])
-                            .rot([rot.x, rot.y, rot.z, rot.w])
-                            .scl([vis_scale.x, vis_scale.y, vis_scale.z])
-                            .build()
-                    ))
-                },
-                2 => {
-                    // Sphere entity - use cube for now with different color/scale to differentiate
-                    // (We could create a custom sphere model or use a different built-in model)
-                    Some((
-                        *id,
-                        Model::namespaced("fusion", "tex_cube")
-                            .part(ModelPart::new("Cube").mat_param("color", MaterialParameter::Color(node_color)))
-                            .pos([trans.x, trans.y, trans.z])
-                            .rot([rot.x, rot.y, rot.z, rot.w])
-                            .scl([vis_scale.x, vis_scale.y, vis_scale.z])
-                            .build()
-                    ))
-                },
-                3 if !node.model_url.is_empty() => {
-                    // Model entity - use gyro model to show it's different
-                    Some((
-                        *id,
-                        Model::namespaced("fusion", "gyro")
-                            .part(ModelPart::new("Cube").mat_param("color", MaterialParameter::Color(node_color)))
-                            .pos([trans.x, trans.y, trans.z])
-                            .rot([rot.x, rot.y, rot.z, rot.w])
-                            .scl([vis_scale.x, vis_scale.y, vis_scale.z])
-                            .build()
-                    ))
-                },
-                _ => {
-                    // Unknown/default - render as gray cube
-                    let default_color = rgba_linear!(0.6, 0.6, 0.6, 0.8);
-                    Some((
-                        *id,
-                        Model::namespaced("fusion", "tex_cube")
-                            .part(ModelPart::new("Cube").mat_param("color", MaterialParameter::Color(node_color)))
-                            .pos([trans.x, trans.y, trans.z])
-                            .rot([rot.x, rot.y, rot.z, rot.w])
-                            .scl([vis_scale.x, vis_scale.y, vis_scale.z])
-                            .build()
-                    ))
-                }
-            }
+            // Simple wireframe cube for all entities for now - each entity gets its own Lines element
+            let t = 0.008; // line thickness
+            let hs = 0.5f32; // half size in model space (unit cube)
+            
+            // Create a line for each edge
+            let seg = |a: [f32;3], b: [f32;3]| -> Line {
+                let p0 = LinePoint { point: Vector3 { x: a[0], y: a[1], z: a[2] }, thickness: t, color: node_color };
+                let p1 = LinePoint { point: Vector3 { x: b[0], y: b[1], z: b[2] }, thickness: t, color: node_color };
+                Line { points: vec![p0, p1], cyclic: false }
+            };
+            
+            let corners = [
+                [-hs, -hs, -hs], [ hs, -hs, -hs], [ hs,  hs, -hs], [-hs,  hs, -hs],
+                [-hs, -hs,  hs], [ hs, -hs,  hs], [ hs,  hs,  hs], [-hs,  hs,  hs],
+            ];
+            
+            // 12 edges of a cube
+            let lines = vec![
+                seg(corners[0], corners[1]), seg(corners[1], corners[2]), seg(corners[2], corners[3]), seg(corners[3], corners[0]),
+                seg(corners[4], corners[5]), seg(corners[5], corners[6]), seg(corners[6], corners[7]), seg(corners[7], corners[4]),
+                seg(corners[0], corners[4]), seg(corners[1], corners[5]), seg(corners[2], corners[6]), seg(corners[3], corners[7]),
+            ];
+            
+            Some((
+                *id,
+                Lines::new(lines)
+                    .pos([trans.x, trans.y, trans.z])
+                    .rot([rot.x, rot.y, rot.z, rot.w])
+                    .scl([vis_scale.x, vis_scale.y, vis_scale.z])
+                    .build()
+            ))
         });
 
         PlaySpace
