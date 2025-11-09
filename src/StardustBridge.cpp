@@ -200,6 +200,8 @@ bool StardustBridge::setNodeColor(NodeId id, const glm::vec3& color, float alpha
     if (it == m_nodes.end()) return false;
     if (m_fnSetColor) {
         return m_fnSetColor(id, color.r, color.g, color.b, alpha) == 0;
+    } else {
+        std::cerr << "[StardustBridge] Warning: setNodeColor called but m_fnSetColor is null" << std::endl;
     }
     return true;
 }
