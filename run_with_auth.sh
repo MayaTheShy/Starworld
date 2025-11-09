@@ -1,5 +1,5 @@
 #!/bin/bash
-# Run stardust-overte-client with authentication
+# Run starworld with authentication
 
 echo "Overte Domain Authentication"
 echo "=============================="
@@ -11,4 +11,4 @@ echo ""
 export OVERTE_USERNAME="$username"
 
 echo "Connecting to Overte domain..."
-./build/stardust-overte-client
+./build/starworld

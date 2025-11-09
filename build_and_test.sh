@@ -36,7 +36,7 @@ else
     exit 1
 fi
 
-CLIENT_PATH="$SCRIPT_DIR/build/stardust-overte-client"
+CLIENT_PATH="$SCRIPT_DIR/build/starworld"
 if [ -f "$CLIENT_PATH" ]; then
     echo "✓ Client executable found: $CLIENT_PATH"
     ls -lh "$CLIENT_PATH"
@@ -51,9 +51,9 @@ echo
 echo "To test with simulation mode:"
 echo "  export STARWORLD_SIMULATE=1"
 echo "  export STARWORLD_BRIDGE_PATH=$SCRIPT_DIR/bridge/target/release"
-echo "  $SCRIPT_DIR/build/stardust-overte-client"
+echo "  $SCRIPT_DIR/build/starworld"
 echo
 echo "To connect to an Overte server:"
 echo "  export STARWORLD_BRIDGE_PATH=$SCRIPT_DIR/bridge/target/release"
-echo "  $SCRIPT_DIR/build/stardust-overte-client ws://domain.example.com:40102"
+echo "  $SCRIPT_DIR/build/starworld ws://domain.example.com:40102"
 echo
