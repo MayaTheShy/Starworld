@@ -15,9 +15,12 @@ use stardust_xr_asteroids::{
 };
 use stardust_xr_asteroids::{CustomElement, Transformable, Projector, Context};
 use stardust_xr_molecules::accent_color::AccentColor;
-use stardust_xr_fusion::objects::connect_client as fusion_connect_client;
-use stardust_xr_fusion::node::NodeType;
-use stardust_xr_fusion::root::RootAspect;
+
+// Import drawable types through asteroids to avoid version conflicts
+type FrameInfo = <ast::client::RootAspect as ast::client::RootAspectMethods>::FrameInfo;
+type Line = ast::client::drawable::Line;
+type LinePoint = ast::client::drawable::LinePoint;
+type Vector3 = ast::client::values::Vector3;
 use tokio::runtime::Runtime;
 
 #[derive(Clone, serde::Serialize, serde::Deserialize)]
@@ -49,7 +52,7 @@ impl ClientState for BridgeState {
     const APP_ID: &'static str = "org.stardustxr.starworld";
     fn initial_state_update(&mut self) {}
     
-    fn on_frame(&mut self, _info: &stardust_xr_fusion::root::FrameInfo) {
+    fn on_frame(&mut self, _info: &FrameInfo) {
         // Sync from the global shared state on each frame
         if let Ok(ctrl) = CTRL.lock() {
             if let Some(shared) = &ctrl.shared_state {
