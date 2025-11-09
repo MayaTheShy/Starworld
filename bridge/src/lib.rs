@@ -70,12 +70,17 @@ impl ClientState for BridgeState {
 impl Reify for BridgeState {
     fn reify(&self) -> impl ast::Element<Self> {
         // Root playspace. Create appropriate visuals per entity type
-        let children = self.nodes.iter().map(|(id, node)| {
+        let children = self.nodes.iter().filter_map(|(id, node)| {
+            // Skip nodes with zero dimensions (like the root node)
+            let dims = glam::Vec3::from(node.dimensions);
+            if dims.length() < 0.001 {
+                return None;
+            }
+            
             // Decompose transform into TRS
             let (scale, rot, trans) = node.transform.to_scale_rotation_translation();
             
             // Use entity dimensions if available, otherwise use transform scale
-            let dims = glam::Vec3::from(node.dimensions);
             let vis_scale = if dims.length() > 0.001 {
                 dims
             } else {
@@ -226,14 +231,14 @@ impl Reify for BridgeState {
                         seg(corners[4], corners[5]), seg(corners[5], corners[6]), seg(corners[6], corners[7]), seg(corners[7], corners[4]),
                         seg(corners[0], corners[4]), seg(corners[1], corners[5]), seg(corners[2], corners[6]), seg(corners[3], corners[7]),
                     ];
-                    (
+                    Some((
                         *id,
                         Lines::new(lines)
                             .pos([trans.x, trans.y, trans.z])
                             .rot([rot.x, rot.y, rot.z, rot.w])
                             .scl([vis_scale.x, vis_scale.y, vis_scale.z])
                             .build()
-                    )
+                    ))
                 }
             }
         });
