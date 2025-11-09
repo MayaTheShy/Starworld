@@ -5,7 +5,7 @@ mod model_downloader;
 use std::collections::HashMap;
 use std::ffi::CStr;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, OnceLock};
 use std::thread::JoinHandle;
 
 use glam::Mat4;
@@ -22,6 +22,9 @@ use stardust_xr_fusion::root::RootAspect;
 use tokio::runtime::Runtime;
 use std::path::PathBuf;
 use model_downloader::ModelDownloader;
+
+// Global model downloader instance
+static MODEL_DOWNLOADER: OnceLock<ModelDownloader> = OnceLock::new();
 
 #[derive(Clone, serde::Serialize, serde::Deserialize)]
 struct BridgeState {
@@ -77,7 +80,42 @@ impl Reify for BridgeState {
         
         eprintln!("[bridge/reify] Reifying {} nodes", self.nodes.len());
         
-        fn get_model_path(entity_type: u8) -> Option<PathBuf> {
+        // Initialize model downloader if not already done
+        let downloader = MODEL_DOWNLOADER.get_or_init(|| {
+            let cache_dir = dirs::cache_dir()
+                .unwrap_or_else(|| PathBuf::from("/tmp"))
+                .join("starworld/models");
+            ModelDownloader::new(cache_dir).expect("Failed to create model downloader")
+        });
+        
+        fn get_model_path(entity_type: u8, model_url: &str, downloader: &ModelDownloader) -> Option<PathBuf> {
+            // First check if there's a model URL provided
+            if !model_url.is_empty() {
+                // Handle HTTP/HTTPS URLs
+                if model_url.starts_with("http://") || model_url.starts_with("https://") {
+                    eprintln!("[bridge/reify] Attempting to download model from URL: {}", model_url);
+                    if let Some(path) = downloader.get_model(model_url) {
+                        eprintln!("[bridge/reify] Using downloaded model: {}", path.display());
+                        return Some(path);
+                    } else {
+                        eprintln!("[bridge/reify] Model download failed or in progress, falling back to primitive");
+                        // Fall through to use primitive based on entity type
+                    }
+                } else if model_url.starts_with("file://") {
+                    // Local file path
+                    let path = PathBuf::from(&model_url[7..]);
+                    if path.exists() {
+                        eprintln!("[bridge/reify] Using local file: {}", path.display());
+                        return Some(path);
+                    }
+                } else if PathBuf::from(model_url).exists() {
+                    // Direct path
+                    eprintln!("[bridge/reify] Using direct path: {}", model_url);
+                    return Some(PathBuf::from(model_url));
+                }
+            }
+            
+            // Fall back to primitive models based on entity type
             let cache_dir = dirs::cache_dir()?.join("starworld/primitives");
             let filename = match entity_type {
                 1 => "cube.glb",      // Box
@@ -89,7 +127,7 @@ impl Reify for BridgeState {
             if path.exists() {
                 Some(path)
             } else {
-                eprintln!("[bridge/reify] Model file not found: {}", path.display());
+                eprintln!("[bridge/reify] Primitive model file not found: {}", path.display());
                 None
             }
         }
@@ -109,18 +147,35 @@ impl Reify for BridgeState {
             let scale_array = [vis_scale.x, vis_scale.y, vis_scale.z];
             let transform = stardust_xr_fusion::spatial::Transform::from_translation_rotation_scale(trans_array, rot_array, scale_array);
             
-            // Try to load the appropriate model based on entity type
-            let model_child = if let Some(model_path) = get_model_path(node.entity_type) {
-                eprintln!("[bridge/reify] Loading {} model for node {} from {}", 
-                    match node.entity_type {
-                        1 => "cube",
-                        2 => "sphere",
-                        3 => "3D model",
-                        _ => "unknown"
-                    }, id, model_path.display());
+            // Try to load the appropriate model based on entity type and model URL
+            let model_child = if let Some(model_path) = get_model_path(node.entity_type, &node.model_url, downloader) {
+                let entity_type_name = match node.entity_type {
+                    1 => "cube",
+                    2 => "sphere",
+                    3 => "3D model",
+                    _ => "unknown"
+                };
+                
+                let model_source = if !node.model_url.is_empty() {
+                    format!("from URL: {}", node.model_url)
+                } else {
+                    format!("primitive from {}", model_path.display())
+                };
+                
+                eprintln!("[bridge/reify] Loading {} for node {} {}", 
+                    entity_type_name, id, model_source);
                 
                 match Model::direct(&model_path) {
-                    Ok(model) => Some(model.build()),
+                    Ok(model) => {
+                        // TODO: Apply color tint to the model
+                        // This would require material manipulation which is not yet exposed
+                        // in the asteroids API. For now, just log it.
+                        if node.color != [1.0, 1.0, 1.0, 1.0] {
+                            eprintln!("[bridge/reify] Node {} has color tint: {:?} (not yet applied)", 
+                                id, node.color);
+                        }
+                        Some(model.build())
+                    }
                     Err(e) => {
                         eprintln!("[bridge/reify] Failed to load model for node {}: {}", id, e);
                         None
