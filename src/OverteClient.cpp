@@ -155,6 +155,10 @@ bool OverteClient::connect() {
     const char* passwordEnv = std::getenv("OVERTE_PASSWORD");
     const char* metaverseEnv = std::getenv("OVERTE_METAVERSE");
     
+    // TODO: OAuth authentication to metaverse server
+    // Currently disabled because mv.overte.org doesn't expose /oauth/token endpoint
+    // Overte uses web-based OAuth flow, not direct API authentication
+    /*
     if (usernameEnv && passwordEnv) {
         std::string metaverseUrl = metaverseEnv ? metaverseEnv : "https://mv.overte.org";
         std::cout << "[OverteClient] Attempting login as " << usernameEnv << "..." << std::endl;
@@ -166,6 +170,12 @@ bool OverteClient::connect() {
     } else if (usernameEnv) {
         m_username = usernameEnv;
         std::cout << "[OverteClient] Username set (no password provided, signature auth not yet implemented)" << std::endl;
+    }
+    */
+    
+    if (usernameEnv) {
+        std::cout << "[OverteClient] Note: Username '" << usernameEnv << "' provided but metaverse OAuth not yet implemented" << std::endl;
+        std::cout << "[OverteClient] Continuing as anonymous user" << std::endl;
     }
     
     // Parse ws://host:port
@@ -1156,10 +1166,11 @@ void OverteClient::sendDomainConnectRequest() {
     // 13. Place name (QString) - empty
     qs.writeQString("");
     
-    // 14. Directory services username (QString) - get from environment or empty
-    const char* usernameEnv = std::getenv("OVERTE_USERNAME");
-    std::string dsUsername = usernameEnv ? usernameEnv : "";
-    qs.writeQString(dsUsername);
+    // 14. Directory services username (QString) - empty for now
+    // TODO: Username sending causes domain server to not respond
+    // const char* usernameEnv = std::getenv("OVERTE_USERNAME");
+    // std::string dsUsername = usernameEnv ? usernameEnv : "";
+    qs.writeQString("");  // Always send empty for now
     
     // 15. Username signature (QString) - empty (no keypair authentication)
     qs.writeQString("");
