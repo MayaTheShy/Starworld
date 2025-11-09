@@ -120,27 +120,35 @@ impl Reify for BridgeState {
             let scale_array = [vis_scale.x, vis_scale.y, vis_scale.z];
             let transform = stardust_xr_fusion::spatial::Transform::from_translation_rotation_scale(trans_array, rot_array, scale_array);
             
-            // Create appropriate visual based on entity type
-            let element: ast::ElementWrapper<_, _, ()> = match node.entity_type {
+            // Create appropriate visual based on entity type - wrap all in Spatial for type consistency
+            let element = match node.entity_type {
                 1 => {
                     // Box - use cube model with color
                     eprintln!("[bridge/reify] Creating box model for node {}", id);
-                    Model::namespaced("fusion", "tex_cube")
+                    Spatial::default()
                         .transform(transform)
-                        .part(
-                            ModelPart::new("Cube")
-                                .mat_param("color", MaterialParameter::Color(node_color))
-                        ).build()
+                        .build()
+                        .child(
+                            Model::namespaced("fusion", "tex_cube")
+                                .part(
+                                    ModelPart::new("Cube")
+                                        .mat_param("color", MaterialParameter::Color(node_color))
+                                ).build()
+                        )
                 }
                 2 => {
                     // Sphere - use sphere model with color
                     eprintln!("[bridge/reify] Creating sphere model for node {}", id);
-                    Model::namespaced("fusion", "tex_sphere")
+                    Spatial::default()
                         .transform(transform)
-                        .part(
-                            ModelPart::new("Sphere")
-                                .mat_param("color", MaterialParameter::Color(node_color))
-                        ).build()
+                        .build()
+                        .child(
+                            Model::namespaced("fusion", "tex_sphere")
+                                .part(
+                                    ModelPart::new("Sphere")
+                                        .mat_param("color", MaterialParameter::Color(node_color))
+                                ).build()
+                        )
                 }
                 3 => {
                     // Model - use model URL if available, fallback to cube
@@ -148,20 +156,28 @@ impl Reify for BridgeState {
                         eprintln!("[bridge/reify] Creating model from URL for node {}: {}", id, node.model_url);
                         // For now, use a fallback model since we can't load arbitrary URLs yet
                         // TODO: Implement model loading and caching
-                        Model::namespaced("fusion", "gyro")
+                        Spatial::default()
                             .transform(transform)
-                            .part(
-                                ModelPart::new("Gem")
-                                    .mat_param("color", MaterialParameter::Color(node_color))
-                            ).build()
+                            .build()
+                            .child(
+                                Model::namespaced("fusion", "gyro")
+                                    .part(
+                                        ModelPart::new("Gem")
+                                            .mat_param("color", MaterialParameter::Color(node_color))
+                                    ).build()
+                            )
                     } else {
                         eprintln!("[bridge/reify] Creating fallback cube for node {} (no model URL)", id);
-                        Model::namespaced("fusion", "tex_cube")
+                        Spatial::default()
                             .transform(transform)
-                            .part(
-                                ModelPart::new("Cube")
-                                    .mat_param("color", MaterialParameter::Color(node_color))
-                            ).build()
+                            .build()
+                            .child(
+                                Model::namespaced("fusion", "tex_cube")
+                                    .part(
+                                        ModelPart::new("Cube")
+                                            .mat_param("color", MaterialParameter::Color(node_color))
+                                    ).build()
+                            )
                     }
                 }
                 _ => {
