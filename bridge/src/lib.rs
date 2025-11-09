@@ -1,5 +1,7 @@
 // Rust C-ABI bridge for StardustXR client integration.
 
+mod model_downloader;
+
 use std::collections::HashMap;
 use std::ffi::CStr;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -19,6 +21,7 @@ use stardust_xr_fusion::node::NodeType;
 use stardust_xr_fusion::root::RootAspect;
 use tokio::runtime::Runtime;
 use std::path::PathBuf;
+use model_downloader::ModelDownloader;
 
 #[derive(Clone, serde::Serialize, serde::Deserialize)]
 struct BridgeState {
