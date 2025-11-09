@@ -738,16 +738,26 @@ void OverteClient::handleDomainListReply(const char* data, size_t len) {
     // Now mark as connected since we got a valid DomainList
     m_domainConnected = true;
     
-    // Read number of nodes - this might be encoded as QDataStream int
+    // Read number of nodes - Qt QDataStream format (signed int32, big-endian)
+    // But for node list, Overte uses a special encoding
+    // Looking at the packet: ff 01 00 06 43 23...
+    // 0xFF might be a marker, or this might be encoded differently
+    // Let's try reading it as a signed int32
     if (offset + 4 > len) return;
-    uint32_t numNodes = ntohl(*reinterpret_cast<const uint32_t*>(data + offset));
+    int32_t numNodesRaw = static_cast<int32_t>(ntohl(*reinterpret_cast<const uint32_t*>(data + offset)));
+    
+    std::cout << "[OverteClient] Number of assignment clients (raw): 0x" << std::hex << numNodesRaw << std::dec 
+              << " (" << numNodesRaw << ")" << std::endl;
+    
+    // If the high byte is 0xFF, this might be a QList with custom size encoding
+    // For now, let's skip the node list and just note we're connected
+    uint32_t numNodes = (numNodesRaw < 0 || numNodesRaw > 100) ? 0 : static_cast<uint32_t>(numNodesRaw);
     offset += 4;
     
-    std::cout << "[OverteClient] Number of assignment clients: " << numNodes << std::endl;
+    std::cout << "[OverteClient] Parsed node count: " << numNodes << std::endl;
     
-    // If numNodes seems too large, it might be a different encoding
-    if (numNodes > 100) {
-        std::cout << "[OverteClient] Warning: Suspicious node count, packet format may be incorrect" << std::endl;
+    if (numNodesRaw < 0 || numNodesRaw > 100) {
+        std::cout << "[OverteClient] Warning: Unusual node count encoding, skipping node list parsing" << std::endl;
         // Dump remaining bytes for analysis
         std::cout << "[OverteClient] Remaining bytes: ";
         for (size_t i = offset - 4; i < std::min(offset + 20, len); i++) {
