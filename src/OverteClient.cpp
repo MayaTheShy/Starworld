@@ -408,6 +408,15 @@ void OverteClient::parseDomainPacket(const char* data, size_t len) {
             std::cout << "[OverteClient] Ping reply received" << std::endl;
             break;
             
+        case PacketType::EntityData:
+            std::cout << "[OverteClient] Received EntityData packet (" << payloadLen << " bytes)" << std::endl;
+            parseEntityPacket(payload, payloadLen);
+            break;
+            
+        case PacketType::EntityQueryInitialResultsComplete:
+            std::cout << "[OverteClient] Entity query initial results complete" << std::endl;
+            break;
+            
         default:
             std::cout << "[OverteClient] Unknown domain packet type: " << static_cast<int>(packetType) << std::endl;
             break;
