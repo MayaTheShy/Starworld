@@ -346,7 +346,7 @@ This allows you to:
 - [ ] Material color application to models
 - [ ] Texture loading and mapping
 
-### Phase 3: Network & Protocol (In Progress)
+### Phase 3: Network & Protocol ✅ MOSTLY COMPLETE
 - [x] Domain connection via UDP
 - [x] NLPacket protocol implementation
 - [x] DomainConnectRequest / DomainList handshake
@@ -356,9 +356,10 @@ This allows you to:
 - [x] Session UUID generation
 - [x] Protocol signature verification (MD5)
 - [x] Domain address parsing (host:port/position/orientation)
-- [ ] OAuth 2.0 authentication (infrastructure ready, needs web flow) ⏭️ NEXT
+- [x] **OAuth 2.0 authentication with browser flow** 🎉
+- [x] Token persistence and refresh
 - [ ] Assignment client direct connections
-- [ ] Token persistence and refresh
+- [ ] Authenticated EntityServer queries
 
 ### Phase 4: Entity System (Current Focus)
 - [ ] Apply entity colors to model materials
