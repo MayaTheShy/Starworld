@@ -490,7 +490,6 @@ pub extern "C" fn sdxr_start(app_id: *const std::os::raw::c_char) -> i32 {
     eprintln!("[bridge] WARNING: Connection status unknown after timeout");
     0 // Assume success to maintain backwards compatibility if status isn't set
 }
-}
 
 #[no_mangle]
 pub extern "C" fn sdxr_poll() -> i32 { if !STARTED.load(Ordering::SeqCst) { -1 } else { 0 } }
