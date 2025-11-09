@@ -313,7 +313,52 @@ git rebase origin/main
 
 ## Resources
 
-- [Overte Source](https://github.com/overte-org/overte)
-- [StardustXR Docs](https://stardustxr.org)
-- [Overte Protocol](https://github.com/overte-org/overte/tree/master/libraries/networking/src)
-- [Issue Tracker](https://git.spatulaa.com/MayaTheShy/Starworld/issues)
+### StardustXR
+- **Website**: https://stardustxr.org
+- **GitHub**: https://github.com/StardustXR
+- **Core (Fusion)**: https://github.com/StardustXR/core - Client library for StardustXR
+- **Server**: https://github.com/StardustXR/server - XR compositor/display server
+- **Asteroids**: https://github.com/StardustXR/asteroids - UI element library
+- **Flatland**: https://github.com/StardustXR/flatland - 2D panel server
+- **Magnetar**: https://github.com/StardustXR/magnetar - Input fusion server
+- **Documentation**: https://stardustxr.org/docs
+- **Matrix Chat**: https://matrix.to/#/#stardustxr:matrix.org
+
+### Overte
+- **Website**: https://overte.org - Official Overte homepage
+- **GitHub**: https://github.com/overte-org/overte - Main source repository
+- **User Docs**: https://docs.overte.org - End-user documentation
+- **Developer Docs**: https://docs.overte.org/developer - Developer guides
+- **API Reference**: https://apidocs.overte.org - API documentation
+- **Discord**: https://discord.gg/overte - Community chat
+- **Metaverse**: https://mv.overte.org - Main public metaverse server
+- **Forums**: https://forums.overte.org - Community discussions
+
+### Overte Protocol Documentation
+- **Networking Library**: https://github.com/overte-org/overte/tree/master/libraries/networking
+- **NLPacket**: `libraries/networking/src/NLPacket.h` - Packet format
+- **NodeList**: `libraries/networking/src/NodeList.cpp` - Domain connection
+- **PacketHeaders**: `libraries/networking/src/PacketHeaders.h` - Packet types
+- **EntityServer**: `assignment-client/src/entities/EntityServer.cpp` - Entity serving
+- **DomainServer**: `domain-server/src/DomainServer.cpp` - Domain coordination
+
+### Development Tools & Libraries
+- **CMake**: https://cmake.org - Build system
+- **Rust**: https://www.rust-lang.org - Rust language
+- **Cargo**: https://doc.rust-lang.org/cargo/ - Rust package manager
+- **GLM**: https://github.com/g-truc/glm - OpenGL Mathematics
+- **libcurl**: https://curl.se/libcurl/ - HTTP client library
+- **GLTF/GLB**: https://www.khronos.org/gltf/ - 3D model format
+- **Blender**: https://www.blender.org - 3D creation suite
+
+### Technical Specifications
+- **Qt QDataStream**: https://doc.qt.io/qt-5/qdatastream.html - Overte serialization
+- **OAuth 2.0**: https://www.rfc-editor.org/rfc/rfc6749.html - Authentication protocol
+- **WebSocket**: https://www.rfc-editor.org/rfc/rfc6455.html - (Future: WebSocket transport)
+- **UDP Protocol**: https://www.rfc-editor.org/rfc/rfc768.html - Current transport
+
+### Community & Support
+- **Starworld Issues**: https://git.spatulaa.com/MayaTheShy/Starworld/issues
+- **StardustXR Matrix**: https://matrix.to/#/#stardustxr:matrix.org
+- **Overte Discord**: https://discord.gg/overte
+- **Overte Forums**: https://forums.overte.org
