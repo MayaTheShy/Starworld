@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.15)
-project(stardust-overte-client LANGUAGES CXX)
+project(starworld LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -18,7 +18,7 @@ if(USE_OVERTE_NETWORKING)
     set(CMAKE_AUTOMOC ON)
 endif()
 
-add_executable(stardust-overte-client
+add_executable(starworld
     src/main.cpp
     src/StardustBridge.cpp
     src/OverteClient.cpp
@@ -29,16 +29,15 @@ add_executable(stardust-overte-client
     src/ModelCache.cpp
  )
 
-add_executable(stardust-tests
+add_executable(starworld-tests
     tests/TestHarness.cpp
     src/NLPacketCodec.cpp
     src/DomainDiscovery.cpp
 )
 
-target_link_libraries(stardust-tests PRIVATE glm::glm ZLIB::ZLIB OpenSSL::Crypto CURL::libcurl)
 find_package(CURL REQUIRED)
-target_link_libraries(stardust-overte-client PRIVATE glm::glm ZLIB::ZLIB CURL::libcurl)
-target_link_libraries(stardust-overte-client PRIVATE OpenSSL::Crypto)
+target_link_libraries(starworld PRIVATE glm::glm ZLIB::ZLIB CURL::libcurl OpenSSL::Crypto)
+target_link_libraries(starworld-tests PRIVATE glm::glm ZLIB::ZLIB OpenSSL::Crypto CURL::libcurl)
 
 # Link Overte networking library
 if(USE_OVERTE_NETWORKING)
