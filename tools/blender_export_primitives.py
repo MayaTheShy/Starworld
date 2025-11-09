@@ -15,12 +15,21 @@ def create_material(name, base_color):
     mat.use_nodes = True
     nodes = mat.node_tree.nodes
     
-    # Get the Principled BSDF node (created by default)
-    bsdf = nodes.get("Principled BSDF")
-    if bsdf:
-        bsdf.inputs['Base Color'].default_value = base_color
-        bsdf.inputs['Roughness'].default_value = 0.5
-        bsdf.inputs['Metallic'].default_value = 0.1
+    # Find the Principled BSDF node (should be created by default)
+    bsdf = None
+    for node in nodes:
+        if node.type == 'BSDF_PRINCIPLED':
+            bsdf = node
+            break
+    
+    # If not found, create it
+    if not bsdf:
+        bsdf = nodes.new(type='ShaderNodeBsdfPrincipled')
+    
+    # Set material properties
+    bsdf.inputs['Base Color'].default_value = base_color
+    bsdf.inputs['Roughness'].default_value = 0.5
+    bsdf.inputs['Metallic'].default_value = 0.1
     
     return mat
 
@@ -69,8 +78,6 @@ bpy.ops.export_scene.gltf(
     export_format='GLB',
     use_selection=True
 )
-print(f"Exported model.glb (BLUE) to {output_dir}")
-
 print(f"Exported model.glb (BLUE) to {output_dir}")
 
 print("\n✓ All primitive models with colors exported successfully!")
