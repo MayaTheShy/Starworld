@@ -13,7 +13,7 @@ use stardust_xr_asteroids as ast; // alias for brevity
 use stardust_xr_asteroids::{
     client::ClientState,
     elements::{PlaySpace, Spatial, Model},
-    Migrate, Reify, CustomElement, Projector, Context, Transformable,
+    Migrate, Reify, CustomElement, Projector, Context,
 };
 use stardust_xr_molecules::accent_color::AccentColor;
 use stardust_xr_fusion::objects::connect_client as fusion_connect_client;
@@ -76,8 +76,6 @@ impl ClientState for BridgeState {
 
 impl Reify for BridgeState {
     fn reify(&self) -> impl ast::Element<Self> {
-        use stardust_xr_fusion::values::color;
-        
         eprintln!("[bridge/reify] Reifying {} nodes", self.nodes.len());
         
         // Initialize model downloader if not already done
@@ -168,12 +166,28 @@ impl Reify for BridgeState {
                 match Model::direct(&model_path) {
                     Ok(model) => {
                         // TODO: Apply color tint to the model
-                        // This would require material manipulation which is not yet exposed
-                        // in the asteroids API. For now, just log it.
+                        // The asteroids Model element doesn't expose material manipulation yet.
+                        // This would require:
+                        // 1. Loading the model's materials
+                        // 2. Multiplying base color by the tint color
+                        // 3. Re-applying the modified materials
+                        // For now, we just log the color for debugging.
                         if node.color != [1.0, 1.0, 1.0, 1.0] {
-                            eprintln!("[bridge/reify] Node {} has color tint: {:?} (not yet applied)", 
-                                id, node.color);
+                            eprintln!("[bridge/reify] Node {} has color tint: RGBA({:.2}, {:.2}, {:.2}, {:.2}) - NOT YET APPLIED", 
+                                id, node.color[0], node.color[1], node.color[2], node.color[3]);
                         }
+                        
+                        // TODO: Apply texture from texture_url
+                        // Similar to color, texture application requires material manipulation.
+                        // This would involve:
+                        // 1. Downloading the texture if it's an HTTP URL
+                        // 2. Loading it as a texture resource
+                        // 3. Applying it to the model's materials
+                        if !node.texture_url.is_empty() {
+                            eprintln!("[bridge/reify] Node {} has texture URL: {} - NOT YET APPLIED", 
+                                id, node.texture_url);
+                        }
+                        
                         Some(model.build())
                     }
                     Err(e) => {
