@@ -158,3 +158,7 @@ std::vector<DiscoveredDomain> discoverDomains(int maxDomains) {
     curl_global_cleanup();
     return result;
 }
+
+std::vector<DiscoveredDomain> parseDomainsFromJson(const std::string& json) {
+    return parseDomains(json);
+}
