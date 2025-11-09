@@ -323,7 +323,7 @@ pub extern "C" fn sdxr_start(app_id: *const std::os::raw::c_char) -> i32 {
             let context = Context { dbus_connection, accent_color };
             // Use the shared_state Arc instead of creating a new BridgeState
             let mut projector = {
-                let state_guard = shared_state.lock().unwrap();
+                let state_guard = shared_for_event_loop.lock().unwrap();
                 Projector::create(&*state_guard, &context, client.get_root().clone().as_spatial_ref(), "/".into())
             };
             
@@ -346,7 +346,7 @@ pub extern "C" fn sdxr_start(app_id: *const std::os::raw::c_char) -> i32 {
                 if frames.is_empty() { return; }
                 
                 // Lock shared_state and work with it
-                if let Ok(mut state) = shared_state.lock() {
+                if let Ok(mut state) = shared_for_event_loop.lock() {
                     eprintln!("[bridge/event_loop] Processing {} frames, state has {} nodes", frames.len(), state.nodes.len());
                     for frame in frames {
                         state.on_frame(&frame);
