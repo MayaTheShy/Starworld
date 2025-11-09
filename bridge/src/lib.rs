@@ -358,12 +358,26 @@ pub extern "C" fn sdxr_start(app_id: *const std::os::raw::c_char) -> i32 {
                 }
             });
             println!("[bridge] Connecting to Stardust server...");
-            // Retry fusion connect for a few seconds to handle compositor wake-up races.
+            // Retry fusion connect with a timeout to detect missing compositor
+            let max_retries = 10; // 5 seconds total (10 * 500ms)
+            let mut retry_count = 0;
             let mut client = loop {
                 match stardust_xr_fusion::client::Client::connect().await {
-                    Ok(c) => break c,
+                    Ok(c) => {
+                        println!("[bridge] Successfully connected to Stardust compositor");
+                        break c;
+                    }
                     Err(e) => {
-                        eprintln!("[bridge] Fusion connect failed: {:?}; retrying...", e);
+                        retry_count += 1;
+                        if retry_count >= max_retries {
+                            eprintln!("[bridge] ERROR: Could not connect to Stardust compositor after {} attempts", max_retries);
+                            eprintln!("[bridge] ERROR: {:?}", e);
+                            eprintln!("[bridge] Make sure the Stardust server is running:");
+                            eprintln!("[bridge]   systemctl --user start stardust");
+                            eprintln!("[bridge]   or: stardust-xr-server");
+                            return; // Exit the async block, which will cause sdxr_start to return error
+                        }
+                        eprintln!("[bridge] Fusion connect failed (attempt {}/{}): {:?}; retrying...", retry_count, max_retries, e);
                         tokio::time::sleep(std::time::Duration::from_millis(500)).await;
                         if STOP_REQUESTED.load(Ordering::SeqCst) { return; }
                     }
