@@ -917,6 +917,19 @@ void OverteClient::sendDomainConnectRequest() {
     
     // 13. Place name (QString) - empty
     qs.writeQString("");
+    
+    // 14. Directory services username (QString) - get from environment or empty
+    const char* usernameEnv = std::getenv("OVERTE_USERNAME");
+    std::string dsUsername = usernameEnv ? usernameEnv : "";
+    qs.writeQString(dsUsername);
+    
+    // 15. Username signature (QString) - empty (no keypair authentication)
+    qs.writeQString("");
+    
+    // 16. Domain username (QString) - empty for now
+    // 17. Domain access token (QString) - empty for now
+    // These are optional and only sent if domain account manager is configured
+    // We'll skip them for now (Overte clients only send if hasDomainAccountManager)
 
     // Append payload to packet
     if (!qs.buf.empty()) packet.write(qs.buf.data(), qs.buf.size());
