@@ -248,7 +248,7 @@ pub extern "C" fn sdxr_start(app_id: *const std::os::raw::c_char) -> i32 {
                 }
             };
             
-            let dbus_connection = match ast::client::connect_client().await {
+            let dbus_connection = match stardust_xr_fusion::objects::connect_client().await {
                 Ok(conn) => conn,
                 Err(_) => {
                     eprintln!("[bridge] Failed to connect to D-Bus, using fallback");
