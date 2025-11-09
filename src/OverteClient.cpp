@@ -681,6 +681,44 @@ void OverteClient::parseEntityPacket(const char* data, size_t len) {
     }
 }
 
+void OverteClient::handleICEPing(const char* data, size_t len) {
+    // ICEPing packet format:
+    // 1. ICE Client ID (16 bytes UUID)
+    // 2. Ping type (uint8_t: 0=Local, 1=Public)
+    
+    if (len < 17) {
+        std::cerr << "[OverteClient] ICEPing packet too short" << std::endl;
+        return;
+    }
+    
+    // Extract the ICE ID and ping type
+    std::vector<uint8_t> iceID(data, data + 16);
+    uint8_t pingType = static_cast<uint8_t>(data[16]);
+    
+    std::cout << "[OverteClient] ICEPing type=" << (int)pingType << std::endl;
+    
+    // Send ICEPingReply with the same ICE ID and ping type
+    NLPacket reply(PacketType::ICEPingReply, 0, false);
+    if (m_localID != 0) {
+        reply.setSourceID(m_localID);
+    }
+    reply.setSequenceNumber(m_sequenceNumber++);
+    
+    // Write ICE ID and ping type
+    reply.write(iceID.data(), iceID.size());
+    reply.writeUInt8(pingType);
+    
+    const auto& replyData = reply.getData();
+    ssize_t s = ::sendto(m_udpFd, replyData.data(), replyData.size(), 0,
+                         reinterpret_cast<sockaddr*>(&m_udpAddr), m_udpAddrLen);
+    
+    if (s > 0) {
+        std::cout << "[OverteClient] Sent ICEPingReply (" << s << " bytes)" << std::endl;
+    } else {
+        std::cerr << "[OverteClient] Failed to send ICEPingReply: " << strerror(errno) << std::endl;
+    }
+}
+
 void OverteClient::handleDomainListReply(const char* data, size_t len) {
     // DomainList packet format (from Overte NodeList.cpp):
     // 1. Domain UUID (16 bytes)
