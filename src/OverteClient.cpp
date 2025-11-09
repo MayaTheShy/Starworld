@@ -1,5 +1,6 @@
 #include "OverteClient.hpp"
 #include "NLPacketCodec.hpp"
+#include "OverteAuth.hpp"
 
 #include <chrono>
 #include <cmath>
