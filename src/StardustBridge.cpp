@@ -2,25 +2,28 @@
 #include "StardustBridge.hpp"
 #include "ModelCache.hpp"
 
+#include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <cstdlib>
+#include <cstring>
 #include <filesystem>
 #include <iostream>
 #include <thread>
+#include <vector>
+
+#include <dlfcn.h>
+#include <fcntl.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <sys/un.h>
 #include <unistd.h>
-#include <fcntl.h>
-#include <sys/stat.h>
-#include <vector>
-#include <algorithm>
-#include <cstring>
-#include <dlfcn.h>
 
 using namespace std::chrono_literals;
 
-static std::vector<std::string> candidateSocketPaths() {
+namespace {
+
+std::vector<std::string> candidateSocketPaths() {
     std::vector<std::string> out;
 
     if (const char* envSock = std::getenv("STARDUSTXR_SOCKET")) out.emplace_back(envSock);
@@ -59,6 +62,8 @@ static std::vector<std::string> candidateSocketPaths() {
     out.emplace_back("@stardustxr/stardust");
     return out;
 }
+
+} // anonymous namespace
 
 std::string StardustBridge::defaultSocketPath() {
     auto c = candidateSocketPaths();
