@@ -1,28 +1,25 @@
 #include "DomainDiscovery.hpp"
 
-#include <iostream>
-#include <string>
-#include <vector>
-#include <sstream>
-#include <optional>
 #include <cstdlib>
 #include <cstring>
+#include <iostream>
+#include <optional>
+#include <sstream>
 
-// Minimal libcurl-based GET
 #include <curl/curl.h>
-
-// For TCP probe
-#include <sys/socket.h>
-#include <sys/select.h>
-#include <netinet/in.h>
 #include <arpa/inet.h>
-#include <netdb.h>
-#include <unistd.h>
-#include <fcntl.h>
 #include <errno.h>
+#include <fcntl.h>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <sys/select.h>
+#include <sys/socket.h>
+#include <unistd.h>
 
 namespace {
+
 struct Buffer { std::string data; };
+
 
 size_t write_cb(char* ptr, size_t size, size_t nmemb, void* userdata) {
     auto* b = reinterpret_cast<Buffer*>(userdata);
@@ -58,7 +55,7 @@ std::optional<std::string> httpGet(const std::string& url, long timeoutMs = 3000
 
 // Very small JSON helpers (avoid adding a full JSON lib):
 // Extract values for keys we care about with a permissive search.
-static std::vector<std::string> findAllStrings(const std::string& json, const std::string& key) {
+std::vector<std::string> findAllStrings(const std::string& json, const std::string& key) {
     std::vector<std::string> out;
     std::string needle = '"' + key + '"';
     size_t pos = 0;
@@ -75,7 +72,7 @@ static std::vector<std::string> findAllStrings(const std::string& json, const st
     return out;
 }
 
-static std::vector<int> findAllInts(const std::string& json, const std::string& key) {
+std::vector<int> findAllInts(const std::string& json, const std::string& key) {
     std::vector<int> out;
     std::string needle = '"' + key + '"';
     size_t pos = 0;
@@ -89,6 +86,8 @@ static std::vector<int> findAllInts(const std::string& json, const std::string& 
     }
     return out;
 }
+
+} // anonymous namespace
 
 // Heuristic: map fields from common metaverse JSONs
 // Vircadia/Overte often expose entries with fields like name, network_address, domain, ice_server_address, port, etc.

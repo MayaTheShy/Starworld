@@ -1,17 +1,14 @@
 // ModelCache.cpp
 #include "ModelCache.hpp"
 
-#include <iostream>
-#include <fstream>
-#include <sstream>
-#include <iomanip>
-#include <thread>
 #include <cstring>
+#include <fstream>
+#include <iomanip>
+#include <iostream>
+#include <sstream>
+#include <thread>
 
-// For HTTP downloads - using libcurl (cross-platform)
 #include <curl/curl.h>
-
-// For hashing URLs to filenames
 #include <openssl/sha.h>
 
 namespace {
