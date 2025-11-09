@@ -1,5 +1,6 @@
 # Build artifacts
 /build/
+**/target/
 
 # CMake
 CMakeFiles/
@@ -7,21 +8,42 @@ CMakeCache.txt
 cmake-build-*/
 Makefile
 *.cmake
+!CMakeLists.txt
 compile_commands.json
 install_manifest.txt
 
-# Rust bridge target
-/bridge/target/
+# Compiled binaries
+*.o
+*.so
+*.a
+*.exe
+*.dll
+*.dylib
+stardust-overte-client
+stardust-tests
+
+# Rust
+Cargo.lock
+**/target/
+**/*.rs.bk
+**/debug/
+**/release/
 
 # IDE/editor
 .vscode/
 .idea/
 *.user
+*.swp
+*.swo
+*~
 
 # Logs
 *.log
 
 # Temporary
 *.tmp
-*.swp
 .DS_Store
+
+# Third-party directories (not tracked as submodules)
+/third_party/molecules/
+/third_party/overte-src/
