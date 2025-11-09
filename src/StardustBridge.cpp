@@ -284,7 +284,14 @@ bool StardustBridge::loadBridge() {
     const char* overridePath = std::getenv("STARWORLD_BRIDGE_PATH");
     std::vector<std::string> candidates;
     if (overridePath) {
-        candidates.emplace_back(std::string(overridePath));
+        std::string pathStr(overridePath);
+        // If it's a directory, append the library filename
+        struct stat st;
+        if (stat(pathStr.c_str(), &st) == 0 && S_ISDIR(st.st_mode)) {
+            candidates.emplace_back(pathStr + "/libstardust_bridge.so");
+        } else {
+            candidates.emplace_back(pathStr);
+        }
     }
     // Likely local dev output
     candidates.emplace_back("./bridge/target/debug/libstardust_bridge.so");
