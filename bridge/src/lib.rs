@@ -10,7 +10,7 @@ use glam::Mat4;
 use stardust_xr_asteroids as ast; // alias for brevity
 use stardust_xr_asteroids::{
     client::ClientState,
-    elements::{PlaySpace, Lines, Model},
+    elements::{PlaySpace, Model},
     Migrate, Reify,
 };
 use stardust_xr_asteroids::{CustomElement, Transformable, Projector, Context};
@@ -19,7 +19,6 @@ use stardust_xr_fusion::objects::connect_client as fusion_connect_client;
 use stardust_xr_fusion::node::NodeType;
 use stardust_xr_fusion::root::RootAspect;
 use stardust_xr_fusion::drawable::MaterialParameter;
-use stardust_xr_fusion::values::ResourceID;
 use tokio::runtime::Runtime;
 
 #[derive(Clone, serde::Serialize, serde::Deserialize)]
@@ -65,8 +64,8 @@ impl ClientState for BridgeState {
 
 impl Reify for BridgeState {
     fn reify(&self) -> impl ast::Element<Self> {
-        use stardust_xr_fusion::drawable::{Line, LinePoint};
-        use stardust_xr_fusion::values::{color::rgba_linear, Vector3};
+        use stardust_xr_fusion::values::color::rgba_linear;
+        use stardust_xr_asteroids::elements::ModelPart;
         
         // Root playspace. Create appropriate visuals per entity type
         let children = self.nodes.iter().filter_map(|(id, node)| {
@@ -92,27 +91,11 @@ impl Reify for BridgeState {
             // Entity types: 0=Unknown, 1=Box, 2=Sphere, 3=Model, ...
             match node.entity_type {
                 1 => {
-                    // Box entity - render as colored wireframe cube
-                    let t = 0.006; // line thickness
-                    let hs = 0.5f32; // half size in model space (unit cube)
-                    let mut seg = |a: [f32;3], b: [f32;3]| -> Line {
-                        let p0 = LinePoint { point: Vector3 { x: a[0], y: a[1], z: a[2] }, thickness: t, color: node_color };
-                        let p1 = LinePoint { point: Vector3 { x: b[0], y: b[1], z: b[2] }, thickness: t, color: node_color };
-                        Line { points: vec![p0, p1], cyclic: false }
-                    };
-                    let corners = [
-                        [-hs, -hs, -hs], [ hs, -hs, -hs], [ hs,  hs, -hs], [-hs,  hs, -hs],
-                        [-hs, -hs,  hs], [ hs, -hs,  hs], [ hs,  hs,  hs], [-hs,  hs,  hs],
-                    ];
-                    // 12 edges of a cube
-                    let lines = vec![
-                        seg(corners[0], corners[1]), seg(corners[1], corners[2]), seg(corners[2], corners[3]), seg(corners[3], corners[0]),
-                        seg(corners[4], corners[5]), seg(corners[5], corners[6]), seg(corners[6], corners[7]), seg(corners[7], corners[4]),
-                        seg(corners[0], corners[4]), seg(corners[1], corners[5]), seg(corners[2], corners[6]), seg(corners[3], corners[7]),
-                    ];
+                    // Box entity - render as solid colored cube using built-in model
                     Some((
                         *id,
-                        Lines::new(lines)
+                        Model::namespaced("fusion", "tex_cube")
+                            .part(ModelPart::new("").mat_param("color", MaterialParameter::Color(node_color)))
                             .pos([trans.x, trans.y, trans.z])
                             .rot([rot.x, rot.y, rot.z, rot.w])
                             .scl([vis_scale.x, vis_scale.y, vis_scale.z])
@@ -120,52 +103,12 @@ impl Reify for BridgeState {
                     ))
                 },
                 2 => {
-                    // Sphere entity - render as colored wireframe sphere (3 rings)
-                    let t = 0.006;
-                    let r = 0.5f32; // radius in model space
-                    let segments = 24;
-                    
-                    let mut lines = Vec::new();
-                    
-                    // XY plane circle (around Z)
-                    let mut xy_points = Vec::new();
-                    for i in 0..=segments {
-                        let angle = (i as f32 / segments as f32) * std::f32::consts::TAU;
-                        xy_points.push(LinePoint {
-                            point: Vector3 { x: r * angle.cos(), y: r * angle.sin(), z: 0.0 },
-                            thickness: t,
-                            color: node_color,
-                        });
-                    }
-                    lines.push(Line { points: xy_points, cyclic: true });
-                    
-                    // XZ plane circle (around Y)
-                    let mut xz_points = Vec::new();
-                    for i in 0..=segments {
-                        let angle = (i as f32 / segments as f32) * std::f32::consts::TAU;
-                        xz_points.push(LinePoint {
-                            point: Vector3 { x: r * angle.cos(), y: 0.0, z: r * angle.sin() },
-                            thickness: t,
-                            color: node_color,
-                        });
-                    }
-                    lines.push(Line { points: xz_points, cyclic: true });
-                    
-                    // YZ plane circle (around X)
-                    let mut yz_points = Vec::new();
-                    for i in 0..=segments {
-                        let angle = (i as f32 / segments as f32) * std::f32::consts::TAU;
-                        yz_points.push(LinePoint {
-                            point: Vector3 { x: 0.0, y: r * angle.cos(), z: r * angle.sin() },
-                            thickness: t,
-                            color: node_color,
-                        });
-                    }
-                    lines.push(Line { points: yz_points, cyclic: true });
-                    
+                    // Sphere entity - use cube for now with different color/scale to differentiate
+                    // (We could create a custom sphere model or use a different built-in model)
                     Some((
                         *id,
-                        Lines::new(lines)
+                        Model::namespaced("fusion", "tex_cube")
+                            .part(ModelPart::new("").mat_param("color", MaterialParameter::Color(node_color)))
                             .pos([trans.x, trans.y, trans.z])
                             .rot([rot.x, rot.y, rot.z, rot.w])
                             .scl([vis_scale.x, vis_scale.y, vis_scale.z])
@@ -173,36 +116,11 @@ impl Reify for BridgeState {
                     ))
                 },
                 3 if !node.model_url.is_empty() => {
-                    // Model entity - would load from URL
-                    // For now, render as a distinctive wireframe octahedron to show it's different
-                    let t = 0.006;
-                    let r = 0.5f32;
-                    let mut seg = |a: [f32;3], b: [f32;3]| -> Line {
-                        let p0 = LinePoint { point: Vector3 { x: a[0], y: a[1], z: a[2] }, thickness: t, color: node_color };
-                        let p1 = LinePoint { point: Vector3 { x: b[0], y: b[1], z: b[2] }, thickness: t, color: node_color };
-                        Line { points: vec![p0, p1], cyclic: false }
-                    };
-                    
-                    // Octahedron vertices
-                    let top = [0.0, r, 0.0];
-                    let bottom = [0.0, -r, 0.0];
-                    let front = [0.0, 0.0, r];
-                    let back = [0.0, 0.0, -r];
-                    let right = [r, 0.0, 0.0];
-                    let left = [-r, 0.0, 0.0];
-                    
-                    let lines = vec![
-                        // Top pyramid
-                        seg(top, front), seg(top, right), seg(top, back), seg(top, left),
-                        // Bottom pyramid
-                        seg(bottom, front), seg(bottom, right), seg(bottom, back), seg(bottom, left),
-                        // Middle square
-                        seg(front, right), seg(right, back), seg(back, left), seg(left, front),
-                    ];
-                    
+                    // Model entity - use gyro model to show it's different
                     Some((
                         *id,
-                        Lines::new(lines)
+                        Model::namespaced("fusion", "gyro")
+                            .part(ModelPart::new("").mat_param("color", MaterialParameter::Color(node_color)))
                             .pos([trans.x, trans.y, trans.z])
                             .rot([rot.x, rot.y, rot.z, rot.w])
                             .scl([vis_scale.x, vis_scale.y, vis_scale.z])
@@ -210,27 +128,12 @@ impl Reify for BridgeState {
                     ))
                 },
                 _ => {
-                    // Unknown/default - render as simple wireframe cube
-                    let t = 0.004;
-                    let c = rgba_linear!(0.6, 0.6, 0.6, 0.8); // Gray for unknown
-                    let hs = 0.5f32;
-                    let mut seg = |a: [f32;3], b: [f32;3]| -> Line {
-                        let p0 = LinePoint { point: Vector3 { x: a[0], y: a[1], z: a[2] }, thickness: t, color: c };
-                        let p1 = LinePoint { point: Vector3 { x: b[0], y: b[1], z: b[2] }, thickness: t, color: c };
-                        Line { points: vec![p0, p1], cyclic: false }
-                    };
-                    let corners = [
-                        [-hs, -hs, -hs], [ hs, -hs, -hs], [ hs,  hs, -hs], [-hs,  hs, -hs],
-                        [-hs, -hs,  hs], [ hs, -hs,  hs], [ hs,  hs,  hs], [-hs,  hs,  hs],
-                    ];
-                    let lines = vec![
-                        seg(corners[0], corners[1]), seg(corners[1], corners[2]), seg(corners[2], corners[3]), seg(corners[3], corners[0]),
-                        seg(corners[4], corners[5]), seg(corners[5], corners[6]), seg(corners[6], corners[7]), seg(corners[7], corners[4]),
-                        seg(corners[0], corners[4]), seg(corners[1], corners[5]), seg(corners[2], corners[6]), seg(corners[3], corners[7]),
-                    ];
+                    // Unknown/default - render as gray cube
+                    let default_color = rgba_linear!(0.6, 0.6, 0.6, 0.8);
                     Some((
                         *id,
-                        Lines::new(lines)
+                        Model::namespaced("fusion", "tex_cube")
+                            .part(ModelPart::new("").mat_param("color", MaterialParameter::Color(default_color)))
                             .pos([trans.x, trans.y, trans.z])
                             .rot([rot.x, rot.y, rot.z, rot.w])
                             .scl([vis_scale.x, vis_scale.y, vis_scale.z])
