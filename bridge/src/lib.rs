@@ -49,6 +49,10 @@ enum Command {
     Shutdown,
 }
 
+// Connection status for startup
+static CONNECTION_SUCCESS: AtomicBool = AtomicBool::new(false);
+static CONNECTION_FAILED: AtomicBool = AtomicBool::new(false);
+
 impl Migrate for BridgeState { type Old = Self; }
 
 impl ClientState for BridgeState {
