@@ -10,7 +10,7 @@ use glam::Mat4;
 use stardust_xr_asteroids as ast; // alias for brevity
 use stardust_xr_asteroids::{
     client::ClientState,
-    elements::{PlaySpace, Model, Lines},
+    elements::{PlaySpace, Model, Lines, Spatial},
     Migrate, Reify,
 };
 use stardust_xr_asteroids::{CustomElement, Transformable, Projector, Context};
@@ -196,7 +196,9 @@ impl Reify for BridgeState {
                     // Box entity - use tex_cube model
                     Some((
                         *id,
-                        ModelWrapper::builtin("tex_cube", transform, node_color).build()
+                        Spatial::default().build().child(
+                            ModelWrapper::builtin("tex_cube", transform, node_color).build()
+                        )
                     ))
                 },
                 2 => {
@@ -208,14 +210,18 @@ impl Reify for BridgeState {
                     let sphere_transform = Transform::from_translation_rotation_scale(trans_array, rot_array, uniform_scale_array);
                     Some((
                         *id,
-                        ModelWrapper::builtin("tex_cube", sphere_transform, node_color).build()
+                        Spatial::default().build().child(
+                            ModelWrapper::builtin("tex_cube", sphere_transform, node_color).build()
+                        )
                     ))
                 },
                 3 if !node.model_url.is_empty() => {
                     // Model entity - use gyro as placeholder (or try to load from URL)
                     Some((
                         *id,
-                        ModelWrapper::builtin("gyro", transform, node_color).build()
+                        Spatial::default().build().child(
+                            ModelWrapper::builtin("gyro", transform, node_color).build()
+                        )
                     ))
                 },
                 _ => {
@@ -223,7 +229,9 @@ impl Reify for BridgeState {
                     let default_color = rgba_linear!(0.6, 0.6, 0.6, 0.8);
                     Some((
                         *id,
-                        ModelWrapper::builtin("tex_cube", transform, default_color).build()
+                        Spatial::default().build().child(
+                            ModelWrapper::builtin("tex_cube", transform, default_color).build()
+                        )
                     ))
                 }
             }
