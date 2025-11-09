@@ -6,7 +6,7 @@
 
 Starworld is an Overte client that renders virtual world entities inside the StardustXR compositor. It bridges Overte's entity protocol with Stardust's spatial computing environment, allowing you to view and interact with Overte domains in XR.
 
-**Current Status:** ✨ **3D colored model rendering with HTTP asset downloading!** Entities render as solid GLTF models with PBR materials. ModelCache automatically downloads models from http:// and https:// URLs to `~/.cache/starworld/models/`. See [RENDERING_FIX_SUMMARY.md](RENDERING_FIX_SUMMARY.md) for implementation details.
+**Current Status:** ✨ **3D model rendering with HTTP asset downloading!** Entities render as GLTF/GLB models loaded from the local cache. ModelCache automatically downloads models from http:// and https:// URLs to `~/.cache/starworld/models/`. Primitive models (cube, sphere, suzanne) are pre-generated in `~/.cache/starworld/primitives/` using Blender.
 
 ## Quick Start
 
@@ -45,10 +45,10 @@ export STARWORLD_BRIDGE_PATH=./bridge/target/release
 ./build/starworld
 ```
 
-This creates three demo entities rendered as colored 3D models:
-- **Red cube** (0.2m) - smooth shaded cube with PBR material
-- **Green sphere** (0.15m) - UV sphere with 32 segments
-- **Blue icosphere** (0.25m) - Geodesic sphere placeholder for Model entities
+This creates three demo entities rendered as 3D models:
+- **Red cube** (0.2m) - Box entity type
+- **Green sphere** (0.15m) - Sphere entity type
+- **Blue suzanne** (0.25m) - Model entity type (Blender monkey head placeholder)
 
 ### Connect to Overte Server
 ```bash
@@ -76,25 +76,27 @@ The Rust bridge provides the StardustXR client implementation, exposing a C ABI 
 
 ## Entity Rendering
 
-Starworld renders Overte entities as **3D colored models**:
+Starworld renders Overte entities as **3D GLTF/GLB models**:
 
-- **Box** (type 1): Smooth-shaded cube with colored PBR material
-- **Sphere** (type 2): UV sphere (32 segments) with colored PBR material
-- **Model** (type 3): Icosphere placeholder (downloads coming soon)
+- **Box** (type 1): Cube model from `cube.glb`
+- **Sphere** (type 2): Sphere model from `sphere.glb`
+- **Model** (type 3): Suzanne (Blender monkey) from `model.glb`, or downloaded models
 - **Other types**: Coming soon (Text, Image, Light, etc.)
 
 **Current Support:**
 - ✅ Position, rotation, scale (full transform matrix)
-- ✅ RGB color with PBR materials (roughness, metallic)
 - ✅ Dimensions (xyz size in meters)
 - ✅ GLTF/GLB model loading from local cache
 - ✅ HTTP/HTTPS model URL downloading with ModelCache (SHA256-based caching)
+- ✅ Primitive generation using Blender (`tools/blender_export_simple.py`)
+- ⏳ Entity colors (stored but not yet applied to models)
+- ⏳ Texture support (entity.textureUrl parsing implemented)
 - ⏳ ATP protocol support (Overte asset server)
-- ⏳ Texture application (planned)
 
-Models are cached to `~/.cache/starworld/models/` using SHA256 URL hashing. HTTP downloads use libcurl with async callbacks. Primitives in `~/.cache/starworld/primitives/` generated using Blender with `tools/blender_export_simple.py`.
-
-For implementation details, see [ENTITY_RENDERING_ENHANCEMENTS.md](ENTITY_RENDERING_ENHANCEMENTS.md).
+**Cache Structure:**
+- Downloaded models: `~/.cache/starworld/models/` (SHA256 URL hashing)
+- Primitive models: `~/.cache/starworld/primitives/` (Blender-generated)
+- HTTP downloads use libcurl with async callbacks and progress reporting
 
 ## Rust Bridge
 
