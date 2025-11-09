@@ -47,6 +47,7 @@ bpy.ops.object.shade_smooth()
 green_mat = create_material("SphereMaterial", (0.2, 1.0, 0.2, 1.0))
 sphere.data.materials.append(green_mat)
 
+# Select ONLY this object for export
 bpy.ops.object.select_all(action='DESELECT')
 sphere.select_set(True)
 
@@ -54,10 +55,10 @@ sphere_path = os.path.join(output_dir, "sphere.glb")
 bpy.ops.export_scene.gltf(filepath=sphere_path, use_selection=True)
 print(f"   ✓ Exported: {sphere_path}")
 
-# Clean up
+# Now delete it (it's still selected)
 bpy.ops.object.delete(use_global=False)
 
-# Clean up
+# Now delete it (it's still selected)
 bpy.ops.object.delete(use_global=False)
 
 # ========== CUBE (RED) ==========
@@ -70,6 +71,7 @@ bpy.ops.object.shade_smooth()
 red_mat = create_material("CubeMaterial", (1.0, 0.2, 0.2, 1.0))
 cube.data.materials.append(red_mat)
 
+# Select ONLY this object for export
 bpy.ops.object.select_all(action='DESELECT')
 cube.select_set(True)
 
@@ -77,7 +79,7 @@ cube_path = os.path.join(output_dir, "cube.glb")
 bpy.ops.export_scene.gltf(filepath=cube_path, use_selection=True)
 print(f"   ✓ Exported: {cube_path}")
 
-# Clean up
+# Now delete it (it's still selected)
 bpy.ops.object.delete(use_global=False)
 
 # ========== ICOSPHERE (BLUE) ==========
@@ -90,6 +92,7 @@ bpy.ops.object.shade_smooth()
 blue_mat = create_material("IcoSphereMaterial", (0.2, 0.2, 1.0, 1.0))
 ico.data.materials.append(blue_mat)
 
+# Select ONLY this object for export
 bpy.ops.object.select_all(action='DESELECT')
 ico.select_set(True)
 
