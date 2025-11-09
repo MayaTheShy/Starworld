@@ -112,14 +112,14 @@ impl Reify for BridgeState {
                         seg(corners[4], corners[5]), seg(corners[5], corners[6]), seg(corners[6], corners[7]), seg(corners[7], corners[4]),
                         seg(corners[0], corners[4]), seg(corners[1], corners[5]), seg(corners[2], corners[6]), seg(corners[3], corners[7]),
                     ];
-                    (
+                    Some((
                         *id,
                         Lines::new(lines)
                             .pos([trans.x, trans.y, trans.z])
                             .rot([rot.x, rot.y, rot.z, rot.w])
                             .scl([vis_scale.x, vis_scale.y, vis_scale.z])
                             .build()
-                    )
+                    ))
                 },
                 2 => {
                     // Sphere entity - render as colored wireframe sphere (3 rings)
