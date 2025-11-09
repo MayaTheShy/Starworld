@@ -13,3 +13,6 @@ struct DiscoveredDomain {
 // Fetch a list of candidate domains. Non-fatal if empty.
 // Implementation attempts several known metaverse endpoints.
 std::vector<DiscoveredDomain> discoverDomains(int maxDomains = 25);
+
+// Exposed for tests: parse a directory JSON payload into candidate domains.
+std::vector<DiscoveredDomain> parseDomainsFromJson(const std::string& json);
