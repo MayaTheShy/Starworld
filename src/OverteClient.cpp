@@ -630,9 +630,11 @@ void OverteClient::sendDomainConnectRequest() {
     }
     // Helper lambda to write QHostAddress (IPv4) in QDataStream format: [protocol:quint8=1][IPv4:quint32]
     auto writeQHostAddressIPv4 = [&qs](uint32_t hostOrderIPv4){
-        // QDataStream for QHostAddress writes a protocol tag (quint8). In Qt5, IPv4Protocol serializes as 0.
-        qs.writeUInt8(0); // IPv4Protocol tag in Qt's QDataStream format
-        qs.writeUInt32BE(hostOrderIPv4); // already host order -> big endian conversion inside writer
+        // QDataStream for QHostAddress writes a protocol tag (quint8).
+        // QAbstractSocket::NetworkLayerProtocol: AnyIPProtocol=0, IPv4Protocol=1, IPv6Protocol=2.
+        // We want IPv4Protocol = 1.
+        qs.writeUInt8(1);
+        qs.writeUInt32BE(hostOrderIPv4);
     };
 
     // 10. Public socket: type (quint8) + SockAddr (QHostAddress + quint16 port, WITHOUT socket type per SockAddr QDataStream operator)
@@ -667,8 +669,18 @@ void OverteClient::sendDomainConnectRequest() {
     // Print MD5 signature in hex for diff against reference Overte client
     std::ostringstream md5hex; md5hex << std::hex << std::setfill('0');
     for (uint8_t byte : protocolSig) md5hex << std::setw(2) << (int)byte;
-    std::cout << "[OverteClient]   Protocol signature: " << protocolSig.size() << " bytes (MD5)" << std::endl;
-    std::cout << "[OverteClient]   Protocol signature (hex): " << md5hex.str() << std::endl;
+        // Base64 encode MD5 for comparison with Overte's protocolVersionsSignatureBase64()
+        auto base64Encode = [](const std::vector<uint8_t>& in){
+            static const char* tbl = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+            std::string out; out.reserve(((in.size()+2)/3)*4);
+            size_t i=0; while(i<in.size()){ uint32_t val=0; int bytes=0; for(int j=0;j<3;++j){ val <<=8; if(i<in.size()){ val|=in[i++]; ++bytes; } }
+                int pad = 3 - bytes; for(int k=0;k<4-pad;++k){ int idx = (val >> (18 - k*6)) & 0x3F; out.push_back(tbl[idx]); }
+                for(int k=0;k<pad;++k) out.push_back('='); }
+            return out; };
+        std::string md5Base64 = base64Encode(protocolSig);
+        std::cout << "[OverteClient]   Protocol signature: " << protocolSig.size() << " bytes (MD5)" << std::endl;
+        std::cout << "[OverteClient]   Protocol signature (hex): " << md5hex.str() << std::endl;
+        std::cout << "[OverteClient]   Protocol signature (base64): " << md5Base64 << std::endl;
         // Hex dump first 64 bytes
         std::cout << "[OverteClient] >>> NLPacket Hex: ";
         for (size_t i = 0; i < std::min(size_t(64), data.size()); ++i) {
