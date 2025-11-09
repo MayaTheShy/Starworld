@@ -17,11 +17,10 @@ echo
 
 # 2. Build the C++ client
 echo "[2/3] Building C++ client..."
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$SCRIPT_DIR"
 mkdir -p build
 cd build
-cmake "$SCRIPT_DIR" -DCMAKE_BUILD_TYPE=Release
+cmake .. -DCMAKE_BUILD_TYPE=Release
 make -j$(nproc)
 echo "✓ C++ client built successfully"
 echo
