@@ -72,12 +72,12 @@ impl ClientState for BridgeState {
 
 impl Reify for BridgeState {
     fn reify(&self) -> impl ast::Element<Self> {
-        use stardust_xr_fusion::values::{rgba_linear, Vector3};
+        use stardust_xr_fusion::values::{color, Vector3};
         use stardust_xr_fusion::drawable::{Line, LinePoint};
         
         eprintln!("[bridge/reify] Reifying {} nodes", self.nodes.len());
         
-        fn create_wireframe_cube(color: stardust_xr_fusion::values::Color, thickness: f32) -> Vec<Line> {
+        fn create_wireframe_cube(color_val: stardust_xr_fusion::values::Color, thickness: f32) -> Vec<Line> {
             let h = 0.5; // half size
             let points = [
                 [-h, -h, -h], [h, -h, -h], [h, h, -h], [-h, h, -h], // back face
@@ -96,8 +96,8 @@ impl Reify for BridgeState {
                 let pb = points[*b];
                 Line {
                     points: vec![
-                        LinePoint { point: Vector3 { x: pa[0], y: pa[1], z: pa[2] }, thickness, color },
-                        LinePoint { point: Vector3 { x: pb[0], y: pb[1], z: pb[2] }, thickness, color },
+                        LinePoint { point: Vector3 { x: pa[0], y: pa[1], z: pa[2] }, thickness, color: color_val },
+                        LinePoint { point: Vector3 { x: pb[0], y: pb[1], z: pb[2] }, thickness, color: color_val },
                     ],
                     cyclic: false,
                 }
@@ -113,7 +113,7 @@ impl Reify for BridgeState {
             
             let (scale, rot, trans) = node.transform.to_scale_rotation_translation();
             let vis_scale = if dims.length() > 0.001 { dims } else { scale };
-            let node_color = rgba_linear!(node.color[0], node.color[1], node.color[2], node.color[3]);
+            let node_color = color::rgba_linear!(node.color[0], node.color[1], node.color[2], node.color[3]);
             
             let trans_array = [trans.x, trans.y, trans.z];
             let rot_array = [rot.x, rot.y, rot.z, rot.w];
@@ -121,28 +121,26 @@ impl Reify for BridgeState {
             let transform = stardust_xr_fusion::spatial::Transform::from_translation_rotation_scale(trans_array, rot_array, scale_array);
             
             // Create appropriate visual based on entity type
-            match node.entity_type {
+            let element: ast::ElementWrapper<_, _, ()> = match node.entity_type {
                 1 => {
                     // Box - use cube model with color
                     eprintln!("[bridge/reify] Creating box model for node {}", id);
-                    let model = Model::namespaced("fusion", "tex_cube")
+                    Model::namespaced("fusion", "tex_cube")
                         .transform(transform)
                         .part(
                             ModelPart::new("Cube")
                                 .mat_param("color", MaterialParameter::Color(node_color))
-                        );
-                    Some((*id, model.build()))
+                        ).build()
                 }
                 2 => {
                     // Sphere - use sphere model with color
                     eprintln!("[bridge/reify] Creating sphere model for node {}", id);
-                    let model = Model::namespaced("fusion", "tex_sphere")
+                    Model::namespaced("fusion", "tex_sphere")
                         .transform(transform)
                         .part(
                             ModelPart::new("Sphere")
                                 .mat_param("color", MaterialParameter::Color(node_color))
-                        );
-                    Some((*id, model.build()))
+                        ).build()
                 }
                 3 => {
                     // Model - use model URL if available, fallback to cube
@@ -150,37 +148,34 @@ impl Reify for BridgeState {
                         eprintln!("[bridge/reify] Creating model from URL for node {}: {}", id, node.model_url);
                         // For now, use a fallback model since we can't load arbitrary URLs yet
                         // TODO: Implement model loading and caching
-                        let model = Model::namespaced("fusion", "gyro")
+                        Model::namespaced("fusion", "gyro")
                             .transform(transform)
                             .part(
                                 ModelPart::new("Gem")
                                     .mat_param("color", MaterialParameter::Color(node_color))
-                            );
-                        Some((*id, model.build()))
+                            ).build()
                     } else {
                         eprintln!("[bridge/reify] Creating fallback cube for node {} (no model URL)", id);
-                        let model = Model::namespaced("fusion", "tex_cube")
+                        Model::namespaced("fusion", "tex_cube")
                             .transform(transform)
                             .part(
                                 ModelPart::new("Cube")
                                     .mat_param("color", MaterialParameter::Color(node_color))
-                            );
-                        Some((*id, model.build()))
+                            ).build()
                     }
                 }
                 _ => {
                     // Unknown or unsupported type - render as wireframe
                     eprintln!("[bridge/reify] Creating wireframe for node {} type={}", id, node.entity_type);
                     let cube_lines = create_wireframe_cube(node_color, 0.003);
-                    Some((
-                        *id,
-                        Spatial::default()
-                            .transform(transform)
-                            .build()
-                            .child(Lines::new(cube_lines).build())
-                    ))
+                    Spatial::default()
+                        .transform(transform)
+                        .build()
+                        .child(Lines::new(cube_lines).build())
                 }
-            }
+            };
+            
+            Some((*id, element))
         });
 
         PlaySpace.build().stable_children(children)
