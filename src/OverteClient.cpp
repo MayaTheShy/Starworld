@@ -738,6 +738,10 @@ void OverteClient::handleDomainListReply(const char* data, size_t len) {
     // Now mark as connected since we got a valid DomainList
     m_domainConnected = true;
     
+    // Send EntityQuery to request entity data from the server
+    std::cout << "[OverteClient] Domain connected! Sending entity query..." << std::endl;
+    sendEntityQuery();
+    
     // Read number of nodes - Qt QDataStream format (signed int32, big-endian)
     // But for node list, Overte uses a special encoding
     // Looking at the packet: ff 01 00 06 43 23...
@@ -1018,26 +1022,78 @@ void OverteClient::sendPing(int fd, const sockaddr_storage& addr, socklen_t addr
 }
 
 void OverteClient::sendEntityQuery() {
-    if (m_entityFd < 0 || !m_entityServerReady) return;
+    if (!m_udpReady || m_udpFd == -1) return;
     
-    const unsigned char PACKET_TYPE_ENTITY_QUERY = 0x15;
+    // Create EntityQuery packet (PacketType::EntityQuery = 0x29)
+    NLPacket packet(PacketType::EntityQuery, 0, true);
+    packet.setSequenceNumber(m_sequenceNumber++);
     
-    // EntityQuery packet structure (simplified):
-    // [PacketType:u8][ConicalViews:bool][CameraFrustum if ConicalViews=true]
-    // For simplicity, send with ConicalViews=false to request all entities
+    // OctreeQuery payload format (from OctreeQuery::getBroadcastData):
+    // 1. Connection ID (uint16)
+    // 2. Number of frustums (uint8) - 0 for requesting all entities
+    // 3. Frustum data (if numFrustums > 0) - we skip this
+    // 4. Max octree packets per second (int32)
+    // 5. Octree size scale (float32)
+    // 6. Boundary level adjust (int32)
+    // 7. JSON parameters size (uint16)
+    // 8. JSON parameters (if size > 0)
+    // 9. Query flags (uint16)
     
-    std::vector<char> packet;
-    packet.push_back(static_cast<char>(PACKET_TYPE_ENTITY_QUERY));
-    packet.push_back(0); // ConicalViews = false
+    std::vector<uint8_t> payload;
+    auto writeU16 = [&](uint16_t v) {
+        payload.push_back((v >> 8) & 0xFF);
+        payload.push_back(v & 0xFF);
+    };
+    auto writeU8 = [&](uint8_t v) { payload.push_back(v); };
+    auto writeI32 = [&](int32_t v) {
+        payload.push_back((v >> 24) & 0xFF);
+        payload.push_back((v >> 16) & 0xFF);
+        payload.push_back((v >> 8) & 0xFF);
+        payload.push_back(v & 0xFF);
+    };
+    auto writeF32 = [&](float v) {
+        uint32_t bits;
+        std::memcpy(&bits, &v, sizeof(float));
+        writeI32(static_cast<int32_t>(bits));
+    };
     
-    // With ConicalViews=false, we're requesting all entities
-    // Additional octree query parameters can be added here
+    // 1. Connection ID - use 0 for initial query
+    static uint16_t connectionID = 0;
+    writeU16(connectionID);
     
-    ssize_t sent = sendto(m_entityFd, packet.data(), packet.size(), 0, 
-                         reinterpret_cast<const sockaddr*>(&m_entityAddr), m_entityAddrLen);
+    // 2. Number of frustums - 0 to request all entities
+    writeU8(0);
     
-    if (sent > 0) {
-        std::cout << "[OverteClient] Sent EntityQuery to EntityServer" << std::endl;
+    // 3. No frustum data since numFrustums = 0
+    
+    // 4. Max octree PPS - 3000 is typical
+    writeI32(3000);
+    
+    // 5. Octree size scale - 1.0 is default
+    writeF32(1.0f);
+    
+    // 6. Boundary level adjust - 0 is default
+    writeI32(0);
+    
+    // 7. JSON parameters size - 0 (no filters)
+    writeU16(0);
+    
+    // 8. No JSON parameters
+    
+    // 9. Query flags - 0x1 = WantInitialCompletion
+    writeU16(0x1);
+    
+    // Write payload to packet
+    if (!payload.empty()) {
+        packet.write(payload.data(), payload.size());
+    }
+    
+    const auto& data = packet.getData();
+    ssize_t s = ::sendto(m_udpFd, data.data(), data.size(), 0, 
+                         reinterpret_cast<sockaddr*>(&m_udpAddr), m_udpAddrLen);
+    
+    if (s > 0) {
+        std::cout << "[OverteClient] Sent EntityQuery (" << s << " bytes, seq=" << (m_sequenceNumber-1) << ")" << std::endl;
     } else {
         std::cerr << "[OverteClient] Failed to send EntityQuery: " << strerror(errno) << std::endl;
     }
