@@ -1,5 +1,6 @@
 // StardustBridge.cpp
 #include "StardustBridge.hpp"
+#include "ModelCache.hpp"
 
 #include <chrono>
 #include <cmath>
@@ -180,6 +181,35 @@ bool StardustBridge::removeNode(NodeId id) {
 bool StardustBridge::setNodeModel(NodeId id, const std::string& modelUrl) {
     auto it = m_nodes.find(id);
     if (it == m_nodes.end()) return false;
+    
+    // Check if URL is HTTP(S) - if so, download via ModelCache
+    if (modelUrl.substr(0, 7) == "http://" || modelUrl.substr(0, 8) == "https://") {
+        // Request download from ModelCache
+        ModelCache::instance().requestModel(
+            modelUrl,
+            [this, id](const std::string& url, bool success, const std::string& localPath) {
+                if (success && m_fnSetModel) {
+                    std::cout << "[StardustBridge] Model downloaded: " << url << " -> " << localPath << std::endl;
+                    m_fnSetModel(id, localPath.c_str());
+                } else if (!success) {
+                    std::cerr << "[StardustBridge] Failed to download model: " << url << std::endl;
+                    // Fall back to primitive based on entity type if download fails
+                    // The Rust bridge will handle this via get_model_path()
+                }
+            },
+            [id](const std::string& url, size_t bytesReceived, size_t bytesTotal) {
+                // Optional: log download progress
+                if (bytesTotal > 0) {
+                    float percent = (bytesReceived * 100.0f) / bytesTotal;
+                    std::cout << "[StardustBridge] Downloading model " << id << ": " 
+                              << percent << "% (" << bytesReceived << "/" << bytesTotal << " bytes)" << std::endl;
+                }
+            }
+        );
+        return true; // Download initiated, will complete asynchronously
+    }
+    
+    // Direct URL (file://, atp://, etc.) - pass through to bridge
     if (m_fnSetModel) {
         return m_fnSetModel(id, modelUrl.c_str()) == 0;
     }
