@@ -382,3 +382,55 @@ pub extern "C" fn sdxr_node_count() -> u64 {
     let ctrl = CTRL.lock().unwrap();
     ctrl.nodes.len() as u64
 }
+
+#[no_mangle]
+pub extern "C" fn sdxr_set_node_model(id: u64, model_url: *const std::os::raw::c_char) -> i32 {
+    if !STARTED.load(Ordering::SeqCst) { return -1; }
+    let url = unsafe { CStr::from_ptr(model_url) }.to_string_lossy().to_string();
+    let ctrl = CTRL.lock().unwrap();
+    if let Some(tx) = &ctrl.tx {
+        let _ = tx.send(Command::SetModel { c_id: id, model_url: url });
+    }
+    0
+}
+
+#[no_mangle]
+pub extern "C" fn sdxr_set_node_texture(id: u64, texture_url: *const std::os::raw::c_char) -> i32 {
+    if !STARTED.load(Ordering::SeqCst) { return -1; }
+    let url = unsafe { CStr::from_ptr(texture_url) }.to_string_lossy().to_string();
+    let ctrl = CTRL.lock().unwrap();
+    if let Some(tx) = &ctrl.tx {
+        let _ = tx.send(Command::SetTexture { c_id: id, texture_url: url });
+    }
+    0
+}
+
+#[no_mangle]
+pub extern "C" fn sdxr_set_node_color(id: u64, r: f32, g: f32, b: f32, a: f32) -> i32 {
+    if !STARTED.load(Ordering::SeqCst) { return -1; }
+    let ctrl = CTRL.lock().unwrap();
+    if let Some(tx) = &ctrl.tx {
+        let _ = tx.send(Command::SetColor { c_id: id, color: [r, g, b, a] });
+    }
+    0
+}
+
+#[no_mangle]
+pub extern "C" fn sdxr_set_node_dimensions(id: u64, x: f32, y: f32, z: f32) -> i32 {
+    if !STARTED.load(Ordering::SeqCst) { return -1; }
+    let ctrl = CTRL.lock().unwrap();
+    if let Some(tx) = &ctrl.tx {
+        let _ = tx.send(Command::SetDimensions { c_id: id, dimensions: [x, y, z] });
+    }
+    0
+}
+
+#[no_mangle]
+pub extern "C" fn sdxr_set_node_entity_type(id: u64, entity_type: u8) -> i32 {
+    if !STARTED.load(Ordering::SeqCst) { return -1; }
+    let ctrl = CTRL.lock().unwrap();
+    if let Some(tx) = &ctrl.tx {
+        let _ = tx.send(Command::SetEntityType { c_id: id, entity_type });
+    }
+    0
+}
