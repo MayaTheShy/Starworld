@@ -4,9 +4,26 @@
 
 ## Overview
 
-Starworld is an Overte client that renders virtual world entities inside the StardustXR compositor. It bridges Overte's entity protocol with Stardust's spatial computing environment, allowing you to view and interact with Overte domains in XR.
+Starworld is an [Overte](https://overte.org) client that renders virtual world entities inside the [StardustXR](https://stardustxr.org) compositor. It bridges Overte's entity protocol with Stardust's spatial computing environment, allowing you to view and interact with Overte domains in XR.
 
 **Current Status:** ✨ **3D model rendering with HTTP asset downloading!** Entities render as GLTF/GLB models loaded from the local cache. ModelCache automatically downloads models from http:// and https:// URLs to `~/.cache/starworld/models/`. Primitive models (cube, sphere, suzanne) are pre-generated in `~/.cache/starworld/primitives/` using Blender.
+
+### About the Technologies
+
+**[StardustXR](https://stardustxr.org)** is a next-generation XR display server and compositor that runs XR clients as separate processes. It provides a Unix-philosophy approach to XR, where each application is an independent process communicating via IPC.
+- **Website**: https://stardustxr.org
+- **GitHub**: https://github.com/StardustXR
+- **Core Repository**: https://github.com/StardustXR/core
+- **Server**: https://github.com/StardustXR/server
+- **Documentation**: https://stardustxr.org/docs
+
+**[Overte](https://overte.org)** is an open-source virtual worlds and social VR platform, a community-maintained fork of High Fidelity. It allows you to create and explore 3D virtual environments with others.
+- **Website**: https://overte.org
+- **GitHub**: https://github.com/overte-org/overte
+- **Documentation**: https://docs.overte.org
+- **API Reference**: https://apidocs.overte.org
+- **Discord**: https://discord.gg/overte
+- **Metaverse**: https://mv.overte.org (main public metaverse server)
 
 ## Quick Start
 
@@ -362,3 +379,35 @@ See [CI_SETUP_SUMMARY.md](CI_SETUP_SUMMARY.md) for details on the CI pipeline.
 ## License
 
 [Add your license here]
+
+## References & Resources
+
+### StardustXR
+- **Official Website**: https://stardustxr.org
+- **GitHub Organization**: https://github.com/StardustXR
+- **Core Library (Fusion)**: https://github.com/StardustXR/core
+- **Server**: https://github.com/StardustXR/server
+- **Asteroids (UI Elements)**: https://github.com/StardustXR/asteroids
+- **Documentation**: https://stardustxr.org/docs
+- **Matrix Chat**: https://matrix.to/#/#stardustxr:matrix.org
+
+### Overte
+- **Official Website**: https://overte.org
+- **GitHub Repository**: https://github.com/overte-org/overte
+- **User Documentation**: https://docs.overte.org
+- **Developer Docs**: https://docs.overte.org/developer
+- **API Reference**: https://apidocs.overte.org
+- **Discord Community**: https://discord.gg/overte
+- **Main Metaverse**: https://mv.overte.org
+- **Protocol Documentation**: https://github.com/overte-org/overte/tree/master/libraries/networking
+
+### Related Projects
+- **High Fidelity** (Overte's predecessor): https://github.com/highfidelity/hifi (archived)
+- **GLTF/GLB Format**: https://www.khronos.org/gltf/
+- **Blender**: https://www.blender.org (used for primitive generation)
+
+### Technical References
+- **Qt QDataStream**: https://doc.qt.io/qt-5/qdatastream.html (Overte serialization format)
+- **OAuth 2.0 RFC**: https://www.rfc-editor.org/rfc/rfc6749.html
+- **NLPacket Protocol**: Documented in Overte source at `libraries/networking/src/NLPacket.h`
+- **libcurl Documentation**: https://curl.se/libcurl/
