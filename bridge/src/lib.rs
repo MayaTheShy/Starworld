@@ -11,7 +11,7 @@ use stardust_xr_asteroids as ast; // alias for brevity
 use stardust_xr_asteroids::{
     client::ClientState,
     elements::{PlaySpace, Spatial, Lines},
-    Migrate, Reify,
+    Migrate, Reify, CustomElement,
 };
 use stardust_xr_fusion::objects::connect_client as fusion_connect_client;
 use stardust_xr_fusion::node::NodeType;
@@ -75,6 +75,46 @@ impl Reify for BridgeState {
         
         eprintln!("[bridge/reify] Reifying {} nodes", self.nodes.len());
         
+        // Helper function to create cube wireframe or filled visualization
+        fn create_cube_lines(half_size: glam::Vec3, _color: stardust_xr_fusion::values::Color) -> Vec<([f32; 3], [f32; 3])> {
+            let mut lines = Vec::new();
+            
+            // Create a dense grid of lines to make it look more solid
+            let steps = 5; // More lines = more solid appearance
+            for i in 0..=steps {
+                let t = (i as f32) / (steps as f32) * 2.0 - 1.0;
+                
+                // Lines parallel to X axis
+                for j in 0..=steps {
+                    let u = (j as f32) / (steps as f32) * 2.0 - 1.0;
+                    lines.push((
+                        [- half_size.x, t * half_size.y, u * half_size.z],
+                        [half_size.x, t * half_size.y, u * half_size.z],
+                    ));
+                }
+                
+                // Lines parallel to Y axis
+                for j in 0..=steps {
+                    let u = (j as f32) / (steps as f32) * 2.0 - 1.0;
+                    lines.push((
+                        [t * half_size.x, -half_size.y, u * half_size.z],
+                        [t * half_size.x, half_size.y, u * half_size.z],
+                    ));
+                }
+                
+                // Lines parallel to Z axis
+                for j in 0..=steps {
+                    let u = (j as f32) / (steps as f32) * 2.0 - 1.0;
+                    lines.push((
+                        [t * half_size.x, u * half_size.y, -half_size.z],
+                        [t * half_size.x, u * half_size.y, half_size.z],
+                    ));
+                }
+            }
+            
+            lines
+        }
+        
         // Root playspace. Create appropriate visuals per entity type
         let children = self.nodes.iter().filter_map(|(id, node)| {
             // Skip nodes with zero dimensions (like the root node)
@@ -105,51 +145,23 @@ impl Reify for BridgeState {
             let scale_array = [vis_scale.x, vis_scale.y, vis_scale.z];
             let transform = Transform::from_translation_rotation_scale(trans_array, rot_array, scale_array);
             
+            // Create a dense cube mesh for a more solid appearance
+            let half_size = glam::Vec3::splat(0.5); // Lines will be scaled by transform
+            let cube_lines = create_cube_lines(half_size, node_color);
+            
             // Entity types: 0=Unknown, 1=Box, 2=Sphere, 3=Model
-            match node.entity_type {
-                1 => {
-                    // Box entity - use tex_cube model
-                    Some((
-                        *id,
-                        Spatial::default().build().child(
-                            ModelWrapper::builtin("tex_cube", transform, node_color).build()
-                        )
-                    ))
-                },
-                2 => {
-                    // Sphere entity - use tex_cube with uniform scale to approximate
-                    let avg_scale = (vis_scale.x + vis_scale.y + vis_scale.z) / 3.0;
-                    let trans_array = [trans.x, trans.y, trans.z];
-                    let rot_array = [rot.x, rot.y, rot.z, rot.w];
-                    let uniform_scale_array = [avg_scale, avg_scale, avg_scale];
-                    let sphere_transform = Transform::from_translation_rotation_scale(trans_array, rot_array, uniform_scale_array);
-                    Some((
-                        *id,
-                        Spatial::default().build().child(
-                            ModelWrapper::builtin("tex_cube", sphere_transform, node_color).build()
-                        )
-                    ))
-                },
-                3 if !node.model_url.is_empty() => {
-                    // Model entity - use gyro as placeholder (or try to load from URL)
-                    Some((
-                        *id,
-                        Spatial::default().build().child(
-                            ModelWrapper::builtin("gyro", transform, node_color).build()
-                        )
-                    ))
-                },
-                _ => {
-                    // Unknown/default - gray cube
-                    let default_color = rgba_linear!(0.6, 0.6, 0.6, 0.8);
-                    Some((
-                        *id,
-                        Spatial::default().build().child(
-                            ModelWrapper::builtin("tex_cube", transform, default_color).build()
-                        )
-                    ))
-                }
-            }
+            // For now, render all as dense wireframe cubes (which we know works)
+            Some((
+                *id,
+                Spatial::from(transform).build().child(
+                    Lines {
+                        transform: Transform::none(),
+                        lines: cube_lines,
+                        color: node_color,
+                        thickness: 0.005, // Thicker lines for more solid appearance
+                    }.build()
+                )
+            ))
         });
 
         PlaySpace
