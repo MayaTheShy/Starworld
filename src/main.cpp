@@ -118,10 +118,15 @@ int main(int argc, char** argv) {
             std::cout << "[Discovery] Selected: " << overteUrl << std::endl;
         }
     }
+    
+    std::cout << "[main] Connecting to Overte domain: " << overteUrl << std::endl;
     OverteClient overte(overteUrl);
     // Overte is optional; warn if unreachable but continue in offline mode.
     if (!overte.connect()) {
-        std::cerr << "[Overte] Domain unreachable; running in offline mode.\n";
+        std::cerr << "[main] Overte domain unreachable; running in offline mode." << std::endl;
+        std::cerr << "[main] Tip: Use --overte=host:port to specify a domain, or set STARWORLD_SIMULATE=1" << std::endl;
+    } else {
+        std::cout << "[main] Overte connection established" << std::endl;
     }
 
     InputHandler input(stardust, overte);
