@@ -12,12 +12,16 @@
 
 namespace Overte {
 
+namespace {
+
 // Control bit masks for sequence number field
-static constexpr uint32_t CONTROL_BIT_MASK = 0x80000000;      // Bit 31
-static constexpr uint32_t RELIABLE_BIT_MASK = 0x40000000;     // Bit 30  
-static constexpr uint32_t MESSAGE_BIT_MASK = 0x20000000;      // Bit 29
-static constexpr uint32_t OBFUSCATION_MASK = 0x18000000;      // Bits 27-28
-static constexpr uint32_t SEQUENCE_NUMBER_MASK = 0x07FFFFFF;  // Bits 0-26
+constexpr uint32_t CONTROL_BIT_MASK = 0x80000000;      // Bit 31
+constexpr uint32_t RELIABLE_BIT_MASK = 0x40000000;     // Bit 30  
+constexpr uint32_t MESSAGE_BIT_MASK = 0x20000000;      // Bit 29
+constexpr uint32_t OBFUSCATION_MASK = 0x18000000;      // Bits 27-28
+constexpr uint32_t SEQUENCE_NUMBER_MASK = 0x07FFFFFF;  // Bits 0-26
+
+} // anonymous namespace
 
 NLPacket::NLPacket(PacketType type, PacketVersion version, bool isReliable)
     : m_type(type)
