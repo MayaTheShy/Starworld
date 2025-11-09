@@ -67,13 +67,18 @@ impl Reify for BridgeState {
         use stardust_xr_fusion::values::color::rgba_linear;
         use stardust_xr_asteroids::elements::ModelPart;
         
+        eprintln!("[bridge/reify] Reifying {} nodes", self.nodes.len());
+        
         // Root playspace. Create appropriate visuals per entity type
         let children = self.nodes.iter().filter_map(|(id, node)| {
             // Skip nodes with zero dimensions (like the root node)
             let dims = glam::Vec3::from(node.dimensions);
             if dims.length() < 0.001 {
+                eprintln!("[bridge/reify] Skipping node {} (zero dimensions)", id);
                 return None;
             }
+            
+            eprintln!("[bridge/reify] Creating visual for node {} type={} dims={:?}", id, node.entity_type, dims);
             
             // Decompose transform into TRS
             let (scale, rot, trans) = node.transform.to_scale_rotation_translation();
