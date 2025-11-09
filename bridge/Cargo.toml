@@ -16,7 +16,8 @@ serde = { version = "1.0", features = ["derive"] }
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 [dependencies.stardust-xr-asteroids]
-path = "../third_party/asteroids"
+git = "https://github.com/StardustXR/asteroids.git"
+branch = "dev"
 
 [dependencies.stardust-xr-fusion]
 git = "https://github.com/StardustXR/core.git"
