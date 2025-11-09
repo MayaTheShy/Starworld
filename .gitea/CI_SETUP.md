@@ -76,10 +76,8 @@ Currently relies on successful compilation. Future additions:
 Add this to your Gitea repository README:
 
 ```markdown
-[![CI](https://your-gitea-instance.com/username/starworld/actions/workflows/ci.yml/badge.svg)](https://your-gitea-instance.com/username/starworld/actions)
+[![CI](https://git.spatulaa.com/MayaTheShy/Starworld/actions/workflows/ci.yml/badge.svg)](https://git.spatulaa.com/MayaTheShy/Starworld/actions)
 ```
-
-Replace `your-gitea-instance.com` and `username` with your actual values.
 
 ## Debugging CI Failures
 

@@ -1,6 +1,6 @@
 # Starworld (StardustXR + Overte Client)
 
-[![CI](https://gitea.example.com/yourusername/starworld/actions/workflows/ci.yml/badge.svg)](https://gitea.example.com/yourusername/starworld/actions)
+[![CI](https://git.spatulaa.com/MayaTheShy/Starworld/actions/workflows/ci.yml/badge.svg)](https://git.spatulaa.com/MayaTheShy/Starworld/actions)
 
 ## Overview
 
