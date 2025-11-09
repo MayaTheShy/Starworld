@@ -129,7 +129,7 @@ bool OverteClient::connect() {
     
     // Parse ws://host:port
     std::string url = m_domainUrl;
-    if (url.empty()) url = "ws://127.0.0.1:40102";
+    if (url.empty()) url = "ws://67.189.29.126:40102";  // BrainStormers_World - active public server
     if (url.rfind("ws://", 0) == 0) url = url.substr(5);
     auto colon = url.find(':');
     m_host = colon == std::string::npos ? url : url.substr(0, colon);
