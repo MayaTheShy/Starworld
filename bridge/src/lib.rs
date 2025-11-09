@@ -11,8 +11,9 @@ use stardust_xr_asteroids as ast; // alias for brevity
 use stardust_xr_asteroids::{
     client::ClientState,
     elements::{PlaySpace, Spatial, Lines},
-    Migrate, Reify, CustomElement,
+    Migrate, Reify, CustomElement, Projector, Context,
 };
+use stardust_xr_molecules::accent_color::AccentColor;
 use stardust_xr_fusion::objects::connect_client as fusion_connect_client;
 use stardust_xr_fusion::node::NodeType;
 use stardust_xr_fusion::root::RootAspect;
@@ -247,7 +248,21 @@ pub extern "C" fn sdxr_start(app_id: *const std::os::raw::c_char) -> i32 {
                 }
             };
             
+            let dbus_connection = match ast::client::connect_client().await {
+                Ok(conn) => conn,
+                Err(_) => {
+                    eprintln!("[bridge] Failed to connect to D-Bus, using fallback");
+                    match fusion_connect_client().await {
+                        Ok(c2) => c2,
+                        Err(_) => return,
+                    }
+                }
+            };
+            
+            let accent_color = AccentColor::new(dbus_connection.clone());
+            let context = Context { dbus_connection, accent_color };
             let mut state = BridgeState::default();
+            let mut projector = Projector::create(&state, &context, client.get_root().clone().as_spatial_ref(), "/".into());
             
             println!("[bridge] Persistent event loop running");
             let event_loop_fut = client.sync_event_loop(|client, flow| {
@@ -270,7 +285,9 @@ pub extern "C" fn sdxr_start(app_id: *const std::os::raw::c_char) -> i32 {
                 for frame in frames {
                     if let Ok(ctrl) = CTRL.lock() { if let Some(shared) = &ctrl.shared_state { if let Ok(ss) = shared.lock() { state.nodes = ss.nodes.clone(); } } }
                     state.on_frame(&frame);
+                    projector.frame(&context, &frame, &mut state);
                 }
+                projector.update(&context, &mut state);
                 if STOP_REQUESTED.load(Ordering::SeqCst) { flow.stop(); }
             });
             if let Err(e) = event_loop_fut.await {
