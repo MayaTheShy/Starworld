@@ -75,5 +75,9 @@ bpy.ops.export_scene.gltf(
 )
 print(f"Exported model.glb (BLUE) to {output_dir}")
 
-print("\n✓ All primitive models exported successfully!")
-print(f"Location: {output_dir}")
+print(f"Exported model.glb (BLUE) to {output_dir}")
+
+print("\n✓ All primitive models with colors exported successfully!")
+print(f"  - RED Cube: {os.path.join(output_dir, 'cube.glb')}")
+print(f"  - GREEN Sphere: {os.path.join(output_dir, 'sphere.glb')}")  
+print(f"  - BLUE IcoSphere: {os.path.join(output_dir, 'model.glb')}")
