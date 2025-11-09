@@ -729,6 +729,9 @@ void OverteClient::handleDomainListReply(const char* data, size_t len) {
     uint16_t localID = ntohs(*reinterpret_cast<const uint16_t*>(data + offset));
     offset += 2;
     
+    // Store our local ID for use in sourced packets
+    m_localID = localID;
+    
     std::cout << "[OverteClient] Local ID: " << localID << std::endl;
     
     // Read permissions (32-bit)
