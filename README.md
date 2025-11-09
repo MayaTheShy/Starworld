@@ -56,15 +56,28 @@ export STARWORLD_BRIDGE_PATH=./bridge/target/release
 ./build/starworld ws://domain.example.com:40102
 ```
 
-Or use domain discovery to find public servers:
+### Connect with Authentication
+To receive full assignment client information, authenticate with the Overte metaverse:
+
 ```bash
 export STARWORLD_BRIDGE_PATH=./bridge/target/release
-./build/starworld --discover
+export OVERTE_USERNAME=your_username
+export OVERTE_PASSWORD=your_password
+export OVERTE_METAVERSE=https://mv.overte.org  # Optional, defaults to mv.overte.org
+./build/starworld ws://domain.example.com:40102
 ```
 
-**Note:** Discovery queries https://mv.overte.org/server/api/v1/places and finds 500+ public Overte domains. However, the protocol handshake with live servers is still under development. Use simulation mode for testing features.
+**Note:** Authenticated users receive:
+- Full assignment client list (EntityServer, AudioMixer, AvatarMixer locations)
+- Direct connection to assignment clients
+- Enhanced permissions
 
-## Architecture
+Anonymous users:
+- Connect without credentials
+- Limited assignment client discovery
+- Fallback to domain server for entity queries
+
+### Domain Discovery
 
 ```
 Overte Server (UDP) → OverteClient (C++) → SceneSync → StardustBridge (C++) 
