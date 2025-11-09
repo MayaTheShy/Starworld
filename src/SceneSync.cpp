@@ -16,9 +16,31 @@ void SceneSync::update(StardustBridge& stardust, OverteClient& overte) {
 			// Create a Stardust node the first time we see this entity.
 			auto nodeId = stardust.createNode(e.name, e.transform);
 			s_entityNodeMap.emplace(e.id, nodeId);
+			
+			// Set visual properties for the newly created node
+			stardust.setNodeEntityType(nodeId, static_cast<uint8_t>(e.type));
+			stardust.setNodeColor(nodeId, e.color, e.alpha);
+			stardust.setNodeDimensions(nodeId, e.dimensions);
+			
+			if (!e.modelUrl.empty()) {
+				stardust.setNodeModel(nodeId, e.modelUrl);
+			}
+			if (!e.textureUrl.empty()) {
+				stardust.setNodeTexture(nodeId, e.textureUrl);
+			}
 		} else {
-			// Update existing node's transform.
+			// Update existing node's transform and visual properties
 			stardust.updateNodeTransform(it->second, e.transform);
+			stardust.setNodeEntityType(it->second, static_cast<uint8_t>(e.type));
+			stardust.setNodeColor(it->second, e.color, e.alpha);
+			stardust.setNodeDimensions(it->second, e.dimensions);
+			
+			if (!e.modelUrl.empty()) {
+				stardust.setNodeModel(it->second, e.modelUrl);
+			}
+			if (!e.textureUrl.empty()) {
+				stardust.setNodeTexture(it->second, e.textureUrl);
+			}
 		}
 	}
 
