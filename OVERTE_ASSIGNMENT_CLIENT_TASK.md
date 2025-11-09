@@ -47,21 +47,50 @@ Would provide:
 
 ## Testing
 
-### With Populated Domain
-Connect to a public Overte domain with entities:
+### Test with Local Domain (Recommended)
 ```bash
-export STARWORLD_BRIDGE_PATH=./bridge/target/release
-./build/starworld --discover  # Find public domains
-# Or directly:
-./build/starworld ws://domain.example.com:40102
+# Ensure your local domain server is running
+ps aux | grep domain-server
+
+# Connect to local domain
+./build/starworld --overte=127.0.0.1:40104
+
+# With simulation mode for demo entities
+STARWORLD_SIMULATE=1 ./build/starworld --overte=127.0.0.1:40104
 ```
 
-### With Simulation Mode
-```bash
-export STARWORLD_SIMULATE=1
-export STARWORLD_BRIDGE_PATH=./bridge/target/release
-./build/starworld
+**Expected Output:**
 ```
+[OverteClient] Connecting to domain at 127.0.0.1 (HTTP:40102, UDP:40104)
+[OverteClient] UDP socket ready for 127.0.0.1:40104
+[OverteClient] DomainConnectRequest sent (225 bytes, seq=0)
+[OverteClient] <<< Received domain packet (72 bytes)
+[OverteClient] DomainList reply received (66 bytes)
+[OverteClient] Domain UUID: 91639838-9131-4b2e-986f-1fe8d2bc
+[OverteClient] Session UUID: 7c98b8bf-a59f-dee1-495a-9b82ec1b
+[OverteClient] Local ID: 50900
+[OverteClient] Authenticated: yes
+[OverteClient] Parsed 0 assignment clients
+```
+
+### Test with Simulation Mode
+```bash
+STARWORLD_SIMULATE=1 ./build/starworld
+```
+
+Creates three demo entities:
+- **Red cube** - Box primitive (0.2m)
+- **Green sphere** - Sphere primitive (0.15m)
+- **Blue suzanne** - Model placeholder (0.25m)
+
+All entities orbit around the origin with proper 3D model rendering.
+
+### Test with Domain Discovery
+```bash
+./build/starworld --discover
+```
+
+Queries metaverse directories for public domains and attempts connection.
 
 ## Future: OAuth Implementation
 
