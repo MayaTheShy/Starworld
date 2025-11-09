@@ -9,16 +9,35 @@ bpy.ops.object.delete()
 output_dir = os.path.expanduser("~/.cache/starworld/primitives")
 os.makedirs(output_dir, exist_ok=True)
 
-# Create and export UV Sphere
+def create_material(name, base_color):
+    """Create a PBR material with the specified base color (RGBA)"""
+    mat = bpy.data.materials.new(name=name)
+    mat.use_nodes = True
+    nodes = mat.node_tree.nodes
+    
+    # Get the Principled BSDF node (created by default)
+    bsdf = nodes.get("Principled BSDF")
+    if bsdf:
+        bsdf.inputs['Base Color'].default_value = base_color
+        bsdf.inputs['Roughness'].default_value = 0.5
+        bsdf.inputs['Metallic'].default_value = 0.1
+    
+    return mat
+
+# Create and export UV Sphere with GREEN material
 bpy.ops.mesh.primitive_uv_sphere_add(segments=32, ring_count=16, radius=0.5, location=(0, 0, 0))
 sphere = bpy.context.active_object
 sphere.name = "Sphere"
+bpy.ops.object.shade_smooth()
+# Apply green material
+green_mat = create_material("SphereMaterial", (0.2, 1.0, 0.2, 1.0))  # Green
+sphere.data.materials.append(green_mat)
 bpy.ops.export_scene.gltf(
     filepath=os.path.join(output_dir, "sphere.glb"),
     export_format='GLB',
     use_selection=True
 )
-print(f"Exported sphere.glb to {output_dir}")
+print(f"Exported sphere.glb (GREEN) to {output_dir}")
 
 # Delete sphere and create cube
 bpy.ops.object.delete()
