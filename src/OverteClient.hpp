@@ -120,6 +120,9 @@ private:
 	std::string m_username;     // Domain account username (for future signature-based auth)
 	std::uint32_t m_sequenceNumber{0};  // Packet sequence number for NLPacket protocol
 	std::uint16_t m_localID{0};         // Local ID assigned by domain server
+	
+	// Authentication
+	std::unique_ptr<OverteAuth> m_auth;
 
 	// Very small in-process world state for testing
 	std::unordered_map<std::uint64_t, OverteEntity> m_entities;
