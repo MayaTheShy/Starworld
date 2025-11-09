@@ -1,5 +1,7 @@
 # Starworld (StardustXR + Overte client)
 
+[![CI](https://gitea.example.com/yourusername/starworld/actions/workflows/ci.yml/badge.svg)](https://gitea.example.com/yourusername/starworld/actions)
+
 ## Rust bridge (optional)
 This project can load a Rust bridge shared library exposing a C ABI to the StardustXR client. Build it with:
 
