@@ -319,10 +319,13 @@ This allows you to:
 - Verify RPATH: `ldd build/starworld`
 
 ### "Could not connect to Overte"
-- Verify server URL/port
-- Check network connectivity
-- Try `--discover` to find public domains
+- Verify domain server is running: `ps aux | grep domain-server`
+- Check UDP port: `sudo ss -ulnp | grep 40104`
+- Verify network connectivity: `ping <domain-host>`
+- For remote domains, check firewall/NAT port forwarding
+- Try local domain first: `--overte=127.0.0.1:40104`
 - Use simulation mode: `export STARWORLD_SIMULATE=1`
+- Check domain server logs for connection attempts
 
 ### Nothing renders in VR
 - Check Stardust server logs for errors
