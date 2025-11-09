@@ -165,14 +165,14 @@ impl Reify for BridgeState {
                     }
                     lines.push(Line { points: yz_points, cyclic: true });
                     
-                    (
+                    Some((
                         *id,
                         Lines::new(lines)
                             .pos([trans.x, trans.y, trans.z])
                             .rot([rot.x, rot.y, rot.z, rot.w])
                             .scl([vis_scale.x, vis_scale.y, vis_scale.z])
                             .build()
-                    )
+                    ))
                 },
                 3 if !node.model_url.is_empty() => {
                     // Model entity - would load from URL
