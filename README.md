@@ -42,7 +42,7 @@ Test the rendering without connecting to an Overte server:
 ```bash
 export STARWORLD_SIMULATE=1
 export STARWORLD_BRIDGE_PATH=./bridge/target/release
-./build/stardust-overte-client
+./build/starworld
 ```
 
 This creates three demo entities rendered as colored 3D models:
@@ -53,13 +53,13 @@ This creates three demo entities rendered as colored 3D models:
 ### Connect to Overte Server
 ```bash
 export STARWORLD_BRIDGE_PATH=./bridge/target/release
-./build/stardust-overte-client ws://domain.example.com:40102
+./build/starworld ws://domain.example.com:40102
 ```
 
 Or use domain discovery:
 ```bash
 export STARWORLD_BRIDGE_PATH=./bridge/target/release
-./build/stardust-overte-client --discover
+./build/starworld --discover
 ```
 
 ## Architecture
