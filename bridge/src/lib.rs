@@ -10,7 +10,7 @@ use glam::Mat4;
 use stardust_xr_asteroids as ast; // alias for brevity
 use stardust_xr_asteroids::{
     client::ClientState,
-    elements::{PlaySpace, Spatial},
+    elements::{PlaySpace, Spatial, Lines},
     Migrate, Reify,
 };
 use stardust_xr_fusion::objects::connect_client as fusion_connect_client;
@@ -18,6 +18,7 @@ use stardust_xr_fusion::node::NodeType;
 use stardust_xr_fusion::root::RootAspect;
 use stardust_xr_fusion::spatial::Transform;
 use stardust_xr_fusion::drawable::Model as FusionModel;
+use stardust_xr_fusion::values::ResourceID;
 use tokio::runtime::Runtime;
 
 #[derive(Clone, serde::Serialize, serde::Deserialize)]
@@ -28,89 +29,6 @@ struct BridgeState {
 impl Default for BridgeState {
     fn default() -> Self {
         Self { nodes: HashMap::new() }
-    }
-}
-
-// Custom element wrapper for fusion Model that can be used with model URLs
-#[derive(Clone, Debug, PartialEq)]
-struct ModelWrapper {
-    resource_id: ResourceID,
-    transform: Transform,
-    color: stardust_xr_fusion::values::Color,
-}
-
-impl ModelWrapper {
-    fn new(url: &str, transform: Transform, color: stardust_xr_fusion::values::Color) -> Self {
-        // Try to parse as a direct file path or URL
-        let resource_id = if url.starts_with("http://") || url.starts_with("https://") {
-            // For HTTP URLs, we'd need to download and cache - for now use a built-in as fallback
-            ResourceID::new_namespaced("fusion", "tex_cube")
-        } else if url.starts_with("/") || url.ends_with(".glb") || url.ends_with(".gltf") {
-            // Try as direct path
-            ResourceID::new_direct(url).unwrap_or_else(|_| ResourceID::new_namespaced("fusion", "tex_cube"))
-        } else {
-            // Default fallback
-            ResourceID::new_namespaced("fusion", "tex_cube")
-        };
-        
-        Self { resource_id, transform, color }
-    }
-    
-    fn builtin(name: &str, transform: Transform, color: stardust_xr_fusion::values::Color) -> Self {
-        Self {
-            resource_id: ResourceID::new_namespaced("fusion", name),
-            transform,
-            color,
-        }
-    }
-}
-
-struct ModelWrapperInner {
-    model: stardust_xr_fusion::drawable::Model,
-}
-
-impl<State: ast::ValidState> CustomElement<State> for ModelWrapper {
-    type Inner = ModelWrapperInner;
-    type Resource = ();
-    type Error = stardust_xr_fusion::node::NodeError;
-
-    fn create_inner(
-        &self,
-        _context: &Context,
-        info: ast::CreateInnerInfo,
-        _resource: &mut Self::Resource,
-    ) -> Result<Self::Inner, Self::Error> {
-        eprintln!("[bridge/ModelWrapper] Creating model with resource: {:?}", self.resource_id);
-        let model = stardust_xr_fusion::drawable::Model::create(
-            info.parent_space,
-            self.transform,
-            &self.resource_id,
-        )?;
-        
-        eprintln!("[bridge/ModelWrapper] Model created successfully");
-        
-        // Try to set color on model parts
-        // Note: set_material_parameter doesn't exist in this version, skip for now
-        
-        Ok(ModelWrapperInner { model })
-    }
-
-    fn diff(&self, _old_self: &Self, _inner: &mut Self::Inner, _resource: &mut Self::Resource) {
-        // Update logic would go here - skip for now as models are recreated each frame
-    }
-    
-    fn spatial_aspect(&self, inner: &Self::Inner) -> stardust_xr_fusion::spatial::SpatialRef {
-        use stardust_xr_fusion::spatial::SpatialAspect;
-        inner.model.clone().as_spatial().as_spatial_ref()
-    }
-}
-
-impl Transformable for ModelWrapper {
-    fn transform(&self) -> &Transform {
-        &self.transform
-    }
-    fn transform_mut(&mut self) -> &mut Transform {
-        &mut self.transform
     }
 }
 
