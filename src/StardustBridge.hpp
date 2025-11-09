@@ -50,9 +50,6 @@ public:
 	glm::vec2 joystick() const { return m_joystick; }   // x,y in [-1, 1]
 	glm::mat4 headPose() const { return m_headPose; }   // world-from-head
 
-	// Utility: compute default IPC socket path (first-best guess).
-	static std::string defaultSocketPath();
-
 	~StardustBridge();
 	// Explicit cleanup
 	void close();
