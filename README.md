@@ -159,7 +159,7 @@ Enable verbose logging:
 ```bash
 export RUST_LOG=debug
 export LOG_LEVEL=debug
-./build/stardust-overte-client
+./build/starworld
 ```
 
 ### Vendoring StardustXR Crates
