@@ -42,35 +42,35 @@ target_link_libraries(starworld-tests PRIVATE glm::glm ZLIB::ZLIB OpenSSL::Crypt
 # Link Overte networking library
 if(USE_OVERTE_NETWORKING)
     # Add Overte include directories
-    target_include_directories(stardust-overte-client PRIVATE
+    target_include_directories(starworld PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/third_party/overte-src/libraries/networking/src
         ${CMAKE_CURRENT_SOURCE_DIR}/third_party/overte-src/libraries/shared/src
         ${CMAKE_CURRENT_SOURCE_DIR}/third_party/overte-src/libraries/platform/src
     )
     
     # Link against precompiled Overte networking library
-    target_link_libraries(stardust-overte-client PRIVATE
+    target_link_libraries(starworld PRIVATE
         /opt/overte/lib/libnetworking.so
         Qt5::Core
         Qt5::Network
     )
     
-    target_compile_definitions(stardust-overte-client PRIVATE HAVE_OVERTE_NETWORKING=1)
+    target_compile_definitions(starworld PRIVATE HAVE_OVERTE_NETWORKING=1)
 endif()
 
 if(USE_OVERTE_SDK)
     find_package(Overte QUIET)
     if(Overte_FOUND)
-        target_link_libraries(stardust-overte-client PRIVATE Overte::Networking)
-        target_compile_definitions(stardust-overte-client PRIVATE HAVE_OVERTE_SDK=1)
+        target_link_libraries(starworld PRIVATE Overte::Networking)
+        target_compile_definitions(starworld PRIVATE HAVE_OVERTE_SDK=1)
     endif()
 endif()
 
 if(USE_STARDUST_SDK)
     find_package(StardustXR QUIET)
     if(StardustXR_FOUND)
-        target_link_libraries(stardust-overte-client PRIVATE StardustXR::Client)
-        target_compile_definitions(stardust-overte-client PRIVATE HAVE_STARDUST_SDK=1)
+        target_link_libraries(starworld PRIVATE StardustXR::Client)
+        target_compile_definitions(starworld PRIVATE HAVE_STARDUST_SDK=1)
     endif()
 endif()
 
@@ -80,7 +80,7 @@ if(NOT DEFINED STARWORLD_BRIDGE_PATH)
 endif()
 if(EXISTS "${STARWORLD_BRIDGE_PATH}")
     # Add to rpath so dlopen without full path can find it
-    set_target_properties(stardust-overte-client PROPERTIES
+    set_target_properties(starworld PROPERTIES
         BUILD_RPATH "${STARWORLD_BRIDGE_PATH}"
         INSTALL_RPATH "${STARWORLD_BRIDGE_PATH}")
 endif()
