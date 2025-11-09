@@ -1013,8 +1013,12 @@ void OverteClient::sendDomainListRequest() {
 }
 
 void OverteClient::sendPing(int fd, const sockaddr_storage& addr, socklen_t addrLen) {
-    // Create NLPacket for Ping with correct version
+    // Create NLPacket for Ping with correct version - sourced if we have a local ID
     NLPacket packet(PacketType::Ping, PacketVersions::Ping_IncludeConnectionID, false);
+    if (m_localID != 0) {
+        packet.setSourced(true);
+        packet.setSourceID(m_localID);
+    }
     packet.setSequenceNumber(m_sequenceNumber++);
     
     // Add timestamp (microseconds since epoch)
