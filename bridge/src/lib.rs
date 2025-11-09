@@ -21,6 +21,9 @@ type FrameInfo = <ast::client::RootAspect as ast::client::RootAspectMethods>::Fr
 type Line = ast::client::drawable::Line;
 type LinePoint = ast::client::drawable::LinePoint;
 type Vector3 = ast::client::values::Vector3;
+
+// Re-export connect_client from the correct version
+use ast::client::objects::connect_client as fusion_connect_client;
 use tokio::runtime::Runtime;
 
 #[derive(Clone, serde::Serialize, serde::Deserialize)]
