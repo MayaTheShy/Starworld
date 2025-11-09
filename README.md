@@ -31,8 +31,18 @@ Starworld is an [Overte](https://overte.org) client that renders virtual world e
 - CMake 3.15+
 - C++20 compiler (GCC/Clang)
 - Rust toolchain (for the bridge)
-- StardustXR server running
+- **StardustXR server running** (required!)
 - Required libraries: glm, OpenSSL, zlib, libcurl
+
+**Important**: The application will exit if no StardustXR compositor is detected. Make sure to start the Stardust server first:
+
+```bash
+# Start StardustXR server (in a separate terminal)
+stardust-xr-server
+
+# Or as a systemd service
+systemctl --user start stardust
+```
 
 ### Build Everything
 ```bash
