@@ -864,6 +864,13 @@ void OverteClient::handleDomainListReply(const char* data, size_t len) {
     m_assignmentClients.clear();
     m_entityServerPort = 0;
     
+    std::cout << "[OverteClient] Bytes remaining after header: " << (len - offset) << std::endl;
+    std::cout << "[OverteClient] Remaining bytes (hex): ";
+    for (size_t i = offset; i < std::min(offset + 40, len); i++) {
+        printf("%02x ", (unsigned char)data[i]);
+    }
+    std::cout << std::endl;
+    
     // Parse assignment client nodes from the packet
     // Each node is serialized using QDataStream format (see Node.cpp operator<<)
     // Format per node:
