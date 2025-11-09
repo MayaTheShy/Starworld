@@ -199,9 +199,12 @@ impl Reify for BridgeState {
                 },
                 2 => {
                     // Sphere entity - use tex_cube with uniform scale to approximate
+                    use stardust_xr_fusion::values::{Vector3, Quaternion};
                     let avg_scale = (vis_scale.x + vis_scale.y + vis_scale.z) / 3.0;
-                    let uniform_scale = glam::Vec3::splat(avg_scale);
-                    let sphere_transform = Transform::from_translation_rotation_scale(trans, rot, uniform_scale);
+                    let translation_vec = Vector3 { x: trans.x, y: trans.y, z: trans.z };
+                    let rotation_quat = Quaternion { x: rot.x, y: rot.y, z: rot.z, w: rot.w };
+                    let uniform_scale_vec = Vector3 { x: avg_scale, y: avg_scale, z: avg_scale };
+                    let sphere_transform = Transform::from_translation_rotation_scale(translation_vec, rotation_quat, uniform_scale_vec);
                     Some((
                         *id,
                         ModelWrapper::builtin("tex_cube", sphere_transform, node_color).build()
