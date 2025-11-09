@@ -56,11 +56,13 @@ export STARWORLD_BRIDGE_PATH=./bridge/target/release
 ./build/starworld ws://domain.example.com:40102
 ```
 
-Or use domain discovery:
+Or use domain discovery to find public servers:
 ```bash
 export STARWORLD_BRIDGE_PATH=./bridge/target/release
 ./build/starworld --discover
 ```
+
+**Note:** Discovery queries https://mv.overte.org/server/api/v1/places and finds 500+ public Overte domains. However, the protocol handshake with live servers is still under development. Use simulation mode for testing features.
 
 ## Architecture
 
