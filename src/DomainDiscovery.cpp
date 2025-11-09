@@ -172,3 +172,61 @@ std::vector<DiscoveredDomain> discoverDomains(int maxDomains) {
 std::vector<DiscoveredDomain> parseDomainsFromJson(const std::string& json) {
     return parseDomains(json);
 }
+
+// Simple TCP reachability probe (non-blocking connect + select)
+bool probeDomain(const DiscoveredDomain& domain, int timeoutMs) {
+    addrinfo hints{}; 
+    hints.ai_socktype = SOCK_STREAM; 
+    hints.ai_family = AF_UNSPEC;
+    addrinfo* res = nullptr;
+    
+    if (getaddrinfo(domain.networkHost.c_str(), std::to_string(domain.httpPort).c_str(), &hints, &res) != 0) {
+        return false;
+    }
+    
+    bool reachable = false;
+    for (addrinfo* rp = res; rp; rp = rp->ai_next) {
+        int fd = ::socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
+        if (fd < 0) continue;
+        
+        // Set non-blocking
+        int flags = fcntl(fd, F_GETFL, 0);
+        fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+        
+        int c = ::connect(fd, rp->ai_addr, rp->ai_addrlen);
+        if (c == 0) {
+            // Immediate success (rare for TCP)
+            reachable = true;
+            ::close(fd);
+            break;
+        }
+        
+        if (errno == EINPROGRESS) {
+            // Wait for connect to complete or timeout
+            fd_set writefds;
+            FD_ZERO(&writefds);
+            FD_SET(fd, &writefds);
+            
+            struct timeval tv;
+            tv.tv_sec = timeoutMs / 1000;
+            tv.tv_usec = (timeoutMs % 1000) * 1000;
+            
+            int sel = select(fd + 1, nullptr, &writefds, nullptr, &tv);
+            if (sel > 0 && FD_ISSET(fd, &writefds)) {
+                // Check if connection succeeded
+                int error = 0;
+                socklen_t len = sizeof(error);
+                if (getsockopt(fd, SOL_SOCKET, SO_ERROR, &error, &len) == 0 && error == 0) {
+                    reachable = true;
+                    ::close(fd);
+                    break;
+                }
+            }
+        }
+        
+        ::close(fd);
+    }
+    
+    if (res) freeaddrinfo(res);
+    return reachable;
+}
