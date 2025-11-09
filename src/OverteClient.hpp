@@ -64,9 +64,8 @@ struct AssignmentClient {
 // optionally enabled via STARWORLD_SIMULATE=1.
 class OverteClient {
 public:
-	explicit OverteClient(std::string domainUrl)
-		: m_domainUrl(std::move(domainUrl)) {}
-	~OverteClient();  // Required for unique_ptr with forward-declared type
+	explicit OverteClient(std::string domainUrl);
+	~OverteClient();
 
 	// Authentication
 	bool login(const std::string& username, const std::string& password,
