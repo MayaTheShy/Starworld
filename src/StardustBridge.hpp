@@ -27,6 +27,13 @@ public:
 
 	// Update a node's transform. Returns false if the node doesn't exist.
 	bool updateNodeTransform(NodeId id, const glm::mat4& transform);
+	
+	// Set visual properties for a node
+	bool setNodeModel(NodeId id, const std::string& modelUrl);
+	bool setNodeTexture(NodeId id, const std::string& textureUrl);
+	bool setNodeColor(NodeId id, const glm::vec3& color, float alpha = 1.0f);
+	bool setNodeDimensions(NodeId id, const glm::vec3& dimensions);
+	bool setNodeEntityType(NodeId id, uint8_t entityType);
 
 	// Remove a node. Returns false if the node doesn't exist.
 	bool removeNode(NodeId id);
