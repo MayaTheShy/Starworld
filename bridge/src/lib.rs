@@ -193,6 +193,7 @@ pub extern "C" fn sdxr_start(app_id: *const std::os::raw::c_char) -> i32 {
     // Shared state that both the command handler and the client state will access
     let shared_state = Arc::new(Mutex::new(BridgeState::default()));
     let shared_for_commands = Arc::clone(&shared_state);
+    let shared_for_event_loop = Arc::clone(&shared_state);
 
     // Build a multi-threaded Tokio runtime for the client
     let rt = tokio::runtime::Builder::new_multi_thread()
