@@ -96,34 +96,82 @@ Connect to a domain using the domain address format:
 
 ### Connect with Authentication
 
-**⚠️ OAuth Not Yet Implemented** - See [OVERTE_AUTH.md](OVERTE_AUTH.md) for details.
+**✨ OAuth Browser Authentication Now Implemented!**
 
-The authentication infrastructure exists but is currently disabled. Overte uses browser-based OAuth 2.0 which requires:
-- HTTP callback server for authorization code flow
-- Browser launcher for login page
-- Token persistence and refresh
+Starworld now supports full OAuth 2.0 authentication via browser flow (Authorization Code Grant). This allows you to authenticate with your Overte account and access private domains and full entity data.
 
-**Current Status:**
-- ✅ Anonymous connection works perfectly
-- ✅ Domain connection and entity queries functional
-- ❌ OAuth login disabled (needs authorization code flow implementation)
-- ❌ Assignment client discovery limited to authenticated users
+**Quick Start - Browser OAuth (Recommended):**
+```bash
+# Automatic browser-based login
+./build/starworld --auth --overte=127.0.0.1:40102
 
-**Workaround:** Run in anonymous mode (default):
+# The application will:
+# 1. Start a local callback server (usually port 8765)
+# 2. Open your web browser to the Overte login page
+# 3. Wait for you to log in
+# 4. Receive the authorization code
+# 5. Exchange it for an access token
+# 6. Save the token for future use
+```
+
+**Features:**
+- ✅ Browser-based OAuth 2.0 (Authorization Code Grant)
+- ✅ Automatic token refresh
+- ✅ Token persistence (`~/.config/starworld/overte_token.txt`)
+- ✅ CSRF protection with state parameter
+- ✅ Secure local callback server (localhost only)
+- ✅ Fallback to saved tokens
+- ✅ Username/password login (less secure, for testing)
+
+**Advanced Options:**
+```bash
+# Use saved token if available, otherwise open browser
+./build/starworld --auth
+
+# Specify metaverse server
+OVERTE_METAVERSE=https://mv.overte.org ./build/starworld --auth
+
+# Legacy username/password (NOT RECOMMENDED - use browser flow)
+./build/starworld --auth --username=myuser --password=mypass
+
+# Force re-authentication (deletes saved token)
+rm ~/.config/starworld/overte_token.txt && ./build/starworld --auth
+```
+
+**How It Works:**
+1. Application starts HTTP callback server on `http://localhost:8765/callback`
+2. Opens browser to: `https://mv.overte.org/oauth/authorize?...`
+3. User logs in via Overte's web interface
+4. Overte redirects to `http://localhost:8765/callback?code=ABC&state=XYZ`
+5. Application receives authorization code
+6. Exchanges code for access token via POST to `/oauth/token`
+7. Saves token to `~/.config/starworld/overte_token.txt`
+8. Token is automatically refreshed when expiring
+
+**Benefits of Authenticated Connection:**
+- Access to private/restricted domains
+- Full entity server topology information
+- Direct EntityServer connections (faster, more reliable)
+- User profile information
+- Permission to edit entities
+- Voice chat capabilities (future)
+
+**Anonymous Connection (No --auth flag):**
 ```bash
 ./build/starworld --overte=127.0.0.1:40104
 ```
 
 Anonymous users can:
 - Connect to public domains
-- Query entity data
+- Query entity data (limited by server permissions)
 - Receive domain list packets
-- View and render entities
+- View and render entities (if server allows)
 
 Limitations:
 - No assignment client topology information
 - EntityServer address not advertised (uses domain server fallback)
 - Some restricted domains may reject anonymous connections
+- Cannot edit entities or participate in voice chat
 
 ### Domain Discovery
 
