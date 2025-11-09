@@ -55,7 +55,11 @@ run_test "C++ Build" "cd build && make -j$(nproc)"
 run_test "C++ Unit Tests" "./build/stardust-tests"
 
 # Verify binaries exist
-run_test "Client Binary Exists" "test -f build/stardust-overte-client"
+run_test "Client Binary Exists" "test -f build/starworld"
+
+# Test 5: Verify client can start in simulation mode
+echo "TEST: Client Starts (Simulation Mode)"
+if timeout 2 env STARWORLD_SIMULATE=1 ./build/starworld > /dev/null 2>&1; then
 run_test "Bridge Library Exists" "test -f bridge/target/debug/libstardust_bridge.so"
 
 # Optional: Quick simulation test (non-blocking)
