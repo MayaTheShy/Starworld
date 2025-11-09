@@ -367,6 +367,8 @@ void ensureVersionTable(uint8_t& vAvatarRemoveAttachments,
     numPacketTypes = s_numPacketTypes;
 }
 
+} // anonymous namespace
+
 uint8_t NLPacket::versionForPacketType(PacketType type) {
     uint8_t vAvatarRemoveAttachments, vAvatarTraitsAck, vEntityLastPacket,
             vEntityParticleSpin, vAssetBakingTextureMeta, vEntityScriptClientCallable, vEntityQueryCbor,
