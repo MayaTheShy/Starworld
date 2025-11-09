@@ -15,7 +15,7 @@ public:
     ~OverteAuth();
     
     // Authenticate with username/password (Resource Owner Password Grant)
-    bool login(const std:string& username, const std::string& password, 
+    bool login(const std::string& username, const std::string& password, 
                const std::string& metaverseUrl = "https://mv.overte.org");
     
     // Authenticate with browser OAuth flow (Authorization Code Grant) - RECOMMENDED
