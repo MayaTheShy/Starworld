@@ -46,7 +46,12 @@ int main(int argc, char** argv) {
         std::cout << "[Discovery] Querying metaverse directories for public domains..." << std::endl;
         auto domains = discoverDomains(25);
         if (domains.empty()) {
-            std::cout << "[Discovery] No domains found via directory; using provided URL: " << overteUrl << std::endl;
+            std::cerr << "[Discovery] ERROR: No public domains found via metaverse directories." << std::endl;
+            std::cerr << "[Discovery] The metaverse directory services may be unreachable." << std::endl;
+            std::cerr << "[Discovery] To connect to a specific server, use:" << std::endl;
+            std::cerr << "[Discovery]   ./build/starworld ws://SERVER_ADDRESS:40102" << std::endl;
+            std::cerr << "[Discovery] Or set OVERTE_URL environment variable." << std::endl;
+            return 1;
         } else {
             std::cout << "[Discovery] Found " << domains.size() << " candidate domain(s):" << std::endl;
             int idx = 0;
