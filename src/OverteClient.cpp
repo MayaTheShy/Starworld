@@ -121,6 +121,10 @@ static std::string generateUUID() {
     return ss.str();
 }
 
+OverteClient::OverteClient(std::string domainUrl)
+    : m_domainUrl(std::move(domainUrl)) {
+}
+
 OverteClient::~OverteClient() {
     // Destructor implementation (required for unique_ptr with forward-declared type)
 }
