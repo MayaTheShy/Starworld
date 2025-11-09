@@ -1,0 +1,337 @@
+{
+  "DataVersion": 0,
+  "Entities": [
+    {
+      "clientOnly": false,
+      "created": "2025-11-09T06:19:00Z",
+      "dimensions": {
+        "x": 0.5,
+        "y": 0.5,
+        "z": 0.5
+      },
+      "id": "{00000001-0000-0000-0000-000000000001}",
+      "lastEdited": 1731135540000000,
+      "lifetime": -1,
+      "localPosition": {
+        "x": 0,
+        "y": 1.5,
+        "z": -2
+      },
+      "localRotation": {
+        "w": 1,
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "name": "Red Cube",
+      "owningAvatarID": "{00000000-0000-0000-0000-000000000000}",
+      "position": {
+        "x": 0,
+        "y": 1.5,
+        "z": -2
+      },
+      "queryAACube": {
+        "scale": 0.8660254037844386,
+        "x": 0,
+        "y": 1.5,
+        "z": -2
+      },
+      "registrationPoint": {
+        "x": 0.5,
+        "y": 0.5,
+        "z": 0.5
+      },
+      "rotation": {
+        "w": 1,
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "shape": "Cube",
+      "type": "Box",
+      "color": {
+        "red": 255,
+        "green": 100,
+        "blue": 100
+      },
+      "userData": "{\"grabbableKey\":{\"grabbable\":true}}"
+    },
+    {
+      "clientOnly": false,
+      "created": "2025-11-09T06:19:00Z",
+      "dimensions": {
+        "x": 0.4,
+        "y": 0.4,
+        "z": 0.4
+      },
+      "id": "{00000002-0000-0000-0000-000000000002}",
+      "lastEdited": 1731135540000000,
+      "lifetime": -1,
+      "localPosition": {
+        "x": 1.2,
+        "y": 1.5,
+        "z": -2
+      },
+      "localRotation": {
+        "w": 1,
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "name": "Green Sphere",
+      "owningAvatarID": "{00000000-0000-0000-0000-000000000000}",
+      "position": {
+        "x": 1.2,
+        "y": 1.5,
+        "z": -2
+      },
+      "queryAACube": {
+        "scale": 0.6928203230275509,
+        "x": 1.2,
+        "y": 1.5,
+        "z": -2
+      },
+      "registrationPoint": {
+        "x": 0.5,
+        "y": 0.5,
+        "z": 0.5
+      },
+      "rotation": {
+        "w": 1,
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "shape": "Sphere",
+      "type": "Sphere",
+      "color": {
+        "red": 100,
+        "green": 255,
+        "blue": 100
+      },
+      "userData": "{\"grabbableKey\":{\"grabbable\":true}}"
+    },
+    {
+      "clientOnly": false,
+      "created": "2025-11-09T06:19:00Z",
+      "dimensions": {
+        "x": 0.3,
+        "y": 0.8,
+        "z": 0.3
+      },
+      "id": "{00000003-0000-0000-0000-000000000003}",
+      "lastEdited": 1731135540000000,
+      "lifetime": -1,
+      "localPosition": {
+        "x": -1.2,
+        "y": 1.5,
+        "z": -2
+      },
+      "localRotation": {
+        "w": 1,
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "name": "Blue Tall Box",
+      "owningAvatarID": "{00000000-0000-0000-0000-000000000000}",
+      "position": {
+        "x": -1.2,
+        "y": 1.5,
+        "z": -2
+      },
+      "queryAACube": {
+        "scale": 1.3856406460551018,
+        "x": -1.2,
+        "y": 1.5,
+        "z": -2
+      },
+      "registrationPoint": {
+        "x": 0.5,
+        "y": 0.5,
+        "z": 0.5
+      },
+      "rotation": {
+        "w": 1,
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "shape": "Cube",
+      "type": "Box",
+      "color": {
+        "red": 100,
+        "green": 100,
+        "blue": 255
+      },
+      "userData": "{\"grabbableKey\":{\"grabbable\":true}}"
+    },
+    {
+      "clientOnly": false,
+      "created": "2025-11-09T06:19:00Z",
+      "dimensions": {
+        "x": 0.6,
+        "y": 0.6,
+        "z": 0.6
+      },
+      "id": "{00000004-0000-0000-0000-000000000004}",
+      "lastEdited": 1731135540000000,
+      "lifetime": -1,
+      "localPosition": {
+        "x": 0,
+        "y": 0.3,
+        "z": -2
+      },
+      "localRotation": {
+        "w": 1,
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "name": "Yellow Cube (Ground)",
+      "owningAvatarID": "{00000000-0000-0000-0000-000000000000}",
+      "position": {
+        "x": 0,
+        "y": 0.3,
+        "z": -2
+      },
+      "queryAACube": {
+        "scale": 1.0392304845413264,
+        "x": 0,
+        "y": 0.3,
+        "z": -2
+      },
+      "registrationPoint": {
+        "x": 0.5,
+        "y": 0.5,
+        "z": 0.5
+      },
+      "rotation": {
+        "w": 1,
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "shape": "Cube",
+      "type": "Box",
+      "color": {
+        "red": 255,
+        "green": 255,
+        "blue": 100
+      },
+      "userData": "{\"grabbableKey\":{\"grabbable\":true}}"
+    },
+    {
+      "clientOnly": false,
+      "created": "2025-11-09T06:19:00Z",
+      "dimensions": {
+        "x": 0.15,
+        "y": 0.15,
+        "z": 0.15
+      },
+      "id": "{00000005-0000-0000-0000-000000000005}",
+      "lastEdited": 1731135540000000,
+      "lifetime": -1,
+      "localPosition": {
+        "x": -0.8,
+        "y": 2.2,
+        "z": -2
+      },
+      "localRotation": {
+        "w": 1,
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "name": "Cyan Small Sphere",
+      "owningAvatarID": "{00000000-0000-0000-0000-000000000000}",
+      "position": {
+        "x": -0.8,
+        "y": 2.2,
+        "z": -2
+      },
+      "queryAACube": {
+        "scale": 0.25980762113533157,
+        "x": -0.8,
+        "y": 2.2,
+        "z": -2
+      },
+      "registrationPoint": {
+        "x": 0.5,
+        "y": 0.5,
+        "z": 0.5
+      },
+      "rotation": {
+        "w": 1,
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "shape": "Sphere",
+      "type": "Sphere",
+      "color": {
+        "red": 100,
+        "green": 255,
+        "blue": 255
+      },
+      "userData": "{\"grabbableKey\":{\"grabbable\":true}}"
+    },
+    {
+      "clientOnly": false,
+      "created": "2025-11-09T06:19:00Z",
+      "dimensions": {
+        "x": 0.2,
+        "y": 1.2,
+        "z": 0.2
+      },
+      "id": "{00000006-0000-0000-0000-000000000006}",
+      "lastEdited": 1731135540000000,
+      "lifetime": -1,
+      "localPosition": {
+        "x": 0.8,
+        "y": 1.5,
+        "z": -2.5
+      },
+      "localRotation": {
+        "w": 0.9238795325112867,
+        "x": 0,
+        "y": 0.38268343236508984,
+        "z": 0
+      },
+      "name": "Magenta Pillar",
+      "owningAvatarID": "{00000000-0000-0000-0000-000000000000}",
+      "position": {
+        "x": 0.8,
+        "y": 1.5,
+        "z": -2.5
+      },
+      "queryAACube": {
+        "scale": 2.0784609690826528,
+        "x": 0.8,
+        "y": 1.5,
+        "z": -2.5
+      },
+      "registrationPoint": {
+        "x": 0.5,
+        "y": 0.5,
+        "z": 0.5
+      },
+      "rotation": {
+        "w": 0.9238795325112867,
+        "x": 0,
+        "y": 0.38268343236508984,
+        "z": 0
+      },
+      "shape": "Cube",
+      "type": "Box",
+      "color": {
+        "red": 255,
+        "green": 100,
+        "blue": 255
+      },
+      "userData": "{\"grabbableKey\":{\"grabbable\":true}}"
+    }
+  ],
+  "Id": "{2a42a1c1-4f93-4024-a49e-857013908f7d}",
+  "Version": 148
+}
