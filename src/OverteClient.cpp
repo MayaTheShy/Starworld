@@ -451,6 +451,13 @@ void OverteClient::parseEntityPacket(const char* data, size_t len) {
     
     if (len < 1) return;
     
+    // Debug: dump first bytes of packet
+    std::cout << "[OverteClient] parseEntityPacket: " << len << " bytes, first 32: ";
+    for (size_t i = 0; i < std::min(len, size_t(32)); i++) {
+        printf("%02x ", (unsigned char)data[i]);
+    }
+    std::cout << std::endl;
+    
     unsigned char packetType = static_cast<unsigned char>(data[0]);
     
     // Entity packet types
