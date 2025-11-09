@@ -277,7 +277,7 @@ This allows you to:
 - [x] Transform support (position, rotation, scale)
 - [x] Dimension support (xyz sizing)
 
-### Phase 2: Asset Pipeline ✅ COMPLETE
+### Phase 2: Asset Pipeline (In Progress)
 - [x] Local asset cache (`~/.cache/starworld/primitives/`)
 - [x] Blender primitive generation (`tools/blender_export_simple.py`)
 - [x] **HTTP model downloader with ModelCache** 🎉
@@ -288,7 +288,7 @@ This allows you to:
 - [ ] Material color application to models
 - [ ] Texture loading and mapping
 
-### Phase 3: Network & Protocol ✅ COMPLETE
+### Phase 3: Network & Protocol (In Progress)
 - [x] Domain connection via UDP
 - [x] NLPacket protocol implementation
 - [x] DomainConnectRequest / DomainList handshake
