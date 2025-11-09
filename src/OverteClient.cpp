@@ -231,7 +231,7 @@ bool OverteClient::connect() {
         modelC.type = EntityType::Model;
         modelC.color = glm::vec3(0.3f, 0.3f, 1.0f); // Blue tint
         modelC.dimensions = glm::vec3(0.25f, 0.25f, 0.25f);
-        modelC.modelUrl = "https://example.com/model.glb"; // Placeholder
+        // Leave modelUrl empty - primitive will be used based on type
         modelC.transform = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 1.2f, -2.0f));
         
         m_entities.emplace(cubeA.id, cubeA);
