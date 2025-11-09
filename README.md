@@ -51,31 +51,55 @@ This creates three demo entities rendered as 3D models:
 - **Blue suzanne** (0.25m) - Model entity type (Blender monkey head placeholder)
 
 ### Connect to Overte Server
+
+Connect to a domain using the domain address format:
+
 ```bash
-export STARWORLD_BRIDGE_PATH=./bridge/target/release
-./build/starworld ws://domain.example.com:40102
+# Using domain:port format (port is UDP domain server port)
+./build/starworld --overte=127.0.0.1:40104
+
+# Using domain address with position/orientation (position/rotation ignored for now)
+./build/starworld --overte=142.122.4.245:40104/0,0,0/0,0,0,1
+
+# Using WebSocket URL format (deprecated, but still works)
+./build/starworld --overte=ws://domain.example.com:40102
 ```
+
+**Address Format:**
+- `host:40104` - Connects to UDP domain server on port 40104 (standard Overte port)
+- HTTP port is automatically calculated as UDP port - 2 (e.g., 40102 for UDP 40104)
+- Position/orientation coordinates after `/` are currently ignored
 
 ### Connect with Authentication
-To receive full assignment client information, authenticate with the Overte metaverse:
 
+**⚠️ OAuth Not Yet Implemented** - See [OVERTE_AUTH.md](OVERTE_AUTH.md) for details.
+
+The authentication infrastructure exists but is currently disabled. Overte uses browser-based OAuth 2.0 which requires:
+- HTTP callback server for authorization code flow
+- Browser launcher for login page
+- Token persistence and refresh
+
+**Current Status:**
+- ✅ Anonymous connection works perfectly
+- ✅ Domain connection and entity queries functional
+- ❌ OAuth login disabled (needs authorization code flow implementation)
+- ❌ Assignment client discovery limited to authenticated users
+
+**Workaround:** Run in anonymous mode (default):
 ```bash
-export STARWORLD_BRIDGE_PATH=./bridge/target/release
-export OVERTE_USERNAME=your_username
-export OVERTE_PASSWORD=your_password
-export OVERTE_METAVERSE=https://mv.overte.org  # Optional, defaults to mv.overte.org
-./build/starworld ws://domain.example.com:40102
+./build/starworld --overte=127.0.0.1:40104
 ```
 
-**Note:** Authenticated users receive:
-- Full assignment client list (EntityServer, AudioMixer, AvatarMixer locations)
-- Direct connection to assignment clients
-- Enhanced permissions
+Anonymous users can:
+- Connect to public domains
+- Query entity data
+- Receive domain list packets
+- View and render entities
 
-Anonymous users:
-- Connect without credentials
-- Limited assignment client discovery
-- Fallback to domain server for entity queries
+Limitations:
+- No assignment client topology information
+- EntityServer address not advertised (uses domain server fallback)
+- Some restricted domains may reject anonymous connections
 
 ### Domain Discovery
 
@@ -141,17 +165,21 @@ The client tries these locations in order:
 - `STARWORLD_BRIDGE_PATH`: Path to bridge .so directory
 - `STARWORLD_SIMULATE`: Set to `1` for simulation mode (no Overte connection)
 - `STARDUSTXR_SOCKET`: Override Stardust compositor socket path
-- `OVERTE_URL`: Override Overte server URL
+- `OVERTE_URL`: Override Overte server URL (deprecated, use --overte flag)
+- `OVERTE_UDP_PORT`: Override UDP domain server port (default: from URL or 40104)
 - `OVERTE_DISCOVER`: Enable domain discovery (`1` or `true`)
 - `OVERTE_DISCOVER_PROBE`: Enable/disable domain reachability probing
 - `OVERTE_DISCOVER_INDEX`: Manual domain selection index
-- `OVERTE_USERNAME`: Set username for Overte authentication
+- `OVERTE_USERNAME`: Reserved for future OAuth (currently unused)
+- `OVERTE_PASSWORD`: Reserved for future OAuth (currently unused)
+- `OVERTE_METAVERSE`: Reserved for future OAuth (currently unused)
 
 ### Command-Line Options
-- `--socket=/path/to.sock`: Legacy socket override
+- `--socket=/path/to.sock`: Override Stardust socket path
 - `--abstract=name`: Use abstract socket namespace
-- `--overte=ws://host:port`: Overte server WebSocket URL
-- `--discover`: Enable Overte domain discovery
+- `--overte=host:port`: Connect to Overte domain (port is UDP port, typically 40104)
+- `--overte=host:port/x,y,z/qx,qy,qz,qw`: Domain address with spawn position (position ignored)
+- `--discover`: Enable Overte domain discovery via metaverse directories
 
 ## Development
 
