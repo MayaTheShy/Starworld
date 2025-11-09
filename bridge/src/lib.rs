@@ -107,7 +107,7 @@ impl Reify for BridgeState {
             let transform = stardust_xr_fusion::spatial::Transform::from_translation_rotation_scale(trans_array, rot_array, scale_array);
             
             // Try to load the appropriate model based on entity type
-            if let Some(model_path) = get_model_path(node.entity_type) {
+            let model_child = if let Some(model_path) = get_model_path(node.entity_type) {
                 eprintln!("[bridge/reify] Loading {} model for node {} from {}", 
                     match node.entity_type {
                         1 => "cube",
@@ -117,27 +117,21 @@ impl Reify for BridgeState {
                     }, id, model_path.display());
                 
                 match Model::direct(&model_path) {
-                    Ok(model) => {
-                        Some((*id, Spatial::default()
-                            .transform(transform)
-                            .build()
-                            .child(model.build())))
-                    }
+                    Ok(model) => Some(model.build()),
                     Err(e) => {
                         eprintln!("[bridge/reify] Failed to load model for node {}: {}", id, e);
-                        // Fall back to spatial-only node
-                        Some((*id, Spatial::default()
-                            .transform(transform)
-                            .build()))
+                        None
                     }
                 }
             } else {
                 eprintln!("[bridge/reify] No model available for entity type {} (node {})", node.entity_type, id);
-                // Fallback to empty spatial
-                Some((*id, Spatial::default()
-                    .transform(transform)
-                    .build()))
-            }
+                None
+            };
+            
+            Some((*id, Spatial::default()
+                .transform(transform)
+                .build()
+                .maybe_child(model_child)))
         });
 
         PlaySpace.build().stable_children(children)
