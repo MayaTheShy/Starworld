@@ -55,9 +55,16 @@ impl ClientState for BridgeState {
         if let Ok(ctrl) = CTRL.lock() {
             if let Some(shared) = &ctrl.shared_state {
                 if let Ok(shared_state) = shared.lock() {
+                    eprintln!("[bridge/on_frame] Syncing {} nodes from shared_state", shared_state.nodes.len());
                     self.nodes = shared_state.nodes.clone();
+                } else {
+                    eprintln!("[bridge/on_frame] Failed to lock shared_state");
                 }
+            } else {
+                eprintln!("[bridge/on_frame] No shared_state in ctrl");
             }
+        } else {
+            eprintln!("[bridge/on_frame] Failed to lock CTRL");
         }
     }
 }
