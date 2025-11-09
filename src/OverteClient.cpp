@@ -408,6 +408,16 @@ void OverteClient::parseDomainPacket(const char* data, size_t len) {
             std::cout << "[OverteClient] Ping reply received" << std::endl;
             break;
             
+        case PacketType::ICEPing:
+            // ICE ping for NAT traversal - reply immediately
+            std::cout << "[OverteClient] ICE Ping received, sending reply" << std::endl;
+            handleICEPing(payload, payloadLen);
+            break;
+            
+        case PacketType::ICEPingReply:
+            std::cout << "[OverteClient] ICE Ping Reply received" << std::endl;
+            break;
+            
         case PacketType::EntityData:
             std::cout << "[OverteClient] Received EntityData packet (" << payloadLen << " bytes)" << std::endl;
             parseEntityPacket(payload, payloadLen);

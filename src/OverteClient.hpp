@@ -79,6 +79,7 @@ private:
 	void parseDomainPacket(const char* data, size_t len);
 	void handleDomainListReply(const char* data, size_t len);
 	void handleDomainConnectionDenied(const char* data, size_t len);
+	void handleICEPing(const char* data, size_t len);
 	void sendDomainListRequest();
 	void sendDomainConnectRequest();
 	void sendEntityQuery();
