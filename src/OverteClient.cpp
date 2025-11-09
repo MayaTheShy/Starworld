@@ -7,7 +7,12 @@
 #include <random>
 #include <sstream>
 #include <iomanip>
+
+#define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/quaternion.hpp>
+#include <glm/gtx/matrix_decompose.hpp>
+
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -404,8 +409,8 @@ void OverteClient::parseEntityPacket(const char* data, size_t len) {
     switch (packetType) {
         case PACKET_TYPE_ENTITY_DATA:
         case PACKET_TYPE_ENTITY_ADD: {
-            // EntityAdd/EntityData packet structure (simplified):
-            // u64 entityID, string name, vec3 position, quat rotation, vec3 dimensions, ...
+            // EntityAdd packet structure (enhanced):
+            // [type:u8][id:u64][name:null-terminated][position:3xf32][rotation:4xf32][dimensions:3xf32][model_url:null-terminated][texture_url:null-terminated][color:3xf32]
             if (len < 9) break; // need at least 1+8 bytes
             
             std::uint64_t entityId;
@@ -417,42 +422,168 @@ void OverteClient::parseEntityPacket(const char* data, size_t len) {
             while (offset < len && data[offset] != '\0') {
                 name += data[offset++];
             }
+            offset++; // skip null terminator
             if (name.empty()) name = "Entity_" + std::to_string(entityId);
             
-            // TODO: Parse full entity properties (position, rotation, dimensions)
-            // For now, create entity with a visible position spread out in front of user
-            // Position entities in a grid pattern for visibility
-            float spacing = 0.5f;
-            int index = static_cast<int>(entityId % 10);
-            float x = (index % 3) * spacing - spacing;  // -0.5, 0, 0.5
-            float y = 1.5f;  // Eye level
-            float z = -2.0f - (index / 3) * spacing;  // Start 2m in front, spread back
+            // Parse position (vec3 - 3 floats)
+            glm::vec3 position(0.0f, 1.5f, -2.0f); // Default
+            if (offset + 12 <= len) {
+                std::memcpy(&position.x, data + offset, 4);
+                std::memcpy(&position.y, data + offset + 4, 4);
+                std::memcpy(&position.z, data + offset + 8, 4);
+                offset += 12;
+            }
             
-            glm::vec3 position(x, y, z);
-            glm::mat4 transform = glm::translate(glm::mat4(1.0f), position);
+            // Parse rotation (quaternion - 4 floats: x, y, z, w)
+            glm::quat rotation(1.0f, 0.0f, 0.0f, 0.0f); // Identity (w, x, y, z in glm)
+            if (offset + 16 <= len) {
+                float qx, qy, qz, qw;
+                std::memcpy(&qx, data + offset, 4);
+                std::memcpy(&qy, data + offset + 4, 4);
+                std::memcpy(&qz, data + offset + 8, 4);
+                std::memcpy(&qw, data + offset + 12, 4);
+                rotation = glm::quat(qw, qx, qy, qz); // glm uses w first
+                offset += 16;
+            }
+            
+            // Parse dimensions/scale (vec3 - 3 floats)
+            glm::vec3 dimensions(0.1f, 0.1f, 0.1f); // Default
+            if (offset + 12 <= len) {
+                std::memcpy(&dimensions.x, data + offset, 4);
+                std::memcpy(&dimensions.y, data + offset + 4, 4);
+                std::memcpy(&dimensions.z, data + offset + 8, 4);
+                offset += 12;
+            }
+            
+            // Parse model URL (null-terminated string)
+            std::string modelUrl;
+            while (offset < len && data[offset] != '\0') {
+                modelUrl += data[offset++];
+            }
+            offset++; // skip null terminator
+            
+            // Parse texture URL (null-terminated string)
+            std::string textureUrl;
+            while (offset < len && data[offset] != '\0') {
+                textureUrl += data[offset++];
+            }
+            offset++; // skip null terminator
+            
+            // Parse color (vec3 RGB - 3 floats 0-1)
+            glm::vec3 color(1.0f, 1.0f, 1.0f); // Default white
+            if (offset + 12 <= len) {
+                std::memcpy(&color.r, data + offset, 4);
+                std::memcpy(&color.g, data + offset + 4, 4);
+                std::memcpy(&color.b, data + offset + 8, 4);
+                offset += 12;
+            }
+            
+            // Build transform matrix from position, rotation, scale
+            glm::mat4 transform = glm::mat4(1.0f);
+            transform = glm::translate(transform, position);
+            transform = transform * glm::mat4_cast(rotation);
+            transform = glm::scale(transform, dimensions);
             
             OverteEntity entity{entityId, name, transform};
             m_entities[entityId] = entity;
             m_updateQueue.push_back(entityId);
             
-            std::cout << "[OverteClient] Entity added: " << name << " (id=" << entityId 
-                      << ") at pos(" << x << ", " << y << ", " << z << ")" << std::endl;
+            std::cout << "[OverteClient] Entity added: " << name << " (id=" << entityId << ")" << std::endl;
+            std::cout << "  Position: (" << position.x << ", " << position.y << ", " << position.z << ")" << std::endl;
+            std::cout << "  Rotation: (" << rotation.x << ", " << rotation.y << ", " << rotation.z << ", " << rotation.w << ")" << std::endl;
+            std::cout << "  Dimensions: (" << dimensions.x << ", " << dimensions.y << ", " << dimensions.z << ")" << std::endl;
+            std::cout << "  Color: RGB(" << color.r << ", " << color.g << ", " << color.b << ")" << std::endl;
+            if (!modelUrl.empty()) {
+                std::cout << "  Model: " << modelUrl << std::endl;
+            }
+            if (!textureUrl.empty()) {
+                std::cout << "  Texture: " << textureUrl << std::endl;
+            }
             break;
         }
         
         case PACKET_TYPE_ENTITY_EDIT: {
-            // EntityEdit packet: u64 entityID, property flags, property data...
-            if (len < 9) break;
+            // EntityEdit packet: [type:u8][id:u64][flags:u8][property data...]
+            if (len < 10) break; // Need type + id + flags
             
             std::uint64_t entityId;
             std::memcpy(&entityId, data + 1, 8);
             
+            uint8_t flags = data[9];
+            size_t offset = 10;
+            
+            const uint8_t HAS_POSITION = 0x01;
+            const uint8_t HAS_ROTATION = 0x02;
+            const uint8_t HAS_DIMENSIONS = 0x04;
+            
             auto it = m_entities.find(entityId);
             if (it != m_entities.end()) {
-                // TODO: parse property flags and update transform
-                // For now, mark as updated
+                glm::vec3 position(0.0f);
+                glm::quat rotation(1.0f, 0.0f, 0.0f, 0.0f);
+                glm::vec3 dimensions(1.0f);
+                
+                // Extract current transform
+                glm::vec3 scale;
+                glm::quat currentRot;
+                glm::vec3 currentPos;
+                glm::vec3 skew;
+                glm::vec4 perspective;
+                glm::decompose(it->second.transform, scale, currentRot, currentPos, skew, perspective);
+                
+                position = currentPos;
+                rotation = currentRot;
+                dimensions = scale;
+                
+                // Update based on flags
+                if (flags & HAS_POSITION) {
+                    if (offset + 12 <= len) {
+                        std::memcpy(&position.x, data + offset, 4);
+                        std::memcpy(&position.y, data + offset + 4, 4);
+                        std::memcpy(&position.z, data + offset + 8, 4);
+                        offset += 12;
+                    }
+                }
+                
+                if (flags & HAS_ROTATION) {
+                    if (offset + 16 <= len) {
+                        float qx, qy, qz, qw;
+                        std::memcpy(&qx, data + offset, 4);
+                        std::memcpy(&qy, data + offset + 4, 4);
+                        std::memcpy(&qz, data + offset + 8, 4);
+                        std::memcpy(&qw, data + offset + 12, 4);
+                        rotation = glm::quat(qw, qx, qy, qz);
+                        offset += 16;
+                    }
+                }
+                
+                if (flags & HAS_DIMENSIONS) {
+                    if (offset + 12 <= len) {
+                        std::memcpy(&dimensions.x, data + offset, 4);
+                        std::memcpy(&dimensions.y, data + offset + 4, 4);
+                        std::memcpy(&dimensions.z, data + offset + 8, 4);
+                        offset += 12;
+                    }
+                }
+                
+                // Rebuild transform
+                glm::mat4 transform = glm::mat4(1.0f);
+                transform = glm::translate(transform, position);
+                transform = transform * glm::mat4_cast(rotation);
+                transform = glm::scale(transform, dimensions);
+                
+                it->second.transform = transform;
                 m_updateQueue.push_back(entityId);
-                std::cout << "[OverteClient] Entity edited: id=" << entityId << std::endl;
+                
+                std::cout << "[OverteClient] Entity edited: id=" << entityId << " (flags=0x" << std::hex << (int)flags << std::dec << ")" << std::endl;
+                if (flags & HAS_POSITION) {
+                    std::cout << "  New position: (" << position.x << ", " << position.y << ", " << position.z << ")" << std::endl;
+                }
+                if (flags & HAS_ROTATION) {
+                    std::cout << "  New rotation: (" << rotation.x << ", " << rotation.y << ", " << rotation.z << ", " << rotation.w << ")" << std::endl;
+                }
+                if (flags & HAS_DIMENSIONS) {
+                    std::cout << "  New dimensions: (" << dimensions.x << ", " << dimensions.y << ", " << dimensions.z << ")" << std::endl;
+                }
             }
             break;
         }
