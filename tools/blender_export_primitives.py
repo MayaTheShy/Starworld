@@ -68,9 +68,6 @@ print(f"   ✓ Exported successfully!")
 bpy.ops.object.delete(use_global=False)
 print("   - Deleted sphere")
 
-# Now delete it (it's still selected)
-bpy.ops.object.delete(use_global=False)
-
 # ========== CUBE (RED) ==========
 print("\n2. Creating RED cube...")
 bpy.ops.mesh.primitive_cube_add(size=1.0, location=(0, 0, 0))
