@@ -147,6 +147,7 @@ impl ModelDownloader {
     }
     
     /// Clear the download cache
+    #[allow(dead_code)]
     pub fn clear_cache(&self) -> Result<(), std::io::Error> {
         let mut cache = self.cache.lock().unwrap();
         cache.clear();
