@@ -65,11 +65,6 @@ std::vector<std::string> candidateSocketPaths() {
 
 } // anonymous namespace
 
-std::string StardustBridge::defaultSocketPath() {
-    auto c = candidateSocketPaths();
-    return c.empty() ? std::string{} : c.front();
-}
-
 bool StardustBridge::connect(const std::string& socketPath) {
     // Prefer Rust bridge if available.
     if (loadBridge()) {
