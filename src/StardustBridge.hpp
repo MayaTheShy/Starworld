@@ -88,12 +88,23 @@ private:
 	using fn_create_node_t = std::uint64_t(*)(const char*, const float*);
 	using fn_update_node_t = int(*)(std::uint64_t, const float*);
 	using fn_remove_node_t = int(*)(std::uint64_t);
+	using fn_set_model_t = int(*)(std::uint64_t, const char*);
+	using fn_set_texture_t = int(*)(std::uint64_t, const char*);
+	using fn_set_color_t = int(*)(std::uint64_t, float, float, float, float);
+	using fn_set_dimensions_t = int(*)(std::uint64_t, float, float, float);
+	using fn_set_entity_type_t = int(*)(std::uint64_t, std::uint8_t);
+	
 	fn_start_t m_fnStart{nullptr};
 	fn_poll_t m_fnPoll{nullptr};
 	fn_shutdown_t m_fnShutdown{nullptr};
 	fn_create_node_t m_fnCreateNode{nullptr};
 	fn_update_node_t m_fnUpdateNode{nullptr};
 	fn_remove_node_t m_fnRemoveNode{nullptr};
+	fn_set_model_t m_fnSetModel{nullptr};
+	fn_set_texture_t m_fnSetTexture{nullptr};
+	fn_set_color_t m_fnSetColor{nullptr};
+	fn_set_dimensions_t m_fnSetDimensions{nullptr};
+	fn_set_entity_type_t m_fnSetEntityType{nullptr};
 
 	bool loadBridge();
 };
