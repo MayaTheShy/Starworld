@@ -46,6 +46,15 @@ struct OverteEntity {
 	float alpha{1.0f};         // Transparency (0-1)
 };
 
+// Assignment client information from DomainList
+struct AssignmentClient {
+	uint8_t type;           // 0=EntityServer, 1=AudioMixer, 2=AvatarMixer, etc.
+	std::array<uint8_t, 16> uuid;
+	sockaddr_storage address{};
+	socklen_t addressLen{0};
+	uint16_t port{0};
+};
+
 // Lightweight client for Overte mixers/entities. Designed to follow Overte's
 // standards. For now includes a minimal parser scaffold; simulation can be
 // optionally enabled via STARWORLD_SIMULATE=1.
@@ -114,6 +123,12 @@ private:
 	bool m_udpReady{false};
 	struct sockaddr_storage m_udpAddr{};
 	socklen_t m_udpAddrLen{0};
+	
+	// Assignment clients from DomainList
+	std::vector<AssignmentClient> m_assignmentClients;
+	sockaddr_storage m_entityServerAddr{};
+	socklen_t m_entityServerAddrLen{0};
+	uint16_t m_entityServerPort{0};
 	
 	// EntityServer connection
 	int m_entityFd{-1};
