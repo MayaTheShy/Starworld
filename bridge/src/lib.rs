@@ -10,17 +10,14 @@ use glam::Mat4;
 use stardust_xr_asteroids as ast; // alias for brevity
 use stardust_xr_asteroids::{
     client::ClientState,
-    elements::{PlaySpace, Model, Lines, Spatial},
+    elements::{PlaySpace, Spatial},
     Migrate, Reify,
 };
-use stardust_xr_asteroids::{CustomElement, Transformable, Projector, Context};
-use stardust_xr_molecules::accent_color::AccentColor;
 use stardust_xr_fusion::objects::connect_client as fusion_connect_client;
 use stardust_xr_fusion::node::NodeType;
 use stardust_xr_fusion::root::RootAspect;
-use stardust_xr_fusion::drawable::MaterialParameter;
-use stardust_xr_fusion::values::ResourceID;
 use stardust_xr_fusion::spatial::Transform;
+use stardust_xr_fusion::drawable::Model as FusionModel;
 use tokio::runtime::Runtime;
 
 #[derive(Clone, serde::Serialize, serde::Deserialize)]
