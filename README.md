@@ -245,7 +245,7 @@ This allows you to:
 ### "Rust bridge present but start() failed"
 - Rebuild the bridge: `cd bridge && cargo build --release`
 - Check library exists: `ls -lh bridge/target/release/libstardust_bridge.so`
-- Verify RPATH: `ldd build/stardust-overte-client`
+- Verify RPATH: `ldd build/starworld`
 
 ### "Could not connect to Overte"
 - Verify server URL/port
