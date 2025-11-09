@@ -17,8 +17,9 @@ public:
 	using NodeId = std::uint64_t;
 
 	// Connect to the StardustXR compositor via IPC.
-	// Returns true on success. If socketPath is empty, uses defaultSocketPath().
+	// Returns true on success. Searches standard socket locations if socketPath is empty.
 	bool connect(const std::string& socketPath = {});
+
 
 	// Create a 3D node with an initial transform. Optionally parent it.
 	NodeId createNode(const std::string& name,
