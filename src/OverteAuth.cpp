@@ -63,7 +63,14 @@ bool OverteAuth::login(const std::string& username, const std::string& password,
     }
     
     // Construct OAuth token endpoint
-    std::string tokenUrl = m_metaverseUrl + "/oauth/token";
+    // From Overte AccountManager: /oauth/token path under metaverse server
+    std::string tokenUrl = m_metaverseUrl;
+    if (tokenUrl.back() == '/') {
+        tokenUrl.pop_back();
+    }
+    tokenUrl += "/api/v1/token";  // Try API v1 endpoint
+    
+    std::cout << "[OverteAuth] Token URL: " << tokenUrl << std::endl;
     
     // Construct POST data
     std::ostringstream postData;
