@@ -119,6 +119,13 @@ struct Node {
     name: String,
     #[serde(skip)]
     transform: Mat4,
+    entity_type: u8, // 0=Unknown, 1=Box, 2=Sphere, 3=Model, etc.
+    model_url: String,
+    texture_url: String,
+    #[serde(skip)]
+    color: [f32; 4], // RGBA
+    #[serde(skip)]
+    dimensions: [f32; 3], // xyz dimensions in meters
 }
 
 struct Ctrl {
