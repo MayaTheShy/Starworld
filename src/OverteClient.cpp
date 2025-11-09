@@ -1019,6 +1019,9 @@ void OverteClient::handleDomainListReply(const char* data, size_t len) {
         sendEntityQuery();
     } else {
         std::cout << "[OverteClient] Warning: No EntityServer found in assignment client list" << std::endl;
+        std::cout << "[OverteClient] This might be expected for non-authenticated connections." << std::endl;
+        std::cout << "[OverteClient] Sending EntityQuery to domain server as fallback..." << std::endl;
+        sendEntityQuery(); // Try sending to domain server anyway
     }
 }
 
