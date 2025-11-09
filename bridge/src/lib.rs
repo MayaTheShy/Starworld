@@ -10,20 +10,14 @@ use glam::Mat4;
 use stardust_xr_asteroids as ast; // alias for brevity
 use stardust_xr_asteroids::{
     client::ClientState,
-    elements::{PlaySpace, Lines},
+    elements::{PlaySpace, Lines, Model},
     Migrate, Reify,
 };
 use stardust_xr_asteroids::{CustomElement, Transformable, Projector, Context};
 use stardust_xr_molecules::accent_color::AccentColor;
-
-// Import drawable types through asteroids to avoid version conflicts
-type FrameInfo = <ast::client::RootAspect as ast::client::RootAspectMethods>::FrameInfo;
-type Line = ast::client::drawable::Line;
-type LinePoint = ast::client::drawable::LinePoint;
-type Vector3 = ast::client::values::Vector3;
-
-// Re-export connect_client from the correct version
-use ast::client::objects::connect_client as fusion_connect_client;
+use stardust_xr_fusion::objects::connect_client as fusion_connect_client;
+use stardust_xr_fusion::node::NodeType;
+use stardust_xr_fusion::root::RootAspect;
 use tokio::runtime::Runtime;
 
 #[derive(Clone, serde::Serialize, serde::Deserialize)]
@@ -55,7 +49,7 @@ impl ClientState for BridgeState {
     const APP_ID: &'static str = "org.stardustxr.starworld";
     fn initial_state_update(&mut self) {}
     
-    fn on_frame(&mut self, _info: &FrameInfo) {
+    fn on_frame(&mut self, _info: &stardust_xr_fusion::root::FrameInfo) {
         // Sync from the global shared state on each frame
         if let Ok(ctrl) = CTRL.lock() {
             if let Some(shared) = &ctrl.shared_state {
@@ -69,6 +63,9 @@ impl ClientState for BridgeState {
 
 impl Reify for BridgeState {
     fn reify(&self) -> impl ast::Element<Self> {
+        use stardust_xr_fusion::drawable::{Line, LinePoint};
+        use stardust_xr_fusion::values::{color::rgba_linear, Vector3};
+        
         // Root playspace. Create appropriate visuals per entity type
         let children = self.nodes.iter().filter_map(|(id, node)| {
             // Skip nodes with zero dimensions (like the root node)
@@ -87,8 +84,7 @@ impl Reify for BridgeState {
                 scale
             };
             
-            // Use entity color if set - use rgba_linear macro from asteroids
-            use ast::client::values::color::rgba_linear;
+            // Use entity color if set
             let node_color = rgba_linear!(node.color[0], node.color[1], node.color[2], node.color[3]);
             
             // Entity types: 0=Unknown, 1=Box, 2=Sphere, 3=Model, ...
@@ -212,7 +208,6 @@ impl Reify for BridgeState {
                     ))
                 },
                 _ => {
-                    use ast::client::values::color::rgba_linear;
                     // Unknown/default - render as simple wireframe cube
                     let t = 0.004;
                     let c = rgba_linear!(0.6, 0.6, 0.6, 0.8); // Gray for unknown
