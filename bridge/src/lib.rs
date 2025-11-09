@@ -202,14 +202,14 @@ impl Reify for BridgeState {
                         seg(front, right), seg(right, back), seg(back, left), seg(left, front),
                     ];
                     
-                    (
+                    Some((
                         *id,
                         Lines::new(lines)
                             .pos([trans.x, trans.y, trans.z])
                             .rot([rot.x, rot.y, rot.z, rot.w])
                             .scl([vis_scale.x, vis_scale.y, vis_scale.z])
                             .build()
-                    )
+                    ))
                 },
                 _ => {
                     use ast::client::values::color::rgba_linear;
