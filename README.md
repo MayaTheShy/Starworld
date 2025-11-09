@@ -6,7 +6,7 @@
 
 Starworld is an Overte client that renders virtual world entities inside the StardustXR compositor. It bridges Overte's entity protocol with Stardust's spatial computing environment, allowing you to view and interact with Overte domains in XR.
 
-**Current Status:** ✨ **3D colored model rendering** with full transform, color, and dimension support! Entities render as solid GLTF models with PBR materials. See [RENDERING_FIX_SUMMARY.md](RENDERING_FIX_SUMMARY.md) for implementation details.
+**Current Status:** ✨ **3D colored model rendering with HTTP asset downloading!** Entities render as solid GLTF models with PBR materials. ModelCache automatically downloads models from http:// and https:// URLs to `~/.cache/starworld/models/`. See [RENDERING_FIX_SUMMARY.md](RENDERING_FIX_SUMMARY.md) for implementation details.
 
 ## Quick Start
 
@@ -88,10 +88,11 @@ Starworld renders Overte entities as **3D colored models**:
 - ✅ RGB color with PBR materials (roughness, metallic)
 - ✅ Dimensions (xyz size in meters)
 - ✅ GLTF/GLB model loading from local cache
-- ⏳ Model URL downloading (in progress)
+- ✅ HTTP/HTTPS model URL downloading with ModelCache (SHA256-based caching)
+- ⏳ ATP protocol support (Overte asset server)
 - ⏳ Texture application (planned)
 
-Models are loaded from `~/.cache/starworld/primitives/` with fallback to built-in primitives. Generated using Blender with `tools/blender_export_simple.py`.
+Models are cached to `~/.cache/starworld/models/` using SHA256 URL hashing. HTTP downloads use libcurl with async callbacks. Primitives in `~/.cache/starworld/primitives/` generated using Blender with `tools/blender_export_simple.py`.
 
 For implementation details, see [ENTITY_RENDERING_ENHANCEMENTS.md](ENTITY_RENDERING_ENHANCEMENTS.md).
 
