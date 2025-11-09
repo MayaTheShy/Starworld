@@ -127,6 +127,36 @@ impl Reify for BridgeState {
             lines
         }
         
+        fn create_octahedron_wireframe(color_val: stardust_xr_fusion::values::Color, thickness: f32) -> Vec<Line> {
+            let r = 0.5;
+            // 6 vertices of octahedron
+            let verts = [
+                Vector3 { x: 0.0, y: r, z: 0.0 },    // top
+                Vector3 { x: r, y: 0.0, z: 0.0 },    // +X
+                Vector3 { x: 0.0, y: 0.0, z: r },    // +Z
+                Vector3 { x: -r, y: 0.0, z: 0.0 },   // -X
+                Vector3 { x: 0.0, y: 0.0, z: -r },   // -Z
+                Vector3 { x: 0.0, y: -r, z: 0.0 },   // bottom
+            ];
+            
+            // 12 edges
+            let edges = [
+                (0, 1), (0, 2), (0, 3), (0, 4), // top pyramid
+                (5, 1), (5, 2), (5, 3), (5, 4), // bottom pyramid
+                (1, 2), (2, 3), (3, 4), (4, 1), // equator
+            ];
+            
+            edges.iter().map(|(a, b)| {
+                Line {
+                    points: vec![
+                        LinePoint { point: verts[*a], thickness, color: color_val },
+                        LinePoint { point: verts[*b], thickness, color: color_val },
+                    ],
+                    cyclic: false,
+                }
+            }).collect()
+        }
+        
         let children = self.nodes.iter().filter_map(|(id, node)| {
             let dims = glam::Vec3::from(node.dimensions);
             if dims.length() < 0.001 {
@@ -194,37 +224,6 @@ impl Reify for BridgeState {
                 }
             }
         });
-        
-        fn create_octahedron_wireframe(color_val: stardust_xr_fusion::values::Color, thickness: f32) -> Vec<Line> {
-            use stardust_xr_fusion::values::Vector3;
-            let r = 0.5;
-            // 6 vertices of octahedron
-            let verts = [
-                Vector3 { x: 0.0, y: r, z: 0.0 },    // top
-                Vector3 { x: r, y: 0.0, z: 0.0 },    // +X
-                Vector3 { x: 0.0, y: 0.0, z: r },    // +Z
-                Vector3 { x: -r, y: 0.0, z: 0.0 },   // -X
-                Vector3 { x: 0.0, y: 0.0, z: -r },   // -Z
-                Vector3 { x: 0.0, y: -r, z: 0.0 },   // bottom
-            ];
-            
-            // 12 edges
-            let edges = [
-                (0, 1), (0, 2), (0, 3), (0, 4), // top pyramid
-                (5, 1), (5, 2), (5, 3), (5, 4), // bottom pyramid
-                (1, 2), (2, 3), (3, 4), (4, 1), // equator
-            ];
-            
-            edges.iter().map(|(a, b)| {
-                Line {
-                    points: vec![
-                        LinePoint { point: verts[*a], thickness, color: color_val },
-                        LinePoint { point: verts[*b], thickness, color: color_val },
-                    ],
-                    cyclic: false,
-                }
-            }).collect()
-        }
 
         PlaySpace.build().stable_children(children)
     }
