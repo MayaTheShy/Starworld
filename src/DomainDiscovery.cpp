@@ -1,0 +1,148 @@
+#include "DomainDiscovery.hpp"
+
+#include <string>
+#include <vector>
+#include <sstream>
+#include <optional>
+#include <cstdlib>
+#include <cstring>
+
+// Minimal libcurl-based GET
+#include <curl/curl.h>
+
+namespace {
+struct Buffer { std::string data; };
+
+size_t write_cb(char* ptr, size_t size, size_t nmemb, void* userdata) {
+    auto* b = reinterpret_cast<Buffer*>(userdata);
+    b->data.append(ptr, size * nmemb);
+    return size * nmemb;
+}
+
+std::optional<std::string> httpGet(const std::string& url, long timeoutMs = 3000) {
+    CURL* curl = curl_easy_init();
+    if (!curl) return std::nullopt;
+    Buffer buf;
+    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_cb);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &buf);
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, timeoutMs);
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1L);
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 2L);
+    // Optional auth header from env if needed
+    struct curl_slist* headers = nullptr;
+    if (const char* token = std::getenv("METAVERSE_TOKEN")) {
+        std::string h = std::string("Authorization: Bearer ") + token;
+        headers = curl_slist_append(headers, h.c_str());
+        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+    }
+    CURLcode rc = curl_easy_perform(curl);
+    long code = 0; curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &code);
+    if (headers) curl_slist_free_all(headers);
+    curl_easy_cleanup(curl);
+    if (rc != CURLE_OK || code < 200 || code >= 300) return std::nullopt;
+    return buf.data;
+}
+
+// Very small JSON helpers (avoid adding a full JSON lib):
+// Extract values for keys we care about with a permissive search.
+static std::vector<std::string> findAllStrings(const std::string& json, const std::string& key) {
+    std::vector<std::string> out;
+    std::string needle = '"' + key + '"';
+    size_t pos = 0;
+    while ((pos = json.find(needle, pos)) != std::string::npos) {
+        size_t colon = json.find(':', pos + needle.size()); if (colon == std::string::npos) break;
+        size_t quote1 = json.find('"', colon + 1); if (quote1 == std::string::npos) break;
+        if (json[quote1-1] == '\\') { pos = quote1 + 1; continue; }
+        size_t quote2 = json.find('"', quote1 + 1); if (quote2 == std::string::npos) break;
+        if (quote2 > quote1) {
+            out.emplace_back(json.substr(quote1 + 1, quote2 - quote1 - 1));
+        }
+        pos = quote2 + 1;
+    }
+    return out;
+}
+
+static std::vector<int> findAllInts(const std::string& json, const std::string& key) {
+    std::vector<int> out;
+    std::string needle = '"' + key + '"';
+    size_t pos = 0;
+    while ((pos = json.find(needle, pos)) != std::string::npos) {
+        size_t colon = json.find(':', pos + needle.size()); if (colon == std::string::npos) break;
+        size_t start = json.find_first_of("-0123456789", colon + 1); if (start == std::string::npos) break;
+        size_t end = json.find_first_not_of("0123456789", start + ((json[start] == '-') ? 1 : 0));
+        std::string num = json.substr(start, end - start);
+        try { out.emplace_back(std::stoi(num)); } catch (...) {}
+        pos = end;
+    }
+    return out;
+}
+
+// Heuristic: map fields from common metaverse JSONs
+// Vircadia/Overte often expose entries with fields like name, network_address, domain, ice_server_address, port, etc.
+std::vector<DiscoveredDomain> parseDomains(const std::string& json) {
+    std::vector<DiscoveredDomain> out;
+    auto names = findAllStrings(json, "name");
+    auto hostsA = findAllStrings(json, "network_address");
+    auto hostsB = findAllStrings(json, "ice_server_address");
+    auto hostsC = findAllStrings(json, "domain");
+    auto httpPorts = findAllInts(json, "http_port");
+    auto udpPorts = findAllInts(json, "udp_port");
+
+    // Gather candidates from each host list
+    auto addHostList = [&](const std::vector<std::string>& hosts) {
+        for (size_t i = 0; i < hosts.size(); ++i) {
+            DiscoveredDomain d;
+            d.name = (i < names.size()) ? names[i] : std::string();
+            d.networkHost = hosts[i];
+            d.httpPort = (i < httpPorts.size() && httpPorts[i] > 0) ? httpPorts[i] : 40102;
+            d.udpPort = (i < udpPorts.size() && udpPorts[i] > 0) ? udpPorts[i] : 40104;
+            out.emplace_back(std::move(d));
+        }
+    };
+    addHostList(hostsA);
+    addHostList(hostsB);
+    addHostList(hostsC);
+
+    // Dedup by host:port
+    std::vector<DiscoveredDomain> dedup;
+    for (auto& d : out) {
+        bool exists = false;
+        for (auto& x : dedup) {
+            if (x.networkHost == d.networkHost && x.httpPort == d.httpPort && x.udpPort == d.udpPort) { exists = true; break; }
+        }
+        if (!exists && !d.networkHost.empty()) dedup.emplace_back(std::move(d));
+    }
+    return dedup;
+}
+} // namespace
+
+std::vector<DiscoveredDomain> discoverDomains(int maxDomains) {
+    std::vector<DiscoveredDomain> result;
+    curl_global_init(CURL_GLOBAL_DEFAULT);
+
+    // Allow override of endpoint via env
+    std::vector<std::string> endpoints;
+    if (const char* custom = std::getenv("METAVERSE_DISCOVERY_URL")) {
+        endpoints.emplace_back(custom);
+    }
+    // Common candidate endpoints
+    endpoints.emplace_back("https://metaverse.vircadia.com/api/domains");
+    endpoints.emplace_back("https://metaverse.overte.org/api/domains");
+    endpoints.emplace_back("https://overte.org/api/domains");
+
+    for (const auto& url : endpoints) {
+        auto body = httpGet(url);
+        if (!body) continue;
+        auto list = parseDomains(*body);
+        for (auto& d : list) {
+            result.emplace_back(std::move(d));
+            if ((int)result.size() >= maxDomains) break;
+        }
+        if ((int)result.size() >= maxDomains) break;
+    }
+
+    curl_global_cleanup();
+    return result;
+}
