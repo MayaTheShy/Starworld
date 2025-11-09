@@ -185,7 +185,7 @@ To connect to a real Overte server:
 export OVERTE_USERNAME=your_username
 
 # Connect to server
-./build/stardust-overte-client ws://domain.example.com:40102
+./build/starworld ws://domain.example.com:40102
 ```
 
 The client will:
@@ -236,25 +236,33 @@ The client will:
          ▼
 ┌─────────────────────┐
 │  Stardust Server    │
-│  - Lines rendering  │
-│  - Type-specific    │
-│    visualization    │
+│  - Model rendering  │
+│  - GLTF/GLB loading │
 └─────────────────────┘
 ```
+
+## Implemented Features ✅
+
+1. **3D Model Rendering** - Loads GLTF/GLB models using Stardust Model element
+2. **Entity Type Support** - Box (cube), Sphere, Model (Suzanne placeholder)
+3. **Transform Support** - Position, rotation, scale from dimensions
+4. **HTTP Downloads** - ModelCache with SHA256 caching, async libcurl
+5. **Primitive Generation** - Blender export script for test models
+6. **Local Caching** - Two-tier cache (primitives + downloaded models)
 
 ## Future Enhancements
 
 ### Short Term
-1. **Actual model loading** - Replace octahedron with loaded .glb/.fbx models using Stardust Model nodes
-2. **Texture application** - Apply textures to rendered entities
+1. **Material color application** - Apply entity.color to model materials
+2. **Texture support** - Load and apply entity.textureUrl to models
 3. **More entity types** - Add support for Light, Text, PolyLine, etc.
-4. **Performance optimization** - Batch updates, reduce command overhead
+4. **ATP protocol** - Support atp:// URLs for Overte asset server
 
 ### Medium Term
-1. **Full mesh rendering** - Move beyond wireframes to solid shaded meshes
-2. **Material support** - PBR materials with metallic/roughness
-3. **Animation** - Skeletal animation for rigged models
-4. **LOD system** - Level-of-detail based on distance
+1. **Material parameters** - PBR materials with metallic/roughness
+2. **Animation** - Skeletal animation for rigged models
+3. **Entity updates** - Real-time property changes
+4. **Entity deletion** - Remove entities from scene
 
 ### Long Term
 1. **Physics sync** - Real-time physics state synchronization
@@ -277,7 +285,7 @@ make
 cd ..
 
 # Run
-./build/stardust-overte-client
+./build/starworld
 ```
 
 ## Dependencies
