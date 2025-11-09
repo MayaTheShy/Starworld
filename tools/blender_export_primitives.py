@@ -42,21 +42,31 @@ print("1. Creating GREEN sphere...")
 bpy.ops.mesh.primitive_uv_sphere_add(segments=32, ring_count=16, radius=0.5, location=(0, 0, 0))
 sphere = bpy.context.active_object
 sphere.name = "Sphere"
+print("   - Created sphere object")
+
 bpy.ops.object.shade_smooth()
+print("   - Applied smooth shading")
 
 green_mat = create_material("SphereMaterial", (0.2, 1.0, 0.2, 1.0))
 sphere.data.materials.append(green_mat)
+print("   - Applied green material")
 
 # Select ONLY this object for export
 bpy.ops.object.select_all(action='DESELECT')
 sphere.select_set(True)
+print("   - Selected sphere for export")
 
 sphere_path = os.path.join(output_dir, "sphere.glb")
+print(f"   - About to export to: {sphere_path}")
+
+# Try export with minimal parameters
 bpy.ops.export_scene.gltf(filepath=sphere_path, use_selection=True)
-print(f"   ✓ Exported: {sphere_path}")
+
+print(f"   ✓ Exported successfully!")
 
 # Now delete it (it's still selected)
 bpy.ops.object.delete(use_global=False)
+print("   - Deleted sphere")
 
 # Now delete it (it's still selected)
 bpy.ops.object.delete(use_global=False)
