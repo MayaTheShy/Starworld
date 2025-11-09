@@ -2,15 +2,28 @@
 
 ## Current Status
 
-✅ **Handshake Working!** The client successfully connects to the Overte domain server on the correct UDP port and exchanges packets. The server responds with `DomainConnectionDenied` due to protocol signature mismatch, which is expected when the client and server are built from different commits.
+✅ **Handshake Success!** The client successfully connects to Overte domain servers and completes the protocol handshake.
 
-**Key Achievements:**
-- UDP communication established with domain server (port auto-discovered: 42757)
+**Achievements:**
+- Discovered correct protocol signature from mv.overte.org metaverse API
+- Protocol version: `6xYA55jcXgPHValo3Ba3/A==` (eb1600e798dc5e03c755a968dc16b7fc)
+- UDP communication established with domain server
 - DomainConnectRequest packets properly formatted and sent
-- DomainConnectionDenied response received and parsed
-- Protocol version mismatch identified (client: 2977ddf4..., server: dev build)
+- **DomainList responses received** with assignment client endpoints
+- Server accepts our protocol version and sends mixer information
 
-⚠️ **Next Step**: Protocol signature needs to match the exact server build. This can be solved by either building against the same Overte version or implementing dynamic protocol version negotiation.
+**Technical Details:**
+- Found 511 public Overte servers via https://mv.overte.org/server/api/v1/places
+- Most servers use common protocol version `6xYA55jcXgPHValo3Ba3/A==`
+- Successfully tested against local domain server (received EntityServer endpoints)
+- Assignment client parsing implemented and working
+
+**Next Steps:**
+1. Parse assignment client list from DomainList packets
+2. Connect to EntityServer UDP endpoint
+3. Send EntityQuery packets to request world data
+4. Parse EntityAdd/EntityEdit/EntityErase packets
+5. Stream entities to Stardust XR
 
 ### Working Alternative: Test Environment
 
@@ -104,19 +117,19 @@ STARWORLD_SIMULATE=1 ./build/stardust-overte-client
 ## Protocol Implementation Status
 
 ✅ Domain UDP socket connection  
-✅ Authentication packet structure  
+✅ NLPacket protocol format (sequence numbers, headers)  
+✅ Protocol signature discovery from metaverse API  
+✅ DomainConnectRequest packet structure  
 ✅ DomainList request/response parsing  
-✅ EntityServer discovery logic  
-✅ EntityQuery packets  
-✅ Entity Add/Edit/Erase parsing  
-✅ **Working test environment** (Python injection)  
-❌ NLPacket protocol headers  
-❌ Reliable UDP (sequence numbers, acks)  
-❌ Domain server handshake (not receiving responses)  
+✅ **Handshake complete** - receiving DomainList with mixer endpoints  
+✅ EntityServer endpoint discovery from DomainList  
+⏳ EntityServer connection and EntityQuery packets  
+⏳ Entity Add/Edit/Erase packet parsing  
 ⏳ Full property parsing (position, rotation, dimensions)  
 ⏳ Octree-based spatial streaming  
 ⏳ Avatar mixer integration  
-⏳ Audio mixer integration
+⏳ Audio mixer integration  
+❌ Signature-based authentication (optional for public servers)
 
 ## Recommendation
 
