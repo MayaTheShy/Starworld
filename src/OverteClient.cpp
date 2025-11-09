@@ -121,6 +121,10 @@ static std::string generateUUID() {
     return ss.str();
 }
 
+OverteClient::~OverteClient() {
+    // Destructor implementation (required for unique_ptr with forward-declared type)
+}
+
 bool OverteClient::login(const std::string& username, const std::string& password, const std::string& metaverseUrl) {
     if (!m_auth) {
         m_auth = std::make_unique<OverteAuth>();

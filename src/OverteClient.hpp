@@ -66,6 +66,7 @@ class OverteClient {
 public:
 	explicit OverteClient(std::string domainUrl)
 		: m_domainUrl(std::move(domainUrl)) {}
+	~OverteClient();  // Required for unique_ptr with forward-declared type
 
 	// Authentication
 	bool login(const std::string& username, const std::string& password,
