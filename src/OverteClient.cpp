@@ -208,14 +208,39 @@ bool OverteClient::connect() {
 
     m_useSimulation = (std::getenv("STARWORLD_SIMULATE") != nullptr);
     if (m_useSimulation) {
-        // Seed a couple of demo entities.
-        OverteEntity a{ m_nextEntityId++, "CubeA", glm::mat4(1.0f) };
-        OverteEntity b{ m_nextEntityId++, "CubeB", glm::mat4(1.0f) };
-        m_entities.emplace(a.id, a);
-        m_entities.emplace(b.id, b);
-        m_updateQueue.push_back(a.id);
-        m_updateQueue.push_back(b.id);
-        std::cout << "[OverteClient] Simulation mode enabled (STARWORLD_SIMULATE=1)" << std::endl;
+        // Seed a few demo entities with different types and properties
+        OverteEntity cubeA;
+        cubeA.id = m_nextEntityId++;
+        cubeA.name = "CubeA";
+        cubeA.type = EntityType::Box;
+        cubeA.color = glm::vec3(1.0f, 0.3f, 0.3f); // Red cube
+        cubeA.dimensions = glm::vec3(0.2f, 0.2f, 0.2f);
+        cubeA.transform = glm::translate(glm::mat4(1.0f), glm::vec3(-0.5f, 1.5f, -2.0f));
+        
+        OverteEntity sphereB;
+        sphereB.id = m_nextEntityId++;
+        sphereB.name = "SphereB";
+        sphereB.type = EntityType::Sphere;
+        sphereB.color = glm::vec3(0.3f, 1.0f, 0.3f); // Green sphere
+        sphereB.dimensions = glm::vec3(0.15f, 0.15f, 0.15f);
+        sphereB.transform = glm::translate(glm::mat4(1.0f), glm::vec3(0.5f, 1.5f, -2.0f));
+        
+        OverteEntity modelC;
+        modelC.id = m_nextEntityId++;
+        modelC.name = "ModelC";
+        modelC.type = EntityType::Model;
+        modelC.color = glm::vec3(0.3f, 0.3f, 1.0f); // Blue tint
+        modelC.dimensions = glm::vec3(0.25f, 0.25f, 0.25f);
+        modelC.modelUrl = "https://example.com/model.glb"; // Placeholder
+        modelC.transform = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 1.2f, -2.0f));
+        
+        m_entities.emplace(cubeA.id, cubeA);
+        m_entities.emplace(sphereB.id, sphereB);
+        m_entities.emplace(modelC.id, modelC);
+        m_updateQueue.push_back(cubeA.id);
+        m_updateQueue.push_back(sphereB.id);
+        m_updateQueue.push_back(modelC.id);
+        std::cout << "[OverteClient] Simulation mode enabled (STARWORLD_SIMULATE=1) with 3 demo entities" << std::endl;
     } else {
         std::cout << "[OverteClient] Waiting for entity packets from Overte server..." << std::endl;
         std::cout << "[OverteClient] Tip: Set STARWORLD_SIMULATE=1 to enable demo entities" << std::endl;
@@ -478,17 +503,40 @@ void OverteClient::parseEntityPacket(const char* data, size_t len) {
                 offset += 12;
             }
             
+            // Parse entity type (optional, u8)
+            EntityType entityType = EntityType::Box; // Default
+            if (offset + 1 <= len) {
+                uint8_t typeCode = static_cast<uint8_t>(data[offset++]);
+                // Map Overte entity type codes to our enum
+                // 0=Unknown, 1=Box, 2=Sphere, 3=Model, etc.
+                if (typeCode <= static_cast<uint8_t>(EntityType::Material)) {
+                    entityType = static_cast<EntityType>(typeCode);
+                }
+            }
+            
             // Build transform matrix from position, rotation, scale
             glm::mat4 transform = glm::mat4(1.0f);
             transform = glm::translate(transform, position);
             transform = transform * glm::mat4_cast(rotation);
             transform = glm::scale(transform, dimensions);
             
-            OverteEntity entity{entityId, name, transform};
+            // Create entity with all properties
+            OverteEntity entity;
+            entity.id = entityId;
+            entity.name = name;
+            entity.transform = transform;
+            entity.type = entityType;
+            entity.modelUrl = modelUrl;
+            entity.textureUrl = textureUrl;
+            entity.color = color;
+            entity.dimensions = dimensions;
+            entity.alpha = 1.0f; // Default fully opaque
+            
             m_entities[entityId] = entity;
             m_updateQueue.push_back(entityId);
             
             std::cout << "[OverteClient] Entity added: " << name << " (id=" << entityId << ")" << std::endl;
+            std::cout << "  Type: " << static_cast<int>(entityType) << std::endl;
             std::cout << "  Position: (" << position.x << ", " << position.y << ", " << position.z << ")" << std::endl;
             std::cout << "  Rotation: (" << rotation.x << ", " << rotation.y << ", " << rotation.z << ", " << rotation.w << ")" << std::endl;
             std::cout << "  Dimensions: (" << dimensions.x << ", " << dimensions.y << ", " << dimensions.z << ")" << std::endl;
