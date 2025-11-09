@@ -10,7 +10,7 @@ use glam::Mat4;
 use stardust_xr_asteroids as ast; // alias for brevity
 use stardust_xr_asteroids::{
     client::ClientState,
-    elements::{PlaySpace, Model},
+    elements::{PlaySpace, Model, Lines},
     Migrate, Reify,
 };
 use stardust_xr_asteroids::{CustomElement, Transformable, Projector, Context};
@@ -107,7 +107,7 @@ impl Reify for BridgeState {
                     Some((
                         *id,
                         Model::namespaced("fusion", "tex_cube")
-                            .part(ModelPart::new("").mat_param("color", MaterialParameter::Color(node_color)))
+                            .part(ModelPart::new("Cube").mat_param("color", MaterialParameter::Color(node_color)))
                             .pos([trans.x, trans.y, trans.z])
                             .rot([rot.x, rot.y, rot.z, rot.w])
                             .scl([vis_scale.x, vis_scale.y, vis_scale.z])
@@ -120,7 +120,7 @@ impl Reify for BridgeState {
                     Some((
                         *id,
                         Model::namespaced("fusion", "tex_cube")
-                            .part(ModelPart::new("").mat_param("color", MaterialParameter::Color(node_color)))
+                            .part(ModelPart::new("Cube").mat_param("color", MaterialParameter::Color(node_color)))
                             .pos([trans.x, trans.y, trans.z])
                             .rot([rot.x, rot.y, rot.z, rot.w])
                             .scl([vis_scale.x, vis_scale.y, vis_scale.z])
@@ -132,7 +132,7 @@ impl Reify for BridgeState {
                     Some((
                         *id,
                         Model::namespaced("fusion", "gyro")
-                            .part(ModelPart::new("").mat_param("color", MaterialParameter::Color(node_color)))
+                            .part(ModelPart::new("Cube").mat_param("color", MaterialParameter::Color(node_color)))
                             .pos([trans.x, trans.y, trans.z])
                             .rot([rot.x, rot.y, rot.z, rot.w])
                             .scl([vis_scale.x, vis_scale.y, vis_scale.z])
@@ -145,7 +145,7 @@ impl Reify for BridgeState {
                     Some((
                         *id,
                         Model::namespaced("fusion", "tex_cube")
-                            .part(ModelPart::new("").mat_param("color", MaterialParameter::Color(default_color)))
+                            .part(ModelPart::new("Cube").mat_param("color", MaterialParameter::Color(node_color)))
                             .pos([trans.x, trans.y, trans.z])
                             .rot([rot.x, rot.y, rot.z, rot.w])
                             .scl([vis_scale.x, vis_scale.y, vis_scale.z])
