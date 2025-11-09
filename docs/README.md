@@ -7,6 +7,7 @@ This directory contains all project documentation organized by topic.
 ### Getting Started
 - **[../README.md](../README.md)** - Main project README with quick start guide
 - **[DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md)** - Developer quick reference with commands and tips
+- **[DIRECTORY_STRUCTURE.md](DIRECTORY_STRUCTURE.md)** - Project organization and file layout
 
 ### Project Information
 - **[CHANGELOG.md](CHANGELOG.md)** - Version history and changes
