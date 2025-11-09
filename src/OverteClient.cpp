@@ -178,17 +178,30 @@ bool OverteClient::connect() {
         std::cout << "[OverteClient] Continuing as anonymous user" << std::endl;
     }
     
-    // Parse ws://host:port
+    // Parse ws://host:port or host:port format
     std::string url = m_domainUrl;
     if (url.empty()) url = "ws://127.0.0.1:40102";
     if (url.rfind("ws://", 0) == 0) url = url.substr(5);
+    
+    // Parse host:port, potentially with path/coords (e.g., "host:40104/0,0,0/0,0,0,1")
+    auto slashPos = url.find('/');
+    if (slashPos != std::string::npos) {
+        url = url.substr(0, slashPos); // Strip position/orientation coords
+    }
+    
     auto colon = url.find(':');
     m_host = colon == std::string::npos ? url : url.substr(0, colon);
-    m_port = colon == std::string::npos ? 40102 : std::stoi(url.substr(colon + 1));
+    
+    // If port is specified in URL, use it as UDP port (Overte domain format)
+    // Otherwise default to 40102 for HTTP
+    int urlPort = colon == std::string::npos ? 40102 : std::stoi(url.substr(colon + 1));
     
     // Check for environment override for UDP port (domain server UDP port)
     const char* portEnv = std::getenv("OVERTE_UDP_PORT");
-    int udpPort = portEnv ? std::atoi(portEnv) : 40104; // Default to 40104 for Overte domain UDP
+    int udpPort = portEnv ? std::atoi(portEnv) : urlPort; // Use URL port as UDP if not overridden
+    
+    // HTTP port is typically UDP port - 2 (40102 for UDP 40104)
+    m_port = udpPort - 2;
     
     std::cout << "[OverteClient] Connecting to domain at " << m_host 
               << " (HTTP:" << m_port << ", UDP:" << udpPort << ")" << std::endl;
