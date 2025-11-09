@@ -31,7 +31,7 @@ private:
     std::string m_accessToken;
     std::string m_refreshToken;
     std::string m_username;
-    uint64_t m_tokenExpiresAt{0}; // Unix timestamp
+    std::uint64_t m_tokenExpiresAt{0}; // Unix timestamp
     
     // libcurl callback for writing response data
     static size_t writeCallback(void* contents, size_t size, size_t nmemb, void* userp);
