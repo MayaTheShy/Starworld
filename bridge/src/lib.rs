@@ -72,13 +72,11 @@ impl ClientState for BridgeState {
 
 impl Reify for BridgeState {
     fn reify(&self) -> impl ast::Element<Self> {
-        use stardust_xr_fusion::values::color::rgba_linear;
+        use stardust_xr_fusion::values::{rgba_linear, Vector3};
         use stardust_xr_fusion::drawable::{Line, LinePoint};
-        use stardust_xr_fusion::values::Vector3;
         
         eprintln!("[bridge/reify] Reifying {} nodes", self.nodes.len());
         
-        // Create simple wireframe cubes (12 edges)
         fn create_wireframe_cube(color: stardust_xr_fusion::values::Color, thickness: f32) -> Vec<Line> {
             let h = 0.5; // half size
             let points = [
@@ -113,8 +111,6 @@ impl Reify for BridgeState {
                 return None;
             }
             
-            eprintln!("[bridge/reify] Creating wireframe for node {} type={}", id, node.entity_type);
-            
             let (scale, rot, trans) = node.transform.to_scale_rotation_translation();
             let vis_scale = if dims.length() > 0.001 { dims } else { scale };
             let node_color = rgba_linear!(node.color[0], node.color[1], node.color[2], node.color[3]);
@@ -124,15 +120,67 @@ impl Reify for BridgeState {
             let scale_array = [vis_scale.x, vis_scale.y, vis_scale.z];
             let transform = stardust_xr_fusion::spatial::Transform::from_translation_rotation_scale(trans_array, rot_array, scale_array);
             
-            let cube_lines = create_wireframe_cube(node_color, 0.003);
-            
-            Some((
-                *id,
-                Spatial::default()
-                    .transform(transform)
-                    .build()
-                    .child(Lines::new(cube_lines).build())
-            ))
+            // Create appropriate visual based on entity type
+            match node.entity_type {
+                1 => {
+                    // Box - use cube model with color
+                    eprintln!("[bridge/reify] Creating box model for node {}", id);
+                    let model = Model::namespaced("fusion", "tex_cube")
+                        .transform(transform)
+                        .part(
+                            ModelPart::new("Cube")
+                                .mat_param("color", MaterialParameter::Color(node_color))
+                        );
+                    Some((*id, model.build()))
+                }
+                2 => {
+                    // Sphere - use sphere model with color
+                    eprintln!("[bridge/reify] Creating sphere model for node {}", id);
+                    let model = Model::namespaced("fusion", "tex_sphere")
+                        .transform(transform)
+                        .part(
+                            ModelPart::new("Sphere")
+                                .mat_param("color", MaterialParameter::Color(node_color))
+                        );
+                    Some((*id, model.build()))
+                }
+                3 => {
+                    // Model - use model URL if available, fallback to cube
+                    if !node.model_url.is_empty() {
+                        eprintln!("[bridge/reify] Creating model from URL for node {}: {}", id, node.model_url);
+                        // For now, use a fallback model since we can't load arbitrary URLs yet
+                        // TODO: Implement model loading and caching
+                        let model = Model::namespaced("fusion", "gyro")
+                            .transform(transform)
+                            .part(
+                                ModelPart::new("Gem")
+                                    .mat_param("color", MaterialParameter::Color(node_color))
+                            );
+                        Some((*id, model.build()))
+                    } else {
+                        eprintln!("[bridge/reify] Creating fallback cube for node {} (no model URL)", id);
+                        let model = Model::namespaced("fusion", "tex_cube")
+                            .transform(transform)
+                            .part(
+                                ModelPart::new("Cube")
+                                    .mat_param("color", MaterialParameter::Color(node_color))
+                            );
+                        Some((*id, model.build()))
+                    }
+                }
+                _ => {
+                    // Unknown or unsupported type - render as wireframe
+                    eprintln!("[bridge/reify] Creating wireframe for node {} type={}", id, node.entity_type);
+                    let cube_lines = create_wireframe_cube(node_color, 0.003);
+                    Some((
+                        *id,
+                        Spatial::default()
+                            .transform(transform)
+                            .build()
+                            .child(Lines::new(cube_lines).build())
+                    ))
+                }
+            }
         });
 
         PlaySpace.build().stable_children(children)
