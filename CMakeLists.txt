@@ -26,6 +26,7 @@ add_executable(stardust-overte-client
     src/InputHandler.cpp
     src/NLPacketCodec.cpp
     src/DomainDiscovery.cpp
+    src/ModelCache.cpp
  )
 
 add_executable(stardust-tests
