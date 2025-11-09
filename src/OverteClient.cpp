@@ -21,6 +21,7 @@
 #include <fcntl.h>
 #include <cstring>
 #include <zlib.h>
+#include <endian.h>
 
 using namespace std::chrono_literals;
 using namespace Overte;
@@ -1206,6 +1207,12 @@ void OverteClient::sendPing(int fd, const sockaddr_storage& addr, socklen_t addr
 void OverteClient::sendEntityQuery() {
     if (!m_udpReady || m_udpFd == -1) return;
     
+    // Use entity server address if available, otherwise fall back to domain server
+    const sockaddr_storage* targetAddr = m_entityServerPort != 0 ? 
+        &m_entityServerAddr : &m_udpAddr;
+    socklen_t targetAddrLen = m_entityServerPort != 0 ?
+        m_entityServerAddrLen : m_udpAddrLen;
+    
     // Create EntityQuery packet (PacketType::EntityQuery = 0x29)
     NLPacket packet(PacketType::EntityQuery, 0, true);
     // Include our local ID (sourced packet)
@@ -1276,10 +1283,19 @@ void OverteClient::sendEntityQuery() {
     
     const auto& data = packet.getData();
     ssize_t s = ::sendto(m_udpFd, data.data(), data.size(), 0, 
-                         reinterpret_cast<sockaddr*>(&m_udpAddr), m_udpAddrLen);
+                         reinterpret_cast<const sockaddr*>(targetAddr), targetAddrLen);
     
     if (s > 0) {
-        std::cout << "[OverteClient] Sent EntityQuery (" << s << " bytes, seq=" << (m_sequenceNumber-1) << ")" << std::endl;
+        char addrStr[INET_ADDRSTRLEN] = "unknown";
+        if (targetAddr->ss_family == AF_INET) {
+            const sockaddr_in* sin = reinterpret_cast<const sockaddr_in*>(targetAddr);
+            inet_ntop(AF_INET, &sin->sin_addr, addrStr, sizeof(addrStr));
+        }
+        
+        const char* targetName = (m_entityServerPort != 0) ? "entity-server" : "domain-server";
+        std::cout << "[OverteClient] Sent EntityQuery to " << targetName 
+                  << " (" << addrStr << ":" << ntohs(reinterpret_cast<const sockaddr_in*>(targetAddr)->sin_port)
+                  << ", " << s << " bytes, seq=" << (m_sequenceNumber-1) << ")" << std::endl;
     } else {
         std::cerr << "[OverteClient] Failed to send EntityQuery: " << strerror(errno) << std::endl;
     }
