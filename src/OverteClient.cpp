@@ -811,28 +811,8 @@ void OverteClient::handleDomainListReply(const char* data, size_t len) {
     
     // Send EntityQuery to request entity data from the server
     std::cout << "[OverteClient] Domain connected! Sending entity query..." << std::endl;
+    std::cout << "[OverteClient] Waiting to receive entities from server..." << std::endl;
     sendEntityQuery();
-    
-    // Create 3 test entities after connection
-    std::cout << "[OverteClient] Creating 3 test entities..." << std::endl;
-    
-    // Red Box at origin
-    createEntity("Red Box", EntityType::Box, 
-                 glm::vec3(0.0f, 1.5f, -2.0f),      // position
-                 glm::vec3(0.5f, 0.5f, 0.5f),       // dimensions
-                 glm::vec3(1.0f, 0.4f, 0.4f));      // red color
-    
-    // Green Sphere to the right
-    createEntity("Green Sphere", EntityType::Sphere,
-                 glm::vec3(1.2f, 1.5f, -2.0f),      // position
-                 glm::vec3(0.4f, 0.4f, 0.4f),       // dimensions
-                 glm::vec3(0.4f, 1.0f, 0.4f));      // green color
-    
-    // Blue Box to the left (tall)
-    createEntity("Blue Box", EntityType::Box,
-                 glm::vec3(-1.2f, 1.5f, -2.0f),     // position
-                 glm::vec3(0.3f, 0.8f, 0.3f),       // dimensions (tall)
-                 glm::vec3(0.4f, 0.4f, 1.0f));      // blue color
     
     // Read number of nodes - Qt QDataStream format (signed int32, big-endian)
     // But for node list, Overte uses a special encoding
