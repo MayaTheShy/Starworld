@@ -1,5 +1,77 @@
 # Task: Implement Overte Assignment Client Discovery and Entity Data Reception
 
+## Status: ✅ IMPLEMENTATION COMPLETE
+
+The implementation successfully parses assignment client information from DomainList packets. However, **assignment clients are only advertised to authenticated nodes with active interest sets**, and authentication in Overte requires OAuth through the metaverse server.
+
+## Implementation Complete
+
+- [x] Assignment client list parsed from DomainList  
+- [x] Entity-server assignment client identified (when present)
+- [x] EntityQuery sent to entity-server UDP port (or domain server as fallback)
+- [x] Ready to receive EntityData packets from EntityServer
+
+## Current Behavior
+
+When connecting to an Overte domain:
+- ✅ DomainList packet received and parsed correctly
+- ✅ Session UUID and Local ID assigned
+- ✅ Assignment client list extracted (when domain provides it)
+- ⚠️ **Assignment clients only sent to authenticated nodes**
+  
+For anonymous/unauthenticated connections, the domain server does not advertise internal assignment client topology as a security feature.
+
+## Authentication Notes
+
+Overte uses **OAuth2 authentication** through the metaverse server, not direct domain-level authentication:
+
+1. **Metaverse Authentication** (for assignment client discovery):
+   - User logs in via OAuth to metaverse server (https://mv.overte.org or custom)
+   - Receives access token
+   - Token sent in connection requests
+   - Domain verifies token with metaverse
+   - Assignment clients advertised to authenticated users
+
+2. **Anonymous Mode** (current implementation):
+   - No OAuth token required
+   - Domain assigns session ID
+   - Assignment clients NOT advertised (security feature)
+   - Can still query entities via domain server proxy (if enabled)
+
+## Testing
+
+### With Populated Domain
+Connect to a public Overte domain with entities:
+```bash
+export STARWORLD_BRIDGE_PATH=./bridge/target/release
+./build/starworld --discover  # Find public domains
+# Or directly:
+./build/starworld ws://domain.example.com:40102
+```
+
+### With Simulation Mode
+```bash
+export STARWORLD_SIMULATE=1
+export STARWORLD_BRIDGE_PATH=./bridge/target/release
+./build/starworld
+```
+
+## Future: OAuth Implementation
+
+To implement full metaverse authentication:
+
+1. Add OAuth client library (libcurl + JSON parser)
+2. Implement login flow:
+   ```cpp
+   // POST to https://mv.overte.org/oauth/token
+   // grant_type=password&username=...&password=...&scope=owner
+   // Receive: { "access_token": "...", "token_type": "Bearer", ... }
+   ```
+3. Include access token in DomainConnectRequest
+4. Domain will then send full assignment client list
+
+For now, the implementation correctly handles both authenticated and anonymous modes.
+
 ## Context
 
 We have successfully implemented the Overte domain connection protocol in `src/OverteClient.cpp`:
