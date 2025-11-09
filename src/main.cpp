@@ -56,12 +56,48 @@ int main(int argc, char** argv) {
                           << " -> ws://" << d.networkHost << ":" << d.httpPort
                           << " (udp:" << d.udpPort << ")" << std::endl;
             }
-            // Choose first candidate by default; allow override index via env
-            int choice = 0;
-            if (const char* envIdx = std::getenv("OVERTE_DISCOVER_INDEX")) {
-                try { choice = std::stoi(envIdx); } catch (...) {}
-                if (choice < 0 || choice >= (int)domains.size()) choice = 0;
+            
+            // Probe for reachability unless disabled
+            bool probeEnabled = true;
+            if (const char* envProbe = std::getenv("OVERTE_DISCOVER_PROBE")) {
+                if (std::string(envProbe) == "0" || std::string(envProbe) == "false") probeEnabled = false;
             }
+            
+            int choice = -1;
+            if (probeEnabled) {
+                std::cout << "[Discovery] Probing domains for reachability..." << std::endl;
+                for (size_t i = 0; i < domains.size(); ++i) {
+                    std::cout << "[Discovery] Probing [" << i << "] " << domains[i].networkHost << ":" << domains[i].httpPort << "... " << std::flush;
+                    if (probeDomain(domains[i])) {
+                        std::cout << "REACHABLE" << std::endl;
+                        choice = static_cast<int>(i);
+                        break;
+                    } else {
+                        std::cout << "unreachable" << std::endl;
+                    }
+                }
+                if (choice < 0) {
+                    std::cout << "[Discovery] No reachable domains found; using first candidate anyway." << std::endl;
+                    choice = 0;
+                }
+            } else {
+                std::cout << "[Discovery] Probing disabled; selecting first candidate." << std::endl;
+                choice = 0;
+            }
+            
+            // Allow override index via env (supersedes probe)
+            if (const char* envIdx = std::getenv("OVERTE_DISCOVER_INDEX")) {
+                try { 
+                    int manualChoice = std::stoi(envIdx);
+                    if (manualChoice >= 0 && manualChoice < (int)domains.size()) {
+                        choice = manualChoice;
+                        std::cout << "[Discovery] Manual override: selecting index " << choice << std::endl;
+                    }
+                } catch (...) {}
+            }
+            
+            if (choice < 0 || choice >= (int)domains.size()) choice = 0;
+            
             const auto& pick = domains[choice];
             overteUrl = std::string("ws://") + pick.networkHost + ":" + std::to_string(pick.httpPort);
             // Pass UDP override via env for this process lifetime
