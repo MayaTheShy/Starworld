@@ -484,19 +484,101 @@ void OverteClient::parseEntityPacket(const char* data, size_t len) {
 }
 
 void OverteClient::handleDomainListReply(const char* data, size_t len) {
-    // DomainList packet contains mixer endpoints
-    // Format: [NumNodes:u8] followed by sequence of:
-    // [NodeType:u8][UUID:16bytes][PublicSocket:sockaddr][LocalSocket:sockaddr]
+    // DomainList packet format (from Overte NodeList.cpp):
+    // 1. Domain UUID (16 bytes)
+    // 2. Session UUID (16 bytes) 
+    // 3. Domain Local ID (16 bits)
+    // 4. Permissions (32 bits)
+    // 5. Authenticated (bool)
+    // 6. Number of nodes (varies)
+    // 7. Node data...
+    
     std::cout << "[OverteClient] DomainList reply received (" << len << " bytes)" << std::endl;
     
-    if (len < 1) return;
+    if (len < 37) { // Min: 16 (UUID) + 16 (session) + 2 (localID) + 4 (perms) + 1 (auth) = 39, but let's check for 37
+        std::cout << "[OverteClient] DomainList packet too short" << std::endl;
+        return;
+    }
     
-    unsigned char numNodes = static_cast<unsigned char>(data[0]);
-    std::cout << "[OverteClient] Number of assignment clients: " << (int)numNodes << std::endl;
+    size_t offset = 0;
     
-    size_t offset = 1;
+    // Read domain UUID
+    if (offset + 16 > len) return;
+    char domainUUID[33];
+    snprintf(domainUUID, sizeof(domainUUID),
+             "%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
+             (unsigned char)data[offset], (unsigned char)data[offset+1],
+             (unsigned char)data[offset+2], (unsigned char)data[offset+3],
+             (unsigned char)data[offset+4], (unsigned char)data[offset+5],
+             (unsigned char)data[offset+6], (unsigned char)data[offset+7],
+             (unsigned char)data[offset+8], (unsigned char)data[offset+9],
+             (unsigned char)data[offset+10], (unsigned char)data[offset+11],
+             (unsigned char)data[offset+12], (unsigned char)data[offset+13],
+             (unsigned char)data[offset+14], (unsigned char)data[offset+15]);
+    offset += 16;
     
-    for (int i = 0; i < numNodes && offset < len; ++i) {
+    std::cout << "[OverteClient] Domain UUID: " << domainUUID << std::endl;
+    
+    // Read session UUID
+    if (offset + 16 > len) return;
+    char sessionUUID[33];
+    snprintf(sessionUUID, sizeof(sessionUUID),
+             "%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
+             (unsigned char)data[offset], (unsigned char)data[offset+1],
+             (unsigned char)data[offset+2], (unsigned char)data[offset+3],
+             (unsigned char)data[offset+4], (unsigned char)data[offset+5],
+             (unsigned char)data[offset+6], (unsigned char)data[offset+7],
+             (unsigned char)data[offset+8], (unsigned char)data[offset+9],
+             (unsigned char)data[offset+10], (unsigned char)data[offset+11],
+             (unsigned char)data[offset+12], (unsigned char)data[offset+13],
+             (unsigned char)data[offset+14], (unsigned char)data[offset+15]);
+    offset += 16;
+    
+    std::cout << "[OverteClient] Session UUID: " << sessionUUID << std::endl;
+    
+    // Read domain local ID (16-bit)
+    if (offset + 2 > len) return;
+    uint16_t localID = ntohs(*reinterpret_cast<const uint16_t*>(data + offset));
+    offset += 2;
+    
+    std::cout << "[OverteClient] Local ID: " << localID << std::endl;
+    
+    // Read permissions (32-bit)
+    if (offset + 4 > len) return;
+    uint32_t permissions = ntohl(*reinterpret_cast<const uint32_t*>(data + offset));
+    offset += 4;
+    
+    std::cout << "[OverteClient] Permissions: 0x" << std::hex << permissions << std::dec << std::endl;
+    
+    // Read authenticated flag
+    if (offset + 1 > len) return;
+    bool authenticated = data[offset++];
+    
+    std::cout << "[OverteClient] Authenticated: " << (authenticated ? "yes" : "no") << std::endl;
+    
+    // Now mark as connected since we got a valid DomainList
+    m_domainConnected = true;
+    
+    // Read number of nodes - this might be encoded as QDataStream int
+    if (offset + 4 > len) return;
+    uint32_t numNodes = ntohl(*reinterpret_cast<const uint32_t*>(data + offset));
+    offset += 4;
+    
+    std::cout << "[OverteClient] Number of assignment clients: " << numNodes << std::endl;
+    
+    // If numNodes seems too large, it might be a different encoding
+    if (numNodes > 100) {
+        std::cout << "[OverteClient] Warning: Suspicious node count, packet format may be incorrect" << std::endl;
+        // Dump remaining bytes for analysis
+        std::cout << "[OverteClient] Remaining bytes: ";
+        for (size_t i = offset - 4; i < std::min(offset + 20, len); i++) {
+            printf("%02x ", (unsigned char)data[i]);
+        }
+        std::cout << std::endl;
+        return;
+    }
+    
+    for (uint32_t i = 0; i < numNodes && offset < len; ++i) {
         // Read NodeType
         if (offset + 1 > len) break;
         unsigned char nodeType = static_cast<unsigned char>(data[offset++]);
