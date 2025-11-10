@@ -420,10 +420,8 @@ void OverteClient::poll() {
         auto now = std::chrono::steady_clock::now();
         
         if (std::chrono::duration_cast<std::chrono::seconds>(now - lastPing).count() >= 1) {
-            // EXPERIMENTAL: Send DomainListRequest instead of Ping to avoid HMAC verification issues
-            // DomainListRequest is non-sourced and non-verified
-            std::cout << "[OverteClient] Sending periodic DomainListRequest (keep-alive, localID=" << m_localID << ")" << std::endl;
-            sendDomainListRequest();
+            std::cout << "[OverteClient] Sending periodic ping to domain (localID=" << m_localID << ")" << std::endl;
+            sendPing(m_udpFd, m_udpAddr, m_udpAddrLen);
             lastPing = now;
         }
         
