@@ -1601,3 +1601,164 @@ void OverteClient::createEntity(const std::string& name, EntityType type, const 
         std::cerr << "[OverteClient] Failed to send EntityAdd: " << strerror(errno) << std::endl;
     }
 }
+
+// ============================================================================
+// Avatar Mixer Protocol Implementation
+// ============================================================================
+
+void OverteClient::sendAvatarIdentity() {
+    if (!m_avatarMixerConnected || m_avatarMixerPort == 0) return;
+    
+    std::cout << "[OverteClient] Sending AvatarIdentity to Avatar Mixer..." << std::endl;
+    
+    // Create AvatarIdentity packet (PacketType::AvatarIdentity = 29 = 0x1D)
+    NLPacket packet(PacketType::AvatarIdentity, m_sequenceNumber++, true);
+    
+    // Include our local ID (sourced packet)
+    if (m_localID != 0) {
+        packet.setSourceID(m_localID);
+    }
+    
+    // AvatarIdentity payload format (simplified):
+    // 1. Identity sequence number (uint16)
+    // 2. Display name (QString - length-prefixed UTF-8)
+    // 3. Avatar URL (QString) - optional, can be empty
+    // 4. Skeleton model URL (QString) - optional
+    // Additional fields exist but are optional for basic connection
+    
+    std::vector<uint8_t> payload;
+    
+    auto writeU16BE = [&](uint16_t v) {
+        payload.push_back((v >> 8) & 0xFF);
+        payload.push_back(v & 0xFF);
+    };
+    
+    auto writeQString = [&](const std::string& str) {
+        // Qt QString serialization: int32 size (bytes), then UTF-8 data
+        uint32_t size = str.size();
+        payload.push_back((size >> 24) & 0xFF);
+        payload.push_back((size >> 16) & 0xFF);
+        payload.push_back((size >> 8) & 0xFF);
+        payload.push_back(size & 0xFF);
+        payload.insert(payload.end(), str.begin(), str.end());
+    };
+    
+    // 1. Identity sequence number
+    writeU16BE(m_avatarIdentitySequence++);
+    
+    // 2. Display name
+    std::string displayName = m_username.empty() ? "StarworldClient" : m_username;
+    writeQString(displayName);
+    
+    // 3. Avatar URL (empty for now - uses default avatar)
+    writeQString("");
+    
+    // 4. Skeleton model URL (empty)
+    writeQString("");
+    
+    // Write payload to packet
+    if (!payload.empty()) {
+        packet.write(payload.data(), payload.size());
+    }
+    
+    const auto& data = packet.getData();
+    ssize_t s = ::sendto(m_udpFd, data.data(), data.size(), 0,
+                         reinterpret_cast<sockaddr*>(&m_avatarMixerAddr), m_avatarMixerAddrLen);
+    
+    if (s > 0) {
+        m_identitySent = true;
+        std::cout << "[OverteClient] Sent AvatarIdentity (" << s << " bytes, name=" << displayName << ")" << std::endl;
+    } else {
+        std::cerr << "[OverteClient] Failed to send AvatarIdentity: " << strerror(errno) << std::endl;
+    }
+}
+
+void OverteClient::sendAvatarData() {
+    if (!m_avatarMixerConnected || m_avatarMixerPort == 0) return;
+    
+    std::cout << "[OverteClient] Sending AvatarData to Avatar Mixer..." << std::endl;
+    
+    // Create AvatarData packet (PacketType::AvatarData = 6 = 0x06)
+    NLPacket packet(PacketType::AvatarData, m_sequenceNumber++, true);
+    
+    // Include our local ID (sourced packet)
+    if (m_localID != 0) {
+        packet.setSourceID(m_localID);
+    }
+    
+    // AvatarData payload format (MINIMAL version):
+    // 1. Avatar data sequence number (uint16)
+    // 2. HasFlags (uint64) - bitfield indicating which data is included
+    // 3. Global position (vec3 - 3x float32) if PACKET_HAS_AVATAR_GLOBAL_POSITION
+    // 4. Avatar orientation (quaternion - 4x float16 compressed) if PACKET_HAS_AVATAR_ORIENTATION
+    // ... many more optional fields
+    
+    // HasFlags bit definitions (from AvatarDataPacket.h):
+    const uint64_t PACKET_HAS_AVATAR_GLOBAL_POSITION = 1ULL << 0;  // 0x0001
+    const uint64_t PACKET_HAS_AVATAR_ORIENTATION = 1ULL << 2;       // 0x0004
+    
+    std::vector<uint8_t> payload;
+    
+    auto writeU16BE = [&](uint16_t v) {
+        payload.push_back((v >> 8) & 0xFF);
+        payload.push_back(v & 0xFF);
+    };
+    
+    auto writeU64BE = [&](uint64_t v) {
+        for (int i = 7; i >= 0; i--) {
+            payload.push_back((v >> (i * 8)) & 0xFF);
+        }
+    };
+    
+    auto writeFloat32BE = [&](float v) {
+        uint32_t bits;
+        std::memcpy(&bits, &v, sizeof(float));
+        payload.push_back((bits >> 24) & 0xFF);
+        payload.push_back((bits >> 16) & 0xFF);
+        payload.push_back((bits >> 8) & 0xFF);
+        payload.push_back(bits & 0xFF);
+    };
+    
+    // 1. Avatar data sequence number
+    writeU16BE(m_avatarDataSequence++);
+    
+    // 2. HasFlags - we're only sending position for now
+    uint64_t hasFlags = PACKET_HAS_AVATAR_GLOBAL_POSITION | PACKET_HAS_AVATAR_ORIENTATION;
+    writeU64BE(hasFlags);
+    
+    // 3. Global position (x, y, z in meters)
+    writeFloat32BE(m_avatarPosition.x);
+    writeFloat32BE(m_avatarPosition.y);
+    writeFloat32BE(m_avatarPosition.z);
+    
+    // 4. Avatar orientation (quaternion - for simplicity, send as full float32 for now)
+    // TODO: Compress to float16 as Overte does
+    writeFloat32BE(m_avatarOrientation.x);
+    writeFloat32BE(m_avatarOrientation.y);
+    writeFloat32BE(m_avatarOrientation.z);
+    writeFloat32BE(m_avatarOrientation.w);
+    
+    // Write payload to packet
+    if (!payload.empty()) {
+        packet.write(payload.data(), payload.size());
+    }
+    
+    const auto& data = packet.getData();
+    ssize_t s = ::sendto(m_udpFd, data.data(), data.size(), 0,
+                         reinterpret_cast<sockaddr*>(&m_avatarMixerAddr), m_avatarMixerAddrLen);
+    
+    if (s > 0) {
+        std::cout << "[OverteClient] Sent AvatarData (" << s << " bytes, pos=[" 
+                  << m_avatarPosition.x << "," << m_avatarPosition.y << "," << m_avatarPosition.z << "])" << std::endl;
+    } else {
+        std::cerr << "[OverteClient] Failed to send AvatarData: " << strerror(errno) << std::endl;
+    }
+}
+
+void OverteClient::handleAvatarMixerPacket(const char* data, size_t len, uint8_t packetType) {
+    std::cout << "[OverteClient] Processing Avatar Mixer packet type " << (int)packetType << " (" << len << " bytes)" << std::endl;
+    
+    // For now, just log that we received something from the Avatar Mixer
+    // The entity data should come through this connection!
+    // TODO: Parse BulkAvatarData and look for entity updates within it
+}
