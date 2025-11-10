@@ -1089,15 +1089,25 @@ void OverteClient::handleDomainListReply(const char* data, size_t len) {
         std::cout << "[OverteClient] Warning: No EntityServer found in assignment client list" << std::endl;
         std::cout << "[OverteClient] This might be expected for non-authenticated connections." << std::endl;
         
-        // Try hardcoded EntityServer port 48247 (common default)
-        std::cout << "[OverteClient] Trying hardcoded EntityServer port 48247..." << std::endl;
-        m_entityServerPort = 48247;
-        std::memcpy(&m_entityServerAddr, &m_udpAddr, m_udpAddrLen);
-        reinterpret_cast<sockaddr_in*>(&m_entityServerAddr)->sin_port = htons(48247);
-        m_entityServerAddrLen = m_udpAddrLen;
+        // Modern Overte doesn't advertise assignment clients in DomainList anymore
+        // Instead, we broadcast EntityQuery to common assignment client ports
+        std::cout << "[OverteClient] Broadcasting EntityQuery to discover EntityServer..." << std::endl;
         
-        std::cout << "[OverteClient] Sending EntityQuery to 127.0.0.1:48247..." << std::endl;
-        sendEntityQuery();
+        // Try common assignment client ports (from netstat output)
+        std::vector<uint16_t> commonPorts = {
+            57236, 48987, 51757, 50776, 38519, 50165, 43845, 
+            36358, 55365, 48851, 33120, 37739
+        };
+        
+        for (uint16_t port : commonPorts) {
+            std::memcpy(&m_entityServerAddr, &m_udpAddr, m_udpAddrLen);
+            reinterpret_cast<sockaddr_in*>(&m_entityServerAddr)->sin_port = htons(port);
+            m_entityServerAddrLen = m_udpAddrLen;
+            m_entityServerPort = port;
+            sendEntityQuery();
+        }
+        
+        std::cout << "[OverteClient] Sent EntityQuery to " << commonPorts.size() << " potential assignment client ports" << std::endl;
     }
 }
 
