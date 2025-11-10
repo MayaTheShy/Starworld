@@ -504,6 +504,12 @@ void OverteClient::parseDomainPacket(const char* data, size_t len) {
             std::cout << "[OverteClient] Domain server requires DTLS (not yet implemented)" << std::endl;
             break;
             
+        case PacketType::Ping:
+            // Incoming ping from server - must reply to stay alive
+            std::cout << "[OverteClient] Ping received from server, sending PingReply" << std::endl;
+            handlePing(payload, payloadLen);
+            break;
+            
         case PacketType::PingReply:
             // Keep-alive ping reply
             std::cout << "[OverteClient] Ping reply received" << std::endl;
