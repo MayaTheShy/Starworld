@@ -1387,6 +1387,41 @@ void OverteClient::sendDomainListRequest() {
     }
 }
 
+void OverteClient::sendACK(uint32_t sequenceNumber) {
+    if (!m_udpReady || m_udpFd == -1) return;
+    
+    // ACK is a control packet with minimal structure:
+    // - 4 bytes: sequence+flags with Control bit (bit 31) set + sequence of ACK packet itself
+    // - 1 byte: Control packet type (0 = ACK)
+    // - 4 bytes: sequence number being acknowledged
+    
+    uint8_t ackPacket[9];
+    
+    // Control bit (bit 31) set, plus our own sequence for this ACK packet
+    uint32_t controlSeqAndFlags = 0x80000000 | (m_sequenceNumber++ & 0x7FFFFFFF);
+    ackPacket[0] = (controlSeqAndFlags >> 24) & 0xFF;
+    ackPacket[1] = (controlSeqAndFlags >> 16) & 0xFF;
+    ackPacket[2] = (controlSeqAndFlags >> 8) & 0xFF;
+    ackPacket[3] = controlSeqAndFlags & 0xFF;
+    
+    // Control packet type: ACK = 0
+    ackPacket[4] = 0;
+    
+    // Sequence number being acknowledged (big-endian)
+    ackPacket[5] = (sequenceNumber >> 24) & 0xFF;
+    ackPacket[6] = (sequenceNumber >> 16) & 0xFF;
+    ackPacket[7] = (sequenceNumber >> 8) & 0xFF;
+    ackPacket[8] = sequenceNumber & 0xFF;
+    
+    ssize_t s = ::sendto(m_udpFd, ackPacket, sizeof(ackPacket), 0,
+                         reinterpret_cast<const sockaddr*>(&m_udpAddr), m_udpAddrLen);
+    if (s < 0 && errno != EWOULDBLOCK && errno != EAGAIN) {
+        std::cerr << "[OverteClient] ACK send failed: " << strerror(errno) << std::endl;
+    } else {
+        std::cout << "[OverteClient] Sent ACK for sequence " << sequenceNumber << std::endl;
+    }
+}
+
 void OverteClient::sendPing(int fd, const sockaddr_storage& addr, socklen_t addrLen) {
     // Create NLPacket for Ping with correct version
     NLPacket packet(PacketType::Ping, PacketVersions::Ping_IncludeConnectionID, false);
