@@ -1232,11 +1232,10 @@ void OverteClient::handleDomainConnectionDenied(const char* data, size_t len) {
 void OverteClient::sendDomainConnectRequest() {
     if (!m_udpReady || m_udpFd == -1) return;
     
-    // Create NLPacket with DomainConnectRequest type and correct version
-    NLPacket packet(PacketType::DomainConnectRequest, PacketVersions::DomainConnectRequest_SocketTypes, true);
+    // DomainConnectRequest is in NON_SOURCED_PACKETS - it should NOT have a source ID field
+    // because we don't have a Local ID yet (server assigns it in DomainList response)
+    NLPacket packet(PacketType::DomainConnectRequest, PacketVersions::DomainConnectRequest_SocketTypes, false);
     packet.setSequenceNumber(m_sequenceNumber++);
-    // DomainConnectRequest is sent BEFORE we have a local ID, so don't set source ID
-    // The server will assign us an ID in the DomainList response
     
     // Build payload using Qt wire format (match Overte's NodeList.cpp structure exactly)
     QtStream qs;
