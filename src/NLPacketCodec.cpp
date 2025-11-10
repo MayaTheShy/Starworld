@@ -58,8 +58,9 @@ void NLPacket::writeHeader() {
     
     // Write source ID if sourced
     if (m_isSourced) {
-        uint16_t netSourceID = htons(m_sourceID);
-        std::memcpy(m_data.data() + offset, &netSourceID, sizeof(uint16_t));
+        // Source ID is written in LITTLE-ENDIAN (host byte order on x86)
+        // Don't use htons() - the server expects it in little-endian!
+        std::memcpy(m_data.data() + offset, &m_sourceID, sizeof(uint16_t));
         offset += sizeof(uint16_t);
     }
 }
