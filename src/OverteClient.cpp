@@ -259,11 +259,11 @@ bool OverteClient::connect() {
         return false;
     }
     
-    // Send domain connect request to initiate handshake
-    // Start with domain list request - simpler packet
+    // Send domain handshake - official client sends DomainListRequest FIRST
+    // This is a simpler packet that doesn't require full credentials
     std::cout << "[OverteClient] Initiating domain handshake..." << std::endl;
-    sendDomainConnectRequest();
     sendDomainListRequest();
+    sendDomainConnectRequest();
 
     m_useSimulation = (std::getenv("STARWORLD_SIMULATE") != nullptr);
     if (m_useSimulation) {
@@ -1206,7 +1206,8 @@ void OverteClient::sendDomainConnectRequest() {
     qs.writeQUuidFromString(m_sessionUUID);
     
     // 5. Compressed system info (QByteArray)
-    std::string sysJson = "{\"computer\":{\"OS\":\"Linux\"},\"cpus\":[{\"model\":\"Stardust\"}],\"memory\":4096,\"nics\":[],\"gpus\":[],\"displays\":[]}";
+    // Match official client format to avoid any filtering
+    std::string sysJson = "{\"computer\":{\"OS\":\"Linux\",\"vendor\":\"PC\"},\"cpus\":[{\"model\":\"Intel Core\"}],\"memory\":8192,\"nics\":[],\"gpus\":[],\"displays\":[]}";
     std::vector<uint8_t> sysBytes(sysJson.begin(), sysJson.end());
     auto sysCompressed = qCompressLike(sysBytes, Z_BEST_SPEED);
     qs.writeQByteArray(sysCompressed);
@@ -1223,10 +1224,8 @@ void OverteClient::sendDomainConnectRequest() {
     qs.writeUInt64BE(static_cast<uint64_t>(nowUs));
     
     // 9. Node type / owner type (NodeType_t)
-    // Use Unassigned (1) for regular clients, NOT 'I' (Agent)!
-    // NodeType::Agent = 'I' is for server-side bots/scripts
-    // NodeType::Unassigned = 1 is for regular Interface clients
-    qs.writeUInt8(1); // Unassigned = regular client
+    // Interface clients use NodeType::Agent = 'I' (confirmed from Application_Setup.cpp:338)
+    qs.writeUInt8(static_cast<uint8_t>('I')); // Agent (yes, Interface uses Agent type!)
     
     // Determine local UDP socket address/port (bind address if needed)
     uint32_t localIPv4 = 0x7F000001; // 127.0.0.1 fallback
@@ -1694,8 +1693,8 @@ void OverteClient::sendAvatarIdentity() {
     // 1. Identity sequence number
     writeU16BE(m_avatarIdentitySequence++);
     
-    // 2. Display name
-    std::string displayName = m_username.empty() ? "StarworldClient" : m_username;
+    // 2. Display name (use empty to match typical client behavior - server assigns default)
+    std::string displayName = m_username.empty() ? "" : m_username;
     writeQString(displayName);
     
     // 3. Avatar URL (empty for now - uses default avatar)
@@ -1716,6 +1715,11 @@ void OverteClient::sendAvatarIdentity() {
     if (s > 0) {
         m_identitySent = true;
         std::cout << "[OverteClient] Sent AvatarIdentity (" << s << " bytes, name=" << displayName << ")" << std::endl;
+        std::cout << "[OverteClient] AvatarIdentity hex (first 64 bytes): ";
+        for (size_t i = 0; i < std::min(size_t(64), data.size()); ++i) {
+            printf("%02x ", data[i]);
+        }
+        std::cout << std::endl;
     } else {
         std::cerr << "[OverteClient] Failed to send AvatarIdentity: " << strerror(errno) << std::endl;
     }
