@@ -106,6 +106,11 @@ private:
 	void sendDomainConnectRequest();
 	void sendEntityQuery();
 	void sendPing(int fd, const sockaddr_storage& addr, socklen_t addrLen);
+	
+	// Avatar Mixer protocol
+	void sendAvatarIdentity();
+	void sendAvatarData();
+	void handleAvatarMixerPacket(const char* data, size_t len, uint8_t packetType);
 
 	std::string m_domainUrl;
 	std::string m_host{"127.0.0.1"};
@@ -141,6 +146,19 @@ private:
 	sockaddr_storage m_entityServerAddr{};
 	socklen_t m_entityServerAddrLen{0};
 	uint16_t m_entityServerPort{0};
+	
+	// Avatar Mixer connection
+	sockaddr_storage m_avatarMixerAddr{};
+	socklen_t m_avatarMixerAddrLen{0};
+	uint16_t m_avatarMixerPort{0};
+	bool m_avatarMixerConnected{false};
+	
+	// Avatar state
+	glm::vec3 m_avatarPosition{0.0f, 0.0f, 0.0f};
+	glm::quat m_avatarOrientation{1.0f, 0.0f, 0.0f, 0.0f};  // Identity quaternion
+	std::uint16_t m_avatarDataSequence{0};
+	std::uint16_t m_avatarIdentitySequence{0};
+	bool m_identitySent{false};
 	
 	// EntityServer connection
 	int m_entityFd{-1};

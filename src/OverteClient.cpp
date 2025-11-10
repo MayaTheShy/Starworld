@@ -496,6 +496,20 @@ void OverteClient::parseDomainPacket(const char* data, size_t len) {
         case PacketType::EntityQueryInitialResultsComplete:
             std::cout << "[OverteClient] Entity query initial results complete" << std::endl;
             break;
+        
+        case PacketType::BulkAvatarData:
+            std::cout << "[OverteClient] Received BulkAvatarData from Avatar Mixer (" << payloadLen << " bytes)" << std::endl;
+            handleAvatarMixerPacket(payload, payloadLen, static_cast<uint8_t>(packetType));
+            break;
+            
+        case PacketType::AvatarIdentity:
+            std::cout << "[OverteClient] Received AvatarIdentity packet (" << payloadLen << " bytes)" << std::endl;
+            // For now just log it, we don't need to parse other avatar identities
+            break;
+            
+        case PacketType::KillAvatar:
+            std::cout << "[OverteClient] Received KillAvatar packet" << std::endl;
+            break;
             
         default:
             // Log all unknown packet types to see what we're missing
@@ -1084,34 +1098,32 @@ void OverteClient::handleDomainListReply(const char* data, size_t len) {
             
             std::cout << "[OverteClient] Entity server found at " << addrStr << ":" << ac.port << std::endl;
         }
+        
+        // If this is the AvatarMixer, store its address
+        if (ac.type == 'W') { // AvatarMixer
+            m_avatarMixerAddr = ac.address;
+            m_avatarMixerAddrLen = ac.addressLen;
+            m_avatarMixerPort = ac.port;
+            
+            std::cout << "[OverteClient] Avatar Mixer found at " << addrStr << ":" << ac.port << std::endl;
+        }
     }
     
     std::cout << "[OverteClient] Parsed " << m_assignmentClients.size() << " assignment clients" << std::endl;
     
-    // Now send EntityQuery to the EntityServer (if we found one)
-    if (m_entityServerPort != 0) {
-        std::cout << "[OverteClient] Domain connected! Sending entity query to entity-server..." << std::endl;
-        sendEntityQuery();
-    } else {
-        std::cout << "[OverteClient] Warning: No EntityServer found in assignment client list" << std::endl;
-        std::cout << "[OverteClient] DomainList doesn't include assignment clients for Agent nodes." << std::endl;
+    // Connect to Avatar Mixer if found - this is how we get entity data!
+    if (m_avatarMixerPort != 0) {
+        std::cout << "[OverteClient] Connecting to Avatar Mixer..." << std::endl;
+        m_avatarMixerConnected = true;
         
-        // Try common EntityServer ports (based on web UI showing port 33237)
-        std::cout << "[OverteClient] Trying EntityQuery to common EntityServer ports..." << std::endl;
-        for (uint16_t port : {33237, 33238, 33239, 40103, 48000, 48001}) {
-            // Temporarily set entity server address to try this port
-            m_entityServerAddr = m_udpAddr;
-            sockaddr_in* addr = reinterpret_cast<sockaddr_in*>(&m_entityServerAddr);
-            addr->sin_port = htons(port);
-            m_entityServerAddrLen = sizeof(sockaddr_in);
-            m_entityServerPort = port;
-            
-            sendEntityQuery();
-            
-            char addrStr[INET_ADDRSTRLEN];
-            inet_ntop(AF_INET, &addr->sin_addr, addrStr, sizeof(addrStr));
-            std::cout << "[OverteClient] Sent EntityQuery to " << addrStr << ":" << port << std::endl;
-        }
+        // Send our avatar identity first
+        sendAvatarIdentity();
+        
+        // Then start sending avatar data regularly
+        sendAvatarData();
+    } else {
+        std::cout << "[OverteClient] Warning: No Avatar Mixer found in assignment client list" << std::endl;
+        std::cout << "[OverteClient] Cannot receive entity data without Avatar Mixer connection." << std::endl;
     }
 }
 
