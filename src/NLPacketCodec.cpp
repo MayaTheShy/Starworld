@@ -462,16 +462,16 @@ uint8_t NLPacket::versionForPacketType(PacketType type) {
 }
 
 std::vector<uint8_t> NLPacket::computeProtocolVersionSignature() {
-    // Protocol signature computed from Overte 2025.05.1 source (DEV_BUILD)
-    // Located in third_party/overte-src (tag 2025.05.1)
-    // Computed via tools/compute_overte_protocol.py
-    // Protocol version: "9MtUp4vmU6T5mKrxDZ9Izw==" (base64) = f4cb54a78be653a4f998aaf10d9f48cf (hex)
-    // Based on PacketHeaders.cpp versionForPacketType() with 106 packet types
-    // EntityVersion::LAST_PACKET_TYPE = 70, default version = 23 (DEV_BUILD)
+    // Protocol signature computed from Overte 2025.05.1 source (commit 53d2094)
+    // Matches overte-server-bin AUR package
+    // Computed via tools/compute_protocol_v2.py with actual enum parsing
+    // Protocol version: "UuQR8qg5dU9NE9CXz2rEaQ==" (base64) = 52e411f2a839754f4d13d097cf6ac469 (hex)
+    // Based on: 106 packet types, EntityVersion::LAST = 70, DomainListVersion::SocketTypes = 7
+    // AvatarMixerPacketVersion::RemoveAttachments = 38, EntityQueryPacketVersion::ConicalFrustums = 23
     
     std::vector<uint8_t> signature = {
-        0xf4, 0xcb, 0x54, 0xa7, 0x8b, 0xe6, 0x53, 0xa4,
-        0xf9, 0x98, 0xaa, 0xf1, 0x0d, 0x9f, 0x48, 0xcf
+        0x52, 0xe4, 0x11, 0xf2, 0xa8, 0x39, 0x75, 0x4f,
+        0x4d, 0x13, 0xd0, 0x97, 0xcf, 0x6a, 0xc4, 0x69
     };
     
     return signature;
