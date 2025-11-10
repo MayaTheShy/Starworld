@@ -1227,7 +1227,25 @@ void OverteClient::sendDomainConnectRequest() {
         if (qs.buf.size() >= 20) {
             uint32_t sigLen = (qs.buf[16] << 24) | (qs.buf[17] << 16) | (qs.buf[18] << 8) | qs.buf[19];
             std::cout << sigLen << std::endl;
-            std::cout << "[OverteClient]       Protocol sig data (" << sigLen << " bytes at offset 20)" << std::endl;
+            std::cout << "[OverteClient]       Protocol sig data (" << sigLen << " bytes at offset 20): ";
+            for (size_t i = 20; i < 20 + sigLen && i < qs.buf.size(); ++i) {
+                printf("%02x", qs.buf[i]);
+            }
+            std::cout << std::endl;
+            
+            // Compare with what we computed
+            std::cout << "[OverteClient]       Expected signature:                                   ";
+            for (uint8_t byte : protocolSig) printf("%02x", byte);
+            std::cout << std::endl;
+            
+            bool match = true;
+            for (size_t i = 0; i < protocolSig.size() && i < sigLen; ++i) {
+                if (qs.buf[20 + i] != protocolSig[i]) {
+                    match = false;
+                    break;
+                }
+            }
+            std::cout << "[OverteClient]       Signatures " << (match ? "MATCH ✓" : "MISMATCH ✗") << std::endl;
         }
         
         // Hex dump first 128 bytes
