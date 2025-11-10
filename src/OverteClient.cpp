@@ -1788,6 +1788,36 @@ void OverteClient::sendAvatarData() {
     }
 }
 
+void OverteClient::sendAvatarQuery() {
+    if (!m_avatarMixerConnected) return;
+    
+    // Create AvatarQuery packet - tells Avatar Mixer which avatars we want to receive
+    // Based on Overte's Application::queryAvatars() in interface/src/Application.cpp
+    PacketVersion version = NLPacket::versionForPacketType(PacketType::AvatarQuery);
+    NLPacket packet(PacketType::AvatarQuery, version, true);
+    packet.setSequenceNumber(m_sequenceNumber++);
+    
+    // Include our local ID (sourced packet)
+    if (m_localID != 0) {
+        packet.setSourceID(m_localID);
+    }
+    
+    // AvatarQuery payload: number of frustums (uint8) + frustum data
+    // For simplicity, send numFrustums=0 which means "send all avatars in the domain"
+    uint8_t numFrustums = 0;
+    packet.writeUInt8(numFrustums);
+    
+    const auto& data = packet.getData();
+    ssize_t s = ::sendto(m_udpFd, data.data(), data.size(), 0,
+                         reinterpret_cast<sockaddr*>(&m_avatarMixerAddr), m_avatarMixerAddrLen);
+    
+    if (s > 0) {
+        std::cout << "[OverteClient] Sent AvatarQuery (" << s << " bytes, numFrustums=0 = request all avatars)" << std::endl;
+    } else {
+        std::cerr << "[OverteClient] Failed to send AvatarQuery: " << strerror(errno) << std::endl;
+    }
+}
+
 void OverteClient::handleAvatarMixerPacket(const char* data, size_t len, uint8_t packetType) {
     std::cout << "[OverteClient] Processing Avatar Mixer packet type " << (int)packetType << " (" << len << " bytes)" << std::endl;
     
@@ -1795,3 +1825,4 @@ void OverteClient::handleAvatarMixerPacket(const char* data, size_t len, uint8_t
     // The entity data should come through this connection!
     // TODO: Parse BulkAvatarData and look for entity updates within it
 }
+
