@@ -1553,9 +1553,8 @@ void OverteClient::sendPing(int fd, const sockaddr_storage& addr, socklen_t addr
     // Ping type (0 = local, 1 = public)
     packet.writeUInt8(0);
     
-    // Write HMAC verification hash using null UUID as key
-    uint8_t nullUUID[16] = {0};
-    packet.writeVerificationHash(nullUUID);
+    // Do NOT write verification hash - this creates a 17-byte sourced packet without hash
+    // The server should either skip verification or use the packet structure to determine hash presence
     
     const auto& data = packet.getData();
     
