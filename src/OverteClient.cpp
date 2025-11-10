@@ -944,9 +944,11 @@ void OverteClient::handleDomainListReply(const char* data, size_t len) {
     
     std::cout << "[OverteClient] Session UUID: " << sessionUUID << std::endl;
     
-    // Read domain local ID (16-bit)
+    // Read domain local ID (16-bit) - this is in LITTLE-ENDIAN, not big-endian!
+    // Do NOT use ntohs() - just read directly on x86
     if (offset + 2 > len) return;
-    uint16_t localID = ntohs(*reinterpret_cast<const uint16_t*>(data + offset));
+    uint16_t localID;
+    std::memcpy(&localID, data + offset, sizeof(uint16_t)); // Direct read, little-endian
     offset += 2;
     
     // Store our local ID for use in sourced packets
