@@ -1134,12 +1134,17 @@ void OverteClient::handleDomainListReply(const char* data, size_t len) {
     
     std::cout << "[OverteClient] Parsed " << m_assignmentClients.size() << " assignment clients" << std::endl;
     
-    // TEMPORARY HACK: If no Avatar Mixer found, try the known port from web UI
+    // TEMPORARY HACK: If no Avatar Mixer found, try the known address from web UI
     if (m_avatarMixerPort == 0) {
-        std::cout << "[OverteClient] No Avatar Mixer in DomainList, trying known port 57460..." << std::endl;
-        m_avatarMixerAddr = m_udpAddr;
-        sockaddr_in* addr = reinterpret_cast<sockaddr_in*>(&m_avatarMixerAddr);
-        addr->sin_port = htons(57460);  // From screenshot
+        std::cout << "[OverteClient] No Avatar Mixer in DomainList, trying known address 192.168.2.2:57460..." << std::endl;
+        
+        // Create sockaddr for Avatar Mixer (NOT the same as domain server!)
+        sockaddr_in avatarAddr{};
+        avatarAddr.sin_family = AF_INET;
+        avatarAddr.sin_port = htons(57460);
+        inet_pton(AF_INET, "192.168.2.2", &avatarAddr.sin_addr);
+        
+        memcpy(&m_avatarMixerAddr, &avatarAddr, sizeof(avatarAddr));
         m_avatarMixerAddrLen = sizeof(sockaddr_in);
         m_avatarMixerPort = 57460;
         m_avatarMixerConnected = true;
@@ -1218,7 +1223,10 @@ void OverteClient::sendDomainConnectRequest() {
     qs.writeUInt64BE(static_cast<uint64_t>(nowUs));
     
     // 9. Node type / owner type (NodeType_t)
-    qs.writeUInt8(static_cast<uint8_t>('I')); // Agent
+    // Use Unassigned (1) for regular clients, NOT 'I' (Agent)!
+    // NodeType::Agent = 'I' is for server-side bots/scripts
+    // NodeType::Unassigned = 1 is for regular Interface clients
+    qs.writeUInt8(1); // Unassigned = regular client
     
     // Determine local UDP socket address/port (bind address if needed)
     uint32_t localIPv4 = 0x7F000001; // 127.0.0.1 fallback
