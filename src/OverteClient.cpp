@@ -937,6 +937,13 @@ void OverteClient::handleDomainListReply(const char* data, size_t len) {
     if (len - offset >= 2) {
         uint16_t possibleCount16 = ntohs(*reinterpret_cast<const uint16_t*>(data + offset));
         std::cout << "[OverteClient] First 2 bytes as uint16 (big-endian): " << possibleCount16 << std::endl;
+        
+        // New observation: those 2 bytes might be flags or a node count
+        // Let's interpret them as little-endian too
+        uint16_t possibleCount16_le = *reinterpret_cast<const uint16_t*>(data + offset);
+        std::cout << "[OverteClient] First 2 bytes as uint16 (little-endian): " << possibleCount16_le << std::endl;
+        std::cout << "[OverteClient] As individual bytes: 0x" << std::hex << (int)(unsigned char)data[offset] 
+                  << " 0x" << (int)(unsigned char)data[offset+1] << std::dec << std::endl;
     }
     
     // Parse assignment client nodes from the packet
@@ -1089,30 +1096,16 @@ void OverteClient::handleDomainListReply(const char* data, size_t len) {
         std::cout << "[OverteClient] Warning: No EntityServer found in assignment client list" << std::endl;
         std::cout << "[OverteClient] This might be expected for non-authenticated connections." << std::endl;
         
-        // Modern Overte doesn't advertise assignment clients in DomainList anymore
-        // Instead, we broadcast EntityQuery to discover EntityServer
-        std::cout << "[OverteClient] Broadcasting EntityQuery to discover EntityServer..." << std::endl;
+        // The first DomainList reply might not include assignment clients
+        // Request an updated DomainList now that the server knows our interests
+        std::cout << "[OverteClient] Requesting updated DomainList to get assignment clients..." << std::endl;
+        sendDomainListRequest();
         
-        // Try a range of common Overte assignment client ports
-        // Overte assignment clients typically use ports in 48000-60000 range
-        std::vector<uint16_t> portRange;
-        for (uint16_t port = 48000; port <= 52000; port += 500) {
-            portRange.push_back(port);
-        }
-        // Add some specific common ports
-        portRange.push_back(40103);
-        portRange.push_back(40104);
-        portRange.push_back(48247);
-        
-        for (uint16_t port : portRange) {
-            std::memcpy(&m_entityServerAddr, &m_udpAddr, m_udpAddrLen);
-            reinterpret_cast<sockaddr_in*>(&m_entityServerAddr)->sin_port = htons(port);
-            m_entityServerAddrLen = m_udpAddrLen;
-            m_entityServerPort = port;
-            sendEntityQuery();
-        }
-        
-        std::cout << "[OverteClient] Sent EntityQuery to " << portRange.size() << " potential assignment client ports" << std::endl;
+        // Modern Overte: also try sending EntityQuery directly to domain server
+        // The domain server may forward it to the EntityServer or respond directly
+        std::cout << "[OverteClient] Sending EntityQuery to domain server as fallback..." << std::endl;
+        m_entityServerPort = 0; // Will use domain server address
+        sendEntityQuery();
     }
 }
 
