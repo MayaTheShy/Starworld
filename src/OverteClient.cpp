@@ -1627,11 +1627,11 @@ void OverteClient::createEntity(const std::string& name, EntityType type, const 
 void OverteClient::sendAvatarIdentity() {
     if (!m_avatarMixerConnected || m_avatarMixerPort == 0) return;
     
-    std::cout << "[OverteClient] Sending AvatarIdentity to Avatar Mixer..." << std::endl;
-    
     // Create AvatarIdentity packet (PacketType::AvatarIdentity = 29 = 0x1D)
     // Use correct packet version from versionForPacketType
     PacketVersion version = NLPacket::versionForPacketType(PacketType::AvatarIdentity);
+    std::cout << "[OverteClient] Sending AvatarIdentity (version=" << (int)version << ") to Avatar Mixer..." << std::endl;
+    
     NLPacket packet(PacketType::AvatarIdentity, version, true);
     packet.setSequenceNumber(m_sequenceNumber++);
     
@@ -1697,11 +1697,11 @@ void OverteClient::sendAvatarIdentity() {
 void OverteClient::sendAvatarData() {
     if (!m_avatarMixerConnected || m_avatarMixerPort == 0) return;
     
-    std::cout << "[OverteClient] Sending AvatarData to Avatar Mixer..." << std::endl;
-    
     // Create AvatarData packet (PacketType::AvatarData = 6 = 0x06)
     // Use correct packet version from versionForPacketType
     PacketVersion version = NLPacket::versionForPacketType(PacketType::AvatarData);
+    std::cout << "[OverteClient] Sending AvatarData (version=" << (int)version << ") to Avatar Mixer..." << std::endl;
+    
     NLPacket packet(PacketType::AvatarData, version, true);
     packet.setSequenceNumber(m_sequenceNumber++);
     
