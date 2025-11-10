@@ -1308,13 +1308,13 @@ void OverteClient::sendDomainConnectRequest() {
         qs.writeUInt32BE(hostOrderIPv4);
     };
 
-    // 10. Public socket: type (quint8) + SockAddr (QHostAddress + quint16 port, WITHOUT socket type per SockAddr QDataStream operator)
-    qs.writeUInt8(1); // SocketType::UDP
+    // 10. Public socket: SockAddr (QHostAddress + quint16 port, WITHOUT socket type byte)
+    // The comment says "WITHOUT socket type per SockAddr QDataStream operator"
+    // This means we should NOT write the SocketType::UDP byte here!
     writeQHostAddressIPv4(localIPv4); // using local as placeholder for public
     qs.writeUInt16BE(localPort); // actual local port (might be 0 if not yet bound)
 
-    // 11. Local socket: type (quint8) + SockAddr
-    qs.writeUInt8(1); // SocketType::UDP
+    // 11. Local socket: SockAddr (without socket type byte)
     writeQHostAddressIPv4(localIPv4);
     qs.writeUInt16BE(localPort);
     
