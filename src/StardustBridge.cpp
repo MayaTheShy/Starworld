@@ -38,6 +38,10 @@ std::vector<std::string> candidateSocketPaths() {
     std::string xdg;
     if (const char* env = std::getenv("XDG_RUNTIME_DIR")) xdg = env;
     if (!xdg.empty()) {
+        // Try numbered sockets first (stardust-0, stardust-1, etc.) - this is what Stardust actually creates
+        for (int i = 0; i < 10; ++i) {
+            out.emplace_back(xdg + "/stardust-" + std::to_string(i));
+        }
         out.emplace_back(xdg + "/stardust.sock");
         out.emplace_back(xdg + "/stardustxr.sock");
         out.emplace_back(xdg + "/stardust/stardust.sock");
@@ -48,6 +52,10 @@ std::vector<std::string> candidateSocketPaths() {
     char uidPath[128];
     std::snprintf(uidPath, sizeof(uidPath), "/run/user/%d", (int)getuid());
     std::string runUser(uidPath);
+    // Try numbered sockets first
+    for (int i = 0; i < 10; ++i) {
+        out.emplace_back(runUser + "/stardust-" + std::to_string(i));
+    }
     out.emplace_back(runUser + "/stardust.sock");
     out.emplace_back(runUser + "/stardustxr.sock");
     out.emplace_back(runUser + "/stardust/stardust.sock");
