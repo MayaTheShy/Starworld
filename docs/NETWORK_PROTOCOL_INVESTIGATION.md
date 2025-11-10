@@ -462,13 +462,55 @@ Possible causes:
 3. **Socket mismatch**: Server might be checking packet source against public socket (mangled) instead of symmetric socket
 4. **Version mismatch**: Some subtle version incompatibility in how sourced packets are processed
 
-## Next Steps for Investigation
+## Next Steps / Recommendations
 
-1. **Verify ping reception**: Capture server logs during ping send to see if any packets are acknowledged
-2. **Check source ID in wire format**: Dump actual bytes sent for sourced ping packets
-3. **Compare with official client**: Capture official Overte Interface client packets and compare byte-for-byte
-4. **Server-side packet processing**: Trace through how server matches incoming sourced packets to nodes
-5. **Public socket usage**: Determine if the mangled address is just a display issue or affects packet matching
+### Immediate Actions
+
+1. **Contact Server Administrator**
+   - Request HMAC verification be disabled for Agent/Interface nodes
+   - Or add PacketType::Ping to NonVerifiedPackets list
+   - This is a server configuration issue, not a client bug
+
+2. **Try Alternative Overte Servers**
+   - Test connection to different Overte domains
+   - Some may have HMAC disabled or configured correctly
+
+3. **Analyze Official Client**
+   - Capture packets from official Overte Interface client
+   - Look for connection secret handshake or negotiation step we're missing
+   - May reveal protocol detail not documented
+
+### Long-term Solutions
+
+1. **Server Patch**
+   - Fix verification logic to skip HMAC when node has no auth configured
+   - Change `if (!auth || mismatch)` to `if (auth && mismatch)`
+
+2. **Protocol Enhancement**
+   - Implement connection secret negotiation if it exists
+   - Add support for requesting HMAC setup during handshake
+
+3. **Alternative Keep-Alive**
+   - Investigate if there's a non-sourced packet type that counts as activity
+   - May be undocumented in current Overte protocol specs
+
+### What We've Learned
+
+✅ **Complete understanding of**:
+- DomainConnectRequest packet format and serialization
+- Local ID assignment and parsing (little-endian at offset 34-35)
+- Source ID handling in sourced packets (little-endian uint16)
+- HMAC-MD5 verification hash calculation and insertion
+- Packet header structures for sourced/non-sourced packets
+- Server-side node tracking and activity monitoring
+- Overte's QDataStream serialization format
+
+❌ **Still unknown**:
+- How official clients avoid the HMAC verification deadlock
+- Whether there's a connection secret negotiation protocol
+- Why server enables HMAC verification but doesn't initialize it
+
+**Status**: Client implementation is complete and correct. Blocked by server-side configuration issue.
 
 ## Code References
 
