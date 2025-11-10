@@ -4,6 +4,24 @@ All notable changes to Starworld will be documented in this file.
 
 ## [Unreleased]
 
+### Added - November 10, 2025
+- **HMAC Verification Implementation**
+  - Complete HMAC-MD5 packet signing using OpenSSL
+  - Verification hash calculation with connection secret UUID as key
+  - Proper hash slot insertion in sourced packet structure
+  - writeVerificationHash() method for NLPacket class
+  - See NETWORK_PROTOCOL_INVESTIGATION.md for detailed analysis
+
+- **Local ID Parsing Fix**
+  - Fixed byte order bug: Local ID is little-endian, not big-endian
+  - Fixed offset bug: Local ID at bytes 34-35, not 32-33 in DomainList
+  - Source ID now correctly matches server assignment
+
+- **Protocol Debugging**
+  - Comprehensive packet hex dumping for analysis
+  - Server log correlation with client packets
+  - Detailed HMAC verification failure investigation
+
 ### Added - November 2025
 - **Overte Protocol Implementation**
   - Complete NLPacket protocol support for Overte domains
@@ -36,6 +54,7 @@ All notable changes to Starworld will be documented in this file.
   - See OVERTE_AUTH.md for implementation details
 
 - **Documentation**
+  - NETWORK_PROTOCOL_INVESTIGATION.md - Comprehensive protocol analysis
   - OVERTE_AUTH.md - Comprehensive OAuth implementation guide
   - OVERTE_ASSIGNMENT_CLIENT_TASK.md - Protocol implementation details
   - Updated README.md with connection instructions
@@ -47,7 +66,20 @@ All notable changes to Starworld will be documented in this file.
 - Disabled OAuth login attempt (needs browser-based authorization code flow)
 - Entity queries sent to domain server when no EntityServer advertised
 
+### Known Issues
+- **HMAC Verification Deadlock**: Connection killed after 11-18 seconds
+  - Server requires HMAC verification for sourced packets (Ping, AvatarData)
+  - Server does not initialize HMAC for new nodes (expects empty hash)
+  - Any hash value (even zeros) causes mismatch and packet rejection
+  - Cannot send non-sourced packets for keep-alive (don't update "last heard")
+  - **Root cause**: Server-side configuration issue or bug
+  - **Status**: Client implementation correct; blocked by server config
+  - See NETWORK_PROTOCOL_INVESTIGATION.md for full analysis
+
 ### Fixed
+- Local ID byte order: now correctly reads little-endian uint16
+- Local ID offset: now correctly reads from bytes 34-35 in DomainList
+- Source ID in Ping packets: now matches server assignment
 - Domain handshake retry loop when username sent in DomainConnectRequest
 - Removed username field from anonymous connections (field 14)
 - Added missing #include <endian.h> for be64toh()
