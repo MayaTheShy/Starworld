@@ -6,7 +6,18 @@
 
 Starworld is an [Overte](https://overte.org) client that renders virtual world entities inside the [StardustXR](https://stardustxr.org) compositor. It bridges Overte's entity protocol with Stardust's spatial computing environment, allowing you to view and interact with Overte domains in XR.
 
-**Current Status:** ✨ **3D model rendering with HTTP asset downloading!** Entities render as GLTF/GLB models loaded from the local cache. ModelCache automatically downloads models from http:// and https:// URLs to `~/.cache/starworld/models/`. Primitive models (cube, sphere, suzanne) are pre-generated in `~/.cache/starworld/primitives/` using Blender.
+**Current Status:** ⚠️ **Connection establishes but drops after 11-18 seconds due to server-side HMAC verification issue.** 
+
+✨ **Working Features:**
+- Complete DomainConnectRequest implementation with OAuth authentication
+- Local ID assignment and parsing (fixed byte order bugs)
+- 3D model rendering with HTTP asset downloading
+- ModelCache automatically downloads models from http:// and https:// URLs to `~/.cache/starworld/models/`
+- Primitive models (cube, sphere, suzanne) pre-generated in `~/.cache/starworld/primitives/`
+- HMAC-MD5 packet verification implementation (correct but blocked by server config)
+
+⚠️ **Known Issue:**
+Connection is killed after 11-18 seconds due to HMAC verification deadlock on the server side. See [`docs/NETWORK_PROTOCOL_INVESTIGATION.md`](docs/NETWORK_PROTOCOL_INVESTIGATION.md) for detailed analysis. The client implementation is correct; the issue is server-side configuration where HMAC verification is required but not properly initialized for new nodes.
 
 ### About the Technologies
 
