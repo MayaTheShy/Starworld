@@ -369,32 +369,44 @@ void OverteClient::poll() {
 
     // Poll domain UDP socket for domain-level packets
     if (m_udpReady && m_udpFd != -1) {
-        char buf[1500];
-        sockaddr_storage from{}; socklen_t fromlen = sizeof(from);
-        ssize_t r = ::recvfrom(m_udpFd, buf, sizeof(buf), 0, reinterpret_cast<sockaddr*>(&from), &fromlen);
-        if (r > 0) {
-            // Log source address
-            char fromIP[INET_ADDRSTRLEN];
-            uint16_t fromPort = 0;
-            if (from.ss_family == AF_INET) {
-                sockaddr_in* sin = reinterpret_cast<sockaddr_in*>(&from);
-                inet_ntop(AF_INET, &sin->sin_addr, fromIP, sizeof(fromIP));
-                fromPort = ntohs(sin->sin_port);
-            }
-            std::cout << "[OverteClient] <<< Received packet (" << r << " bytes) from " << fromIP << ":" << fromPort << std::endl;
-            
-            // Hex dump first 32 bytes for debugging
-            std::cout << "[OverteClient] Hex: ";
-            for (int i = 0; i < std::min(32, (int)r); ++i) {
-                printf("%02x ", (unsigned char)buf[i]);
-            }
-            std::cout << std::endl;
-            parseDomainPacket(buf, static_cast<size_t>(r));
-        } else if (r < 0 && errno != EWOULDBLOCK && errno != EAGAIN) {
-            // Only log errors that aren't "would block"
-            static int errorCount = 0;
-            if (++errorCount <= 3) {
-                std::cerr << "[OverteClient] UDP recv error: " << strerror(errno) << std::endl;
+        // Read ALL available packets (non-blocking socket)
+        while (true) {
+            char buf[1500];
+            sockaddr_storage from{}; socklen_t fromlen = sizeof(from);
+            ssize_t r = ::recvfrom(m_udpFd, buf, sizeof(buf), 0, reinterpret_cast<sockaddr*>(&from), &fromlen);
+            if (r > 0) {
+                // Log source address
+                char fromIP[INET_ADDRSTRLEN];
+                uint16_t fromPort = 0;
+                if (from.ss_family == AF_INET) {
+                    sockaddr_in* sin = reinterpret_cast<sockaddr_in*>(&from);
+                    inet_ntop(AF_INET, &sin->sin_addr, fromIP, sizeof(fromIP));
+                    fromPort = ntohs(sin->sin_port);
+                }
+                std::cout << "[OverteClient] <<< Received packet (" << r << " bytes) from " << fromIP << ":" << fromPort << std::endl;
+                
+                // Hex dump first 32 bytes for debugging
+                std::cout << "[OverteClient] Hex: ";
+                for (int i = 0; i < std::min(32, (int)r); ++i) {
+                    printf("%02x ", (unsigned char)buf[i]);
+                }
+                std::cout << std::endl;
+                parseDomainPacket(buf, static_cast<size_t>(r));
+            } else if (r < 0) {
+                if (errno == EWOULDBLOCK || errno == EAGAIN) {
+                    // No more packets available
+                    break;
+                } else {
+                    // Real error
+                    static int errorCount = 0;
+                    if (++errorCount <= 3) {
+                        std::cerr << "[OverteClient] UDP recv error: " << strerror(errno) << std::endl;
+                    }
+                    break;
+                }
+            } else {
+                // r == 0, connection closed (shouldn't happen with UDP)
+                break;
             }
         }
         
