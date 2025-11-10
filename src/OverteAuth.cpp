@@ -644,13 +644,13 @@ bool OverteAuth::loginWithBrowser(const std::string& metaverseUrl) {
     m_receivedAuthCode.clear();
     
     // Construct authorization URL
-    // Overte uses /api/v1/oauth/authorize endpoint
+    // Overte uses /server/oauth/authorize endpoint
     std::string authUrl = m_metaverseUrl;
     if (authUrl.back() == '/') authUrl.pop_back();
     
-    // Check if URL already has /api/v1 path, if not add it
-    if (authUrl.find("/api/v1") == std::string::npos) {
-        authUrl += "/api/v1";
+    // Check if URL already has /server path, if not add it
+    if (authUrl.find("/server") == std::string::npos) {
+        authUrl += "/server";
     }
     authUrl += "/oauth/authorize?";
     authUrl += "response_type=code";
