@@ -1308,15 +1308,14 @@ void OverteClient::sendDomainConnectRequest() {
         qs.writeUInt32BE(hostOrderIPv4);
     };
 
-    // 10. Public socket: SockAddr (QHostAddress + quint16 port, WITHOUT socket type byte)
-    // The comment says "WITHOUT socket type per SockAddr QDataStream operator"
-    // This means we should NOT write the SocketType::UDP byte here!
-    writeQHostAddressIPv4(localIPv4); // using local as placeholder for public
-    qs.writeUInt16BE(localPort); // actual local port (might be 0 if not yet bound)
+    // 10. Public socket: SockAddr (QHostAddress + quint16 port)
+    // Try sending a NULL address (protocol 0) to see if server figures it out from UDP source
+    qs.writeUInt8(0); // QAbstractSocket::AnyIPProtocol (means null/unknown)
+    qs.writeUInt16BE(0); // port 0
 
-    // 11. Local socket: SockAddr (without socket type byte)
-    writeQHostAddressIPv4(localIPv4);
-    qs.writeUInt16BE(localPort);
+    // 11. Local socket: SockAddr
+    qs.writeUInt8(0); // QAbstractSocket::AnyIPProtocol
+    qs.writeUInt16BE(0); // port 0
     
     // 12. Node types of interest (QList<NodeType_t>)
     // Write as Qt container: size (qint32) + elements (quint8) -- include a few mixers we want
