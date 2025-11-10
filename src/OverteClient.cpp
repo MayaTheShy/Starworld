@@ -1094,18 +1094,13 @@ void OverteClient::handleDomainListReply(const char* data, size_t len) {
         sendEntityQuery();
     } else {
         std::cout << "[OverteClient] Warning: No EntityServer found in assignment client list" << std::endl;
-        std::cout << "[OverteClient] This might be expected for non-authenticated connections." << std::endl;
+        std::cout << "[OverteClient] DomainList doesn't include assignment clients for Agent nodes." << std::endl;
         
-        // The first DomainList reply might not include assignment clients
-        // Request an updated DomainList now that the server knows our interests
-        std::cout << "[OverteClient] Requesting updated DomainList to get assignment clients..." << std::endl;
-        sendDomainListRequest();
-        
-        // Modern Overte: also try sending EntityQuery directly to domain server
-        // The domain server may forward it to the EntityServer or respond directly
-        std::cout << "[OverteClient] Sending EntityQuery to domain server as fallback..." << std::endl;
-        m_entityServerPort = 0; // Will use domain server address
-        sendEntityQuery();
+        // Try common EntityServer ports (based on web UI showing port 33237)
+        std::cout << "[OverteClient] Trying EntityQuery to common EntityServer ports..." << std::endl;
+        for (uint16_t port : {33237, 33238, 33239, 40103, 48000, 48001}) {
+            sendEntityQuery(port);
+        }
     }
 }
 
