@@ -1308,12 +1308,13 @@ void OverteClient::sendDomainConnectRequest() {
         qs.writeUInt32BE(hostOrderIPv4);
     };
 
-    // 10. Public socket: SockAddr (QHostAddress + quint16 port)
-    // Write the actual IPv4 address and port
+    // 10. Public socket: type (quint8) + SockAddr (QHostAddress + quint16 port)
+    qs.writeUInt8(1); // SocketType::UDP
     writeQHostAddressIPv4(localIPv4);
     qs.writeUInt16BE(localPort);
 
-    // 11. Local socket: SockAddr
+    // 11. Local socket: type (quint8) + SockAddr
+    qs.writeUInt8(1); // SocketType::UDP
     writeQHostAddressIPv4(localIPv4);
     qs.writeUInt16BE(localPort);
     
