@@ -1552,11 +1552,16 @@ void OverteClient::sendPing(int fd, const sockaddr_storage& addr, socklen_t addr
     // Ping type (0 = local, 1 = public)
     packet.writeUInt8(0);
     
+    // Add HMAC-MD5 verification hash using null UUID as connection secret
+    // (domain server uses null UUID for clients that haven't been assigned a connection secret)
+    uint8_t nullUUID[16] = {0};  // All zeros = null UUID
+    packet.writeVerificationHash(nullUUID);
+    
     const auto& data = packet.getData();
     
     // Debug: hex dump ping packet
     std::cout << "[OverteClient] Ping packet (" << data.size() << " bytes, localID=" << m_localID << "): ";
-    for (size_t i = 0; i < std::min(data.size(), size_t(16)); i++) {
+    for (size_t i = 0; i < std::min(data.size(), size_t(32)); i++) {
         printf("%02x ", (unsigned char)data[i]);
     }
     std::cout << std::endl;
