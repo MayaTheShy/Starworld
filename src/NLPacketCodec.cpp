@@ -4,6 +4,8 @@
 #include <cstring>
 #include <string>
 #include <openssl/md5.h>
+#include <openssl/hmac.h>
+#include <openssl/evp.h>
 #include <fstream>
 #include <sstream>
 #include <unordered_map>
@@ -119,6 +121,41 @@ void NLPacket::setSourceID(LocalID id) {
         m_data.resize(m_headerSize);
     }
     writeHeader();
+}
+
+void NLPacket::writeVerificationHash(const uint8_t* connectionSecretUUID) {
+    // HMAC-MD5 verification hash goes right after source ID
+    // Packet structure for verified sourced packet:
+    // [seq+flags(4)] [type(1)] [version(1)] [sourceID(2)] [hash(16)] [payload...]
+    
+    if (!m_isSourced) {
+        std::cerr << "[NLPacket] Warning: Cannot write verification hash for non-sourced packet" << std::endl;
+        return;
+    }
+    
+    const size_t HASH_SIZE = 16;  // MD5 produces 16 bytes
+    const size_t HASH_OFFSET = SOURCED_HEADER_SIZE;  // Hash goes right after source ID
+    
+    // Calculate HMAC-MD5 hash
+    // The hash is calculated over the payload data AFTER the hash field itself
+    const size_t payloadOffset = HASH_OFFSET + HASH_SIZE;
+    const uint8_t* payloadData = m_data.data() + payloadOffset;
+    const size_t payloadSize = m_data.size() - payloadOffset;
+    
+    unsigned char hash[HASH_SIZE];
+    unsigned int hashLen = HASH_SIZE;
+    
+    // Use HMAC_MD5 with connection secret UUID as key
+    HMAC(EVP_md5(), connectionSecretUUID, 16, payloadData, payloadSize, hash, &hashLen);
+    
+    // Insert hash into packet at correct position
+    // We need to insert 16 bytes right after the header
+    if (m_data.size() < HASH_OFFSET + HASH_SIZE) {
+        m_data.resize(HASH_OFFSET + HASH_SIZE);
+    }
+    
+    // Insert hash at the correct position
+    m_data.insert(m_data.begin() + HASH_OFFSET, hash, hash + HASH_SIZE);
 }
 
 bool NLPacket::parseHeader(const uint8_t* data, size_t size, Header& header) {

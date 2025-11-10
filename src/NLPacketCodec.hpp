@@ -170,6 +170,9 @@ public:
     void setSequenceNumber(SequenceNumber seq);
     void setSourceID(LocalID id);
     
+    // Write HMAC-MD5 verification hash
+    void writeVerificationHash(const uint8_t* connectionSecretUUID);
+    
     // Protocol version signature
     static std::vector<uint8_t> computeProtocolVersionSignature();
     static uint8_t versionForPacketType(PacketType type);
