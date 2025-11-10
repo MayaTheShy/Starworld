@@ -328,6 +328,11 @@ bool OverteAuth::login(const std::string& username, const std::string& password,
     
     std::string tokenUrl = m_metaverseUrl;
     if (tokenUrl.back() == '/') tokenUrl.pop_back();
+    
+    // Overte uses /api/v1/oauth/token endpoint
+    if (tokenUrl.find("/api/v1") == std::string::npos) {
+        tokenUrl += "/api/v1";
+    }
     tokenUrl += "/oauth/token";
     
     std::ostringstream postData;
@@ -354,6 +359,11 @@ bool OverteAuth::login(const std::string& username, const std::string& password,
 bool OverteAuth::loginWithAuthCode(const std::string& authCode, const std::string& redirectUri) {
     std::string tokenUrl = m_metaverseUrl;
     if (tokenUrl.back() == '/') tokenUrl.pop_back();
+    
+    // Overte uses /api/v1/oauth/token endpoint
+    if (tokenUrl.find("/api/v1") == std::string::npos) {
+        tokenUrl += "/api/v1";
+    }
     tokenUrl += "/oauth/token";
     
     std::ostringstream postData;
@@ -629,8 +639,14 @@ bool OverteAuth::loginWithBrowser(const std::string& metaverseUrl) {
     m_receivedAuthCode.clear();
     
     // Construct authorization URL
+    // Overte uses /api/v1/oauth/authorize endpoint
     std::string authUrl = m_metaverseUrl;
     if (authUrl.back() == '/') authUrl.pop_back();
+    
+    // Check if URL already has /api/v1 path, if not add it
+    if (authUrl.find("/api/v1") == std::string::npos) {
+        authUrl += "/api/v1";
+    }
     authUrl += "/oauth/authorize?";
     authUrl += "response_type=code";
     authUrl += "&client_id=" + urlEncode(m_clientId);
