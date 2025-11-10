@@ -1235,6 +1235,8 @@ void OverteClient::sendDomainConnectRequest() {
     // Create NLPacket with DomainConnectRequest type and correct version
     NLPacket packet(PacketType::DomainConnectRequest, PacketVersions::DomainConnectRequest_SocketTypes, true);
     packet.setSequenceNumber(m_sequenceNumber++);
+    // DomainConnectRequest is sent BEFORE we have a local ID, so don't set source ID
+    // The server will assign us an ID in the DomainList response
     
     // Build payload using Qt wire format (match Overte's NodeList.cpp structure exactly)
     QtStream qs;
