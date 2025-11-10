@@ -1146,6 +1146,9 @@ void OverteClient::handleDomainListReply(const char* data, size_t len) {
         // Send our avatar identity first
         sendAvatarIdentity();
         
+        // Send AvatarQuery to request all avatars in the domain
+        sendAvatarQuery();
+        
         // Then start sending avatar data regularly
         sendAvatarData();
     } else {
