@@ -1188,10 +1188,11 @@ void OverteClient::sendDomainConnectRequest() {
     // 15. Username signature (QString) - empty (no keypair authentication)
     qs.writeQString("");
     
-    // 16. Domain username (QString) - empty for now
-    // 17. Domain access token (QString) - empty for now
-    // These are optional and only sent if domain account manager is configured
-    // We'll skip them for now (Overte clients only send if hasDomainAccountManager)
+    // 16. Domain username (QString) - send empty for compatibility
+    qs.writeQString("");
+    
+    // 17. Domain access token:refreshToken (QString) - send empty for compatibility  
+    qs.writeQString("");
 
     // Append payload to packet
     if (!qs.buf.empty()) packet.write(qs.buf.data(), qs.buf.size());
