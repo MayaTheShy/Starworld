@@ -1538,10 +1538,13 @@ void OverteClient::handlePing(const char* payload, size_t len) {
 void OverteClient::sendPing(int fd, const sockaddr_storage& addr, socklen_t addrLen) {
     // Create NLPacket for Ping with correct version
     NLPacket packet(PacketType::Ping, PacketVersions::Ping_IncludeConnectionID, false);
-    // Include our local ID if we have one (sourced packet)
+    
+    // Set source ID first (this resizes header and writes it)
     if (m_localID != 0) {
         packet.setSourceID(m_localID);
     }
+    
+    // Then set sequence number (this updates the header without resizing)
     packet.setSequenceNumber(m_sequenceNumber++);
     
     // Add timestamp (microseconds since epoch)
