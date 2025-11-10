@@ -461,7 +461,7 @@ uint8_t NLPacket::versionForPacketType(PacketType type) {
     }
 }
 
-std::vector<uint8_t> NLPacketCodec::computeProtocolVersionSignature() {
+std::vector<uint8_t> NLPacket::computeProtocolVersionSignature() {
     // Protocol signature extracted from official Overte client packet capture
     // This is the actual signature that the AUR overte-server-bin package expects
     static const std::vector<uint8_t> signature = {
