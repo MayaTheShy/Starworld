@@ -918,7 +918,16 @@ void OverteClient::handleDomainListReply(const char* data, size_t len) {
     
     size_t offset = 0;
     
-    // Read domain UUID
+    // DomainList packet structure (from DomainServer.cpp sendDomainListToNode):
+    // 1. Domain Session UUID (16 bytes) 
+    // 2. Domain Session Local ID (2 bytes) - not needed by us
+    // 3. Node UUID (16 bytes) - our session UUID
+    // 4. Node Local ID (2 bytes) - **THIS IS WHAT WE NEED** (big-endian!)
+    // 5. Permissions (4 bytes)
+    // 6. Authenticated (1 byte)
+    // 7. More fields...
+    
+    // Read domain session UUID
     if (offset + 16 > len) return;
     char domainUUID[33];
     snprintf(domainUUID, sizeof(domainUUID),
@@ -933,12 +942,18 @@ void OverteClient::handleDomainListReply(const char* data, size_t len) {
              (unsigned char)data[offset+14], (unsigned char)data[offset+15]);
     offset += 16;
     
-    std::cout << "[OverteClient] Domain UUID: " << domainUUID << std::endl;
+    std::cout << "[OverteClient] Domain Session UUID: " << domainUUID << std::endl;
     
-    // Read session UUID
+    // Skip domain session local ID (2 bytes) - we don't need this
+    if (offset + 2 > len) return;
+    uint16_t domainSessionLocalID = ntohs(*reinterpret_cast<const uint16_t*>(data + offset));
+    offset += 2;
+    std::cout << "[OverteClient] Domain Session Local ID: " << domainSessionLocalID << std::endl;
+    
+    // Read node UUID (our session UUID)
     if (offset + 16 > len) return;
-    char sessionUUID[33];
-    snprintf(sessionUUID, sizeof(sessionUUID),
+    char nodeUUID[33];
+    snprintf(nodeUUID, sizeof(nodeUUID),
              "%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
              (unsigned char)data[offset], (unsigned char)data[offset+1],
              (unsigned char)data[offset+2], (unsigned char)data[offset+3],
@@ -950,7 +965,7 @@ void OverteClient::handleDomainListReply(const char* data, size_t len) {
              (unsigned char)data[offset+14], (unsigned char)data[offset+15]);
     offset += 16;
     
-    std::cout << "[OverteClient] Session UUID: " << sessionUUID << std::endl;
+    std::cout << "[OverteClient] Node UUID (our session): " << nodeUUID << std::endl;
     
     // Read domain local ID (16-bit) - this is in LITTLE-ENDIAN, not big-endian!
     // Do NOT use ntohs() - just read directly on x86
