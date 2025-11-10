@@ -1078,8 +1078,16 @@ void OverteClient::handleDomainListReply(const char* data, size_t len) {
     } else {
         std::cout << "[OverteClient] Warning: No EntityServer found in assignment client list" << std::endl;
         std::cout << "[OverteClient] This might be expected for non-authenticated connections." << std::endl;
-        std::cout << "[OverteClient] Sending EntityQuery to domain server as fallback..." << std::endl;
-        sendEntityQuery(); // Try sending to domain server anyway
+        
+        // Try hardcoded EntityServer port 48247 (common default)
+        std::cout << "[OverteClient] Trying hardcoded EntityServer port 48247..." << std::endl;
+        m_entityServerPort = 48247;
+        std::memcpy(&m_entityServerAddr, &m_udpAddr, m_udpAddrLen);
+        reinterpret_cast<sockaddr_in*>(&m_entityServerAddr)->sin_port = htons(48247);
+        m_entityServerAddrLen = m_udpAddrLen;
+        
+        std::cout << "[OverteClient] Sending EntityQuery to 127.0.0.1:48247..." << std::endl;
+        sendEntityQuery();
     }
 }
 
