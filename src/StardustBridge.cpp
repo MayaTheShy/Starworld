@@ -73,10 +73,17 @@ bool StardustBridge::connect(const std::string& socketPath) {
         if (rc == 0) {
             m_connected = true;
             std::cout << "[StardustBridge] Connected via Rust bridge (C-ABI)." << std::endl;
+            std::cout.flush();
+            std::cout << "[StardustBridge] Creating root node..." << std::endl;
+            std::cout.flush();
             m_overteRoot = createNode("OverteWorld");
+            std::cout << "[StardustBridge] Root node created, ID: " << *m_overteRoot << std::endl;
+            std::cout.flush();
             // Set root node to type 0 (Unknown) with zero dimensions so it doesn't render
             setNodeEntityType(*m_overteRoot, 0); 
             setNodeDimensions(*m_overteRoot, glm::vec3(0.0f, 0.0f, 0.0f));
+            std::cout << "[StardustBridge] Rust bridge fully initialized" << std::endl;
+            std::cout.flush();
             return true;
         } else {
             std::cerr << "[StardustBridge] Rust bridge present but start() failed (rc=" << rc << ")" << std::endl;
