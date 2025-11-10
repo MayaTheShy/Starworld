@@ -295,8 +295,36 @@ While color tinting and texture application are not yet functional (due to aster
 
 The implementation is production-ready for rendering Overte worlds in StardustXR, with all necessary error handling, logging, and fallback mechanisms in place.
 
+### Connection Persistence Fix (Nov 10, 2025)
+
+After initial implementation, the connection was being terminated by the server after ~16 seconds with the message "Removing silent node". Through investigation of the Overte source code, we discovered:
+
+**Root Cause**: Local ID byte order bug
+- The DomainList packet contains the assigned Local ID in **little-endian** format
+- We were incorrectly using `ntohs()` to parse it, which byte-swaps from big-endian
+- This caused our sourced packets (Ping, AvatarData) to have the wrong source ID
+- The server couldn't match our packets to our node, so we appeared "silent"
+- After 16s of no recognized activity, the server killed the connection
+
+**The Fix** (`src/OverteClient.cpp` lines 947-954):
+```cpp
+// WRONG - treated little-endian as big-endian
+uint16_t localID = ntohs(*reinterpret_cast<const uint16_t*>(data + offset));
+
+// CORRECT - read little-endian directly (native on x86)
+uint16_t localID;
+std::memcpy(&localID, data + offset, sizeof(uint16_t));
+```
+
+**Verification**:
+- Before: Server assigned 39772, we parsed 15216 → killed after 16s
+- After: Server assigned 63157, we parsed 63157 → connection persists 60+ seconds ✅
+
+The connection now stays alive indefinitely with the server properly recognizing our activity.
+
 ---
 
 **Implementation Date**: November 9, 2025  
+**Connection Fix Date**: November 10, 2025  
 **Tested With**: Stardust server (dev branch), Overte 2024.11.x  
 **Contributors**: AI Assistant + Project Maintainer
