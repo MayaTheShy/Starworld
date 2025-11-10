@@ -2,22 +2,27 @@
 
 ## Current Status (Nov 10, 2025)
 
-**✅ CONNECTION PERSISTENCE ISSUE RESOLVED!**
+**⚠️ HMAC VERIFICATION DEADLOCK - SERVER CONFIGURATION ISSUE**
 
 ### Working ✅
 - **DomainConnectRequest packet format** - Matches official Overte client implementation
 - **Connection established** - Server responds with DomainList packet
-- **Local ID assignment** - Server assigns a valid Local ID
-- **Local ID parsing** - Fixed byte order bug (was using ntohs() on little-endian data)
+- **Local ID assignment** - Server assigns a valid Local ID correctly
+- **Local ID parsing** - Fixed to read little-endian uint16 at correct offset (bytes 34-35)
 - **Symmetric socket creation** - Server creates correct socket to our actual address
 - **Packet version negotiation** - Using correct version 27 (DomainConnectRequest_SocketTypes)
 - **Protocol signature** - MD5 hash `eb1600e798dc5e03c755a968dc16b7fc` matches server
 - **Packet structure** - All fields properly ordered and serialized per Qt QDataStream format
-- **Source ID handling** - Little-endian uint16, correctly set on sourced packets
-- **Connection persistence** - Connection now stays alive indefinitely with correct Local ID ✅
-- **Activity tracking** - Server recognizes our sourced packets (Ping, AvatarData) and updates lastHeardMicrostamp ✅
+- **Source ID handling** - Little-endian uint16 at offset 6-7 in sourced packet header
+- **HMAC-MD5 implementation** - Correctly calculates hash using OpenSSL with null UUID as key
+- **Packet hash insertion** - Properly reserves 16-byte slot and moves payload
 
-### Root Cause of Connection Persistence Bug (FIXED)
+### Not Working / Blocked ❌
+- **Connection persistence** - Still killed after 11-18 seconds as "silent node"
+- **HMAC verification** - Server rejects all sourced packets due to hash mismatch
+- **Keep-alive mechanism** - Cannot send valid Ping packets that server will accept
+
+### Root Cause: HMAC Verification Deadlock (UNSOLVED)
 
 The connection was being killed after 16 seconds because the server couldn't match our sourced packets to our node.
 
