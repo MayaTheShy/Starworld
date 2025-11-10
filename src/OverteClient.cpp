@@ -1428,6 +1428,46 @@ void OverteClient::sendACK(uint32_t sequenceNumber) {
     }
 }
 
+void OverteClient::handlePing(const char* payload, size_t len) {
+    // Ping packet format:
+    // - uint64: timestamp (microseconds)
+    // - uint8: ping type (0=local, 1=public)
+    // - [optional] uint16: connection ID
+    
+    if (len < 9) {
+        std::cerr << "[OverteClient] Ping packet too short: " << len << " bytes" << std::endl;
+        return;
+    }
+    
+    // Read timestamp (we'll echo it back)
+    uint64_t timestamp = 0;
+    for (int i = 0; i < 8; i++) {
+        timestamp = (timestamp << 8) | (unsigned char)payload[i];
+    }
+    
+    uint8_t pingType = payload[8];
+    
+    // Send PingReply
+    NLPacket packet(PacketType::PingReply, PacketVersions::Ping_IncludeConnectionID, false);
+    if (m_localID != 0) {
+        packet.setSourceID(m_localID);
+    }
+    packet.setSequenceNumber(m_sequenceNumber++);
+    
+    // Echo back the timestamp
+    packet.writeUInt64(timestamp);
+    
+    // Ping type
+    packet.writeUInt8(pingType);
+    
+    const auto& data = packet.getData();
+    ssize_t s = ::sendto(m_udpFd, data.data(), data.size(), 0,
+                         reinterpret_cast<const sockaddr*>(&m_udpAddr), m_udpAddrLen);
+    if (s < 0 && errno != EWOULDBLOCK && errno != EAGAIN) {
+        std::cerr << "[OverteClient] PingReply send failed: " << strerror(errno) << std::endl;
+    }
+}
+
 void OverteClient::sendPing(int fd, const sockaddr_storage& addr, socklen_t addrLen) {
     // Create NLPacket for Ping with correct version
     NLPacket packet(PacketType::Ping, PacketVersions::Ping_IncludeConnectionID, false);
