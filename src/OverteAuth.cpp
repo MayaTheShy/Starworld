@@ -360,9 +360,9 @@ bool OverteAuth::loginWithAuthCode(const std::string& authCode, const std::strin
     std::string tokenUrl = m_metaverseUrl;
     if (tokenUrl.back() == '/') tokenUrl.pop_back();
     
-    // Overte uses /api/v1/oauth/token endpoint
-    if (tokenUrl.find("/api/v1") == std::string::npos) {
-        tokenUrl += "/api/v1";
+    // Overte uses /server/oauth/token endpoint
+    if (tokenUrl.find("/server") == std::string::npos) {
+        tokenUrl += "/server";
     }
     tokenUrl += "/oauth/token";
     
