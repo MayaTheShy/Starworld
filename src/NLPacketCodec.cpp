@@ -272,8 +272,13 @@ void ensureVersionTable(uint8_t& vAvatarRemoveAttachments,
                    s_vPingIncludeConnID, s_vIcePingSendPeerID, s_vAudioStopInjectors;
     static int s_numPacketTypes;
     if (!inited) {
+        // Try multiple paths since we might be run from different directories
         std::string path = "third_party/overte-src/libraries/networking/src/udt/PacketHeaders.h";
         auto content = readFileToString(path);
+        if (content.empty()) {
+            path = "../third_party/overte-src/libraries/networking/src/udt/PacketHeaders.h";
+            content = readFileToString(path);
+        }
         if (!content.empty()) {
             auto avatar = parseEnumValues(content, "AvatarMixerPacketVersion");
             auto entity = parseEnumValues(content, "EntityVersion");
