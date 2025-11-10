@@ -1487,6 +1487,14 @@ void OverteClient::sendPing(int fd, const sockaddr_storage& addr, socklen_t addr
     packet.writeUInt8(0);
     
     const auto& data = packet.getData();
+    
+    // Debug: hex dump ping packet
+    std::cout << "[OverteClient] Ping packet (" << data.size() << " bytes, localID=" << m_localID << "): ";
+    for (size_t i = 0; i < std::min(data.size(), size_t(16)); i++) {
+        printf("%02x ", (unsigned char)data[i]);
+    }
+    std::cout << std::endl;
+    
     ssize_t s = ::sendto(fd, data.data(), data.size(), 0, 
                          reinterpret_cast<const sockaddr*>(&addr), addrLen);
     if (s < 0 && errno != EWOULDBLOCK && errno != EAGAIN) {
