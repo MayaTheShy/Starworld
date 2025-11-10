@@ -1541,13 +1541,10 @@ void OverteClient::sendPing(int fd, const sockaddr_storage& addr, socklen_t addr
     // Create NLPacket for Ping with correct version
     NLPacket packet(PacketType::Ping, PacketVersions::Ping_IncludeConnectionID, false);
     
-    // EXPERIMENTAL: Try sending as non-sourced packet to avoid hash verification issues
-    // The server should still be able to identify us from our source socket address
-   // if (m_localID != 0) {
-    //     packet.setSourceID(m_localID);
-    // }
-    
-    // Set sequence number
+    // Set source ID and sequence number
+    if (m_localID != 0) {
+        packet.setSourceID(m_localID);
+    }
     packet.setSequenceNumber(m_sequenceNumber++);
     
     // Add timestamp (microseconds since epoch)
@@ -1557,6 +1554,10 @@ void OverteClient::sendPing(int fd, const sockaddr_storage& addr, socklen_t addr
     
     // Ping type (0 = local, 1 = public)
     packet.writeUInt8(0);
+    
+    // Write HMAC verification hash using null UUID as key
+    uint8_t nullUUID[16] = {0};
+    packet.writeVerificationHash(nullUUID);
     
     const auto& data = packet.getData();
     
