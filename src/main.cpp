@@ -80,6 +80,8 @@ int main(int argc, char** argv) {
         std::cerr << "Failed to connect to StardustXR compositor.\n";
         return 1;
     }
+    
+    std::cout << "[main] StardustXR connected, continuing to Overte setup..." << std::endl;
 
     // Overte localhost default assumption (can override via OVERTE_URL env or --overte=ws://host:port)
     std::string overteUrl = "ws://127.0.0.1:40102";
