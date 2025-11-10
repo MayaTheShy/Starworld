@@ -382,11 +382,18 @@ void OverteClient::poll() {
         // Send periodic ping to domain to keep connection alive
         static auto lastPing = std::chrono::steady_clock::now();
         static auto lastDomainList = std::chrono::steady_clock::now();
+        static auto lastAvatarData = std::chrono::steady_clock::now();
         auto now = std::chrono::steady_clock::now();
         
         if (std::chrono::duration_cast<std::chrono::seconds>(now - lastPing).count() >= 1) {
             sendPing(m_udpFd, m_udpAddr, m_udpAddrLen);
             lastPing = now;
+        }
+        
+        // Send avatar data to Avatar Mixer every 100ms (10 Hz) if connected
+        if (m_avatarMixerConnected && std::chrono::duration_cast<std::chrono::milliseconds>(now - lastAvatarData).count() >= 100) {
+            sendAvatarData();
+            lastAvatarData = now;
         }
         
         // Request domain list periodically if not connected
