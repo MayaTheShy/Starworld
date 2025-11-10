@@ -1090,16 +1090,21 @@ void OverteClient::handleDomainListReply(const char* data, size_t len) {
         std::cout << "[OverteClient] This might be expected for non-authenticated connections." << std::endl;
         
         // Modern Overte doesn't advertise assignment clients in DomainList anymore
-        // Instead, we broadcast EntityQuery to common assignment client ports
+        // Instead, we broadcast EntityQuery to discover EntityServer
         std::cout << "[OverteClient] Broadcasting EntityQuery to discover EntityServer..." << std::endl;
         
-        // Try common assignment client ports (from netstat output)
-        std::vector<uint16_t> commonPorts = {
-            57236, 48987, 51757, 50776, 38519, 50165, 43845, 
-            36358, 55365, 48851, 33120, 37739
-        };
+        // Try a range of common Overte assignment client ports
+        // Overte assignment clients typically use ports in 48000-60000 range
+        std::vector<uint16_t> portRange;
+        for (uint16_t port = 48000; port <= 52000; port += 500) {
+            portRange.push_back(port);
+        }
+        // Add some specific common ports
+        portRange.push_back(40103);
+        portRange.push_back(40104);
+        portRange.push_back(48247);
         
-        for (uint16_t port : commonPorts) {
+        for (uint16_t port : portRange) {
             std::memcpy(&m_entityServerAddr, &m_udpAddr, m_udpAddrLen);
             reinterpret_cast<sockaddr_in*>(&m_entityServerAddr)->sin_port = htons(port);
             m_entityServerAddrLen = m_udpAddrLen;
@@ -1107,7 +1112,7 @@ void OverteClient::handleDomainListReply(const char* data, size_t len) {
             sendEntityQuery();
         }
         
-        std::cout << "[OverteClient] Sent EntityQuery to " << commonPorts.size() << " potential assignment client ports" << std::endl;
+        std::cout << "[OverteClient] Sent EntityQuery to " << portRange.size() << " potential assignment client ports" << std::endl;
     }
 }
 
