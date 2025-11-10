@@ -461,18 +461,19 @@ uint8_t NLPacket::versionForPacketType(PacketType type) {
     }
 }
 
-std::vector<uint8_t> NLPacket::computeProtocolVersionSignature() {
-    // Protocol signature computed from Overte 2025.05.1 source (commit 53d2094)
-    // Matches overte-server-bin AUR package
-    // Computed via tools/compute_protocol_v2.py with actual enum parsing
-    // Protocol version: "UuQR8qg5dU9NE9CXz2rEaQ==" (base64) = 52e411f2a839754f4d13d097cf6ac469 (hex)
-    // Based on: 106 packet types, EntityVersion::LAST = 70, DomainListVersion::SocketTypes = 7
-    // AvatarMixerPacketVersion::RemoveAttachments = 38, EntityQueryPacketVersion::ConicalFrustums = 23
-    
-    std::vector<uint8_t> signature = {
-        0x52, 0xe4, 0x11, 0xf2, 0xa8, 0x39, 0x75, 0x4f,
-        0x4d, 0x13, 0xd0, 0x97, 0xcf, 0x6a, 0xc4, 0x69
+std::vector<uint8_t> NLPacketCodec::computeProtocolVersionSignature() {
+    // Protocol signature extracted from official Overte client packet capture
+    // This is the actual signature that the AUR overte-server-bin package expects
+    static const std::vector<uint8_t> signature = {
+        0xeb, 0x16, 0x00, 0xe7, 0x98, 0xdc, 0x5e, 0x03,
+        0xc7, 0x55, 0xa9, 0x68, 0xdc, 0x16, 0xb7, 0xfc
     };
+    
+    std::cout << "[DEBUG] Using protocol signature: ";
+    for (uint8_t byte : signature) {
+        std::cout << std::hex << std::setw(2) << std::setfill('0') << (int)byte;
+    }
+    std::cout << std::dec << std::endl;
     
     return signature;
 }
