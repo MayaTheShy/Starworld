@@ -468,13 +468,6 @@ std::vector<uint8_t> NLPacketCodec::computeProtocolVersionSignature() {
         0xeb, 0x16, 0x00, 0xe7, 0x98, 0xdc, 0x5e, 0x03,
         0xc7, 0x55, 0xa9, 0x68, 0xdc, 0x16, 0xb7, 0xfc
     };
-    
-    std::cout << "[DEBUG] Using protocol signature: ";
-    for (uint8_t byte : signature) {
-        std::cout << std::hex << std::setw(2) << std::setfill('0') << (int)byte;
-    }
-    std::cout << std::dec << std::endl;
-    
     return signature;
 }
 
