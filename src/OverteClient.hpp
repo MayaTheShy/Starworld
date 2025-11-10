@@ -103,6 +103,7 @@ private:
 	void handleDomainListReply(const char* data, size_t len);
 	void handleDomainConnectionDenied(const char* data, size_t len);
 	void handleICEPing(const char* data, size_t len);
+	void handlePing(const char* payload, size_t len);
 	void sendDomainListRequest();
 	void sendDomainConnectRequest();
 	void sendEntityQuery();
