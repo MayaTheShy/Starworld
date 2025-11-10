@@ -929,6 +929,16 @@ void OverteClient::handleDomainListReply(const char* data, size_t len) {
     }
     std::cout << std::endl;
     
+    // Check if this might be a count field (QDataStream format often starts with a count)
+    if (len - offset >= 4) {
+        uint32_t possibleCount = ntohl(*reinterpret_cast<const uint32_t*>(data + offset));
+        std::cout << "[OverteClient] First 4 bytes as uint32 (big-endian): " << possibleCount << std::endl;
+    }
+    if (len - offset >= 2) {
+        uint16_t possibleCount16 = ntohs(*reinterpret_cast<const uint16_t*>(data + offset));
+        std::cout << "[OverteClient] First 2 bytes as uint16 (big-endian): " << possibleCount16 << std::endl;
+    }
+    
     // Parse assignment client nodes from the packet
     // Each node is serialized using QDataStream format (see Node.cpp operator<<)
     // Format per node:
