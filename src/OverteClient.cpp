@@ -1217,9 +1217,22 @@ void OverteClient::sendDomainConnectRequest() {
         std::cout << "[OverteClient]   Protocol signature: " << protocolSig.size() << " bytes (MD5)" << std::endl;
         std::cout << "[OverteClient]   Protocol signature (hex): " << md5hex.str() << std::endl;
         std::cout << "[OverteClient]   Protocol signature (base64): " << md5Base64 << std::endl;
-        // Hex dump first 64 bytes
-        std::cout << "[OverteClient] >>> NLPacket Hex: ";
-        for (size_t i = 0; i < std::min(size_t(64), data.size()); ++i) {
+        
+        // Detailed payload breakdown
+        std::cout << "[OverteClient]   Payload size: " << qs.buf.size() << " bytes" << std::endl;
+        std::cout << "[OverteClient]   >>> Payload (QDataStream format):" << std::endl;
+        std::cout << "[OverteClient]       UUID (16 bytes)" << std::endl;
+        std::cout << "[OverteClient]       Protocol sig length (4 bytes): ";
+        if (qs.buf.size() >= 20) {
+            uint32_t sigLen = (qs.buf[16] << 24) | (qs.buf[17] << 16) | (qs.buf[18] << 8) | qs.buf[19];
+            std::cout << sigLen << std::endl;
+            std::cout << "[OverteClient]       Protocol sig data (" << sigLen << " bytes at offset 20)" << std::endl;
+        }
+        
+        // Hex dump first 128 bytes
+        std::cout << "[OverteClient] >>> Full packet hex (first 128 bytes):" << std::endl;
+        for (size_t i = 0; i < std::min(size_t(128), data.size()); ++i) {
+            if (i > 0 && i % 16 == 0) std::cout << std::endl << "                   ";
             printf("%02x ", data[i]);
         }
         std::cout << std::endl;
