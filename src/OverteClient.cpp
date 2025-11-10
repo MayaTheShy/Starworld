@@ -1630,7 +1630,10 @@ void OverteClient::sendAvatarIdentity() {
     std::cout << "[OverteClient] Sending AvatarIdentity to Avatar Mixer..." << std::endl;
     
     // Create AvatarIdentity packet (PacketType::AvatarIdentity = 29 = 0x1D)
-    NLPacket packet(PacketType::AvatarIdentity, m_sequenceNumber++, true);
+    // Use correct packet version from versionForPacketType
+    PacketVersion version = NLPacket::versionForPacketType(PacketType::AvatarIdentity);
+    NLPacket packet(PacketType::AvatarIdentity, version, true);
+    packet.setSequenceNumber(m_sequenceNumber++);
     
     // Include our local ID (sourced packet)
     if (m_localID != 0) {
@@ -1697,7 +1700,10 @@ void OverteClient::sendAvatarData() {
     std::cout << "[OverteClient] Sending AvatarData to Avatar Mixer..." << std::endl;
     
     // Create AvatarData packet (PacketType::AvatarData = 6 = 0x06)
-    NLPacket packet(PacketType::AvatarData, m_sequenceNumber++, true);
+    // Use correct packet version from versionForPacketType
+    PacketVersion version = NLPacket::versionForPacketType(PacketType::AvatarData);
+    NLPacket packet(PacketType::AvatarData, version, true);
+    packet.setSequenceNumber(m_sequenceNumber++);
     
     // Include our local ID (sourced packet)
     if (m_localID != 0) {
