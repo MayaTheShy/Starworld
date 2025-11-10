@@ -1559,8 +1559,22 @@ void OverteClient::sendPing(int fd, const sockaddr_storage& addr, socklen_t addr
     
     const auto& data = packet.getData();
     
+    // Debug: show destination address
+    char destIP[INET6_ADDRSTRLEN];
+    int destPort = 0;
+    if (addr.ss_family == AF_INET) {
+        auto* sin = reinterpret_cast<const sockaddr_in*>(&addr);
+        inet_ntop(AF_INET, &sin->sin_addr, destIP, sizeof(destIP));
+        destPort = ntohs(sin->sin_port);
+    } else if (addr.ss_family == AF_INET6) {
+        auto* sin6 = reinterpret_cast<const sockaddr_in6*>(&addr);
+        inet_ntop(AF_INET6, &sin6->sin6_addr, destIP, sizeof(destIP));
+        destPort = ntohs(sin6->sin6_port);
+    }
+    
     // Debug: hex dump ping packet
-    std::cout << "[OverteClient] Ping packet (" << data.size() << " bytes, localID=" << m_localID << "): ";
+    std::cout << "[OverteClient] Ping packet (" << data.size() << " bytes, localID=" << m_localID 
+              << ") to " << destIP << ":" << destPort << " - ";
     for (size_t i = 0; i < std::min(data.size(), size_t(32)); i++) {
         printf("%02x ", (unsigned char)data[i]);
     }
