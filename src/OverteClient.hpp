@@ -8,6 +8,7 @@
 #include <memory>
 
 #include <glm/glm.hpp>
+#include <glm/gtc/quaternion.hpp>
 
 // Networking types needed for member declarations (sockaddr_storage, socklen_t)
 #include <sys/socket.h>
