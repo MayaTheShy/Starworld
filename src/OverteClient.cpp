@@ -363,7 +363,16 @@ void OverteClient::poll() {
         sockaddr_storage from{}; socklen_t fromlen = sizeof(from);
         ssize_t r = ::recvfrom(m_udpFd, buf, sizeof(buf), 0, reinterpret_cast<sockaddr*>(&from), &fromlen);
         if (r > 0) {
-            std::cout << "[OverteClient] <<< Received domain packet (" << r << " bytes)" << std::endl;
+            // Log source address
+            char fromIP[INET_ADDRSTRLEN];
+            uint16_t fromPort = 0;
+            if (from.ss_family == AF_INET) {
+                sockaddr_in* sin = reinterpret_cast<sockaddr_in*>(&from);
+                inet_ntop(AF_INET, &sin->sin_addr, fromIP, sizeof(fromIP));
+                fromPort = ntohs(sin->sin_port);
+            }
+            std::cout << "[OverteClient] <<< Received packet (" << r << " bytes) from " << fromIP << ":" << fromPort << std::endl;
+            
             // Hex dump first 32 bytes for debugging
             std::cout << "[OverteClient] Hex: ";
             for (int i = 0; i < std::min(32, (int)r); ++i) {

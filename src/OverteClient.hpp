@@ -111,6 +111,7 @@ private:
 	// Avatar Mixer protocol
 	void sendAvatarIdentity();
 	void sendAvatarData();
+	void sendAvatarQuery();
 	void handleAvatarMixerPacket(const char* data, size_t len, uint8_t packetType);
 
 	std::string m_domainUrl;
