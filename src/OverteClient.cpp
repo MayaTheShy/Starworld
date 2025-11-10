@@ -392,11 +392,18 @@ void OverteClient::poll() {
         static auto lastPing = std::chrono::steady_clock::now();
         static auto lastDomainList = std::chrono::steady_clock::now();
         static auto lastAvatarData = std::chrono::steady_clock::now();
+        static auto lastAvatarQuery = std::chrono::steady_clock::now();
         auto now = std::chrono::steady_clock::now();
         
         if (std::chrono::duration_cast<std::chrono::seconds>(now - lastPing).count() >= 1) {
             sendPing(m_udpFd, m_udpAddr, m_udpAddrLen);
             lastPing = now;
+        }
+        
+        // Send AvatarQuery periodically (every 5 seconds) to get avatar updates
+        if (m_avatarMixerConnected && std::chrono::duration_cast<std::chrono::seconds>(now - lastAvatarQuery).count() >= 5) {
+            sendAvatarQuery();
+            lastAvatarQuery = now;
         }
         
         // Send avatar data to Avatar Mixer every 100ms (10 Hz) if connected
