@@ -1,8 +1,12 @@
-# Overte to Stardust Entity Rendering - Implementation Complete
+# Overte to Stardust Entity Rendering - Implementation Status
 
 ## Overview
 
-This document summarizes the implementation work completed to enable Overte entities to be properly rendered in the StardustXR compositor. The system now supports:
+This document summarizes the implementation work completed to enable Overte entities to be properly rendered in the StardustXR compositor. 
+
+**Current Status:** ⚠️ Connection establishes successfully but is terminated after 11-18 seconds due to server-side HMAC verification issues. See [NETWORK_PROTOCOL_INVESTIGATION.md](NETWORK_PROTOCOL_INVESTIGATION.md) for detailed analysis.
+
+### Implemented ✅
 
 ✅ **Entity Type Detection** - Box, Sphere, Model, and other entity types from Overte  
 ✅ **HTTP/HTTPS Model Downloads** - Automatic downloading and caching of 3D models  
@@ -12,7 +16,18 @@ This document summarizes the implementation work completed to enable Overte enti
 ✅ **Dimension Support** - Entity dimensions properly applied as scale factors  
 ✅ **Domain Connection** - Establishes connection, receives Local ID and assignment client list
 ✅ **Packet Protocol** - Full implementation of NLPacket format with sourcing, versioning, and sequence numbers
-✅ **Connection Persistence** - Fixed Local ID byte order bug, connection now persists indefinitely
+✅ **Local ID Parsing** - Fixed byte order bugs (little-endian at offset 34-35)
+✅ **HMAC-MD5 Verification** - Complete implementation with OpenSSL
+✅ **Packet Hash Insertion** - Proper 16-byte slot reservation and payload relocation
+
+### Blocked / Not Working ❌
+
+❌ **Connection Persistence** - Killed after 11-18 seconds due to HMAC verification deadlock
+❌ **Server HMAC Configuration** - Server expects empty hash but packet structure requires 16 bytes
+❌ **Keep-Alive Mechanism** - Cannot send valid sourced packets that server will accept
+
+### Pending ⏳
+
 ⏳ **Color Tinting** - Data captured but not yet applied (requires asteroids API extension)  
 ⏳ **Texture Support** - Data captured but not yet applied (requires material API)
 
