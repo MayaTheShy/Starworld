@@ -134,28 +134,32 @@ void NLPacket::writeVerificationHash(const uint8_t* connectionSecretUUID) {
     }
     
     const size_t HASH_SIZE = 16;  // MD5 produces 16 bytes
-    const size_t HASH_OFFSET = SOURCED_HEADER_SIZE;  // Hash goes right after source ID
+    const size_t HASH_OFFSET = SOURCED_HEADER_SIZE;  // Hash goes right after source ID (offset 8)
     
-    // Calculate HMAC-MD5 hash
-    // The hash is calculated over the payload data AFTER the hash field itself
-    const size_t payloadOffset = HASH_OFFSET + HASH_SIZE;
-    const uint8_t* payloadData = m_data.data() + payloadOffset;
-    const size_t payloadSize = m_data.size() - payloadOffset;
+    // The current packet structure is: [header(8)] [payload...]
+    // We need to insert 16 bytes for the hash between header and payload
+    // New structure will be: [header(8)] [hash(16)] [payload...]
     
+    // Get the current payload (everything after the header)
+    std::vector<uint8_t> currentPayload(m_data.begin() + m_headerSize, m_data.end());
+    
+    // Resize packet to make room for hash
+    m_data.resize(m_headerSize + HASH_SIZE + currentPayload.size());
+    
+    // Move payload to after the hash slot
+    if (!currentPayload.empty()) {
+        std::memcpy(m_data.data() + HASH_OFFSET + HASH_SIZE, currentPayload.data(), currentPayload.size());
+    }
+    
+    // Calculate HMAC-MD5 hash over the payload data
     unsigned char hash[HASH_SIZE];
     unsigned int hashLen = HASH_SIZE;
     
     // Use HMAC_MD5 with connection secret UUID as key
-    HMAC(EVP_md5(), connectionSecretUUID, 16, payloadData, payloadSize, hash, &hashLen);
+    HMAC(EVP_md5(), connectionSecretUUID, 16, currentPayload.data(), currentPayload.size(), hash, &hashLen);
     
-    // Insert hash into packet at correct position
-    // We need to insert 16 bytes right after the header
-    if (m_data.size() < HASH_OFFSET + HASH_SIZE) {
-        m_data.resize(HASH_OFFSET + HASH_SIZE);
-    }
-    
-    // Insert hash at the correct position
-    m_data.insert(m_data.begin() + HASH_OFFSET, hash, hash + HASH_SIZE);
+    // Write hash into the reserved slot
+    std::memcpy(m_data.data() + HASH_OFFSET, hash, HASH_SIZE);
 }
 
 bool NLPacket::parseHeader(const uint8_t* data, size_t size, Header& header) {
