@@ -1270,11 +1270,17 @@ void OverteClient::sendDomainConnectRequest() {
     if (::getsockname(m_udpFd, reinterpret_cast<sockaddr*>(&localSs), &localLen) == 0) {
         if (localSs.ss_family == AF_INET) {
             auto* sin = reinterpret_cast<sockaddr_in*>(&localSs);
-            localIPv4 = ntohl(sin->sin_addr.s_addr);
+            uint32_t sockIPv4 = ntohl(sin->sin_addr.s_addr);
             localPort = ntohs(sin->sin_port);
-            std::cout << "[OverteClient] getsockname: " << ((localIPv4 >> 24) & 0xFF) << "." 
-                      << ((localIPv4 >> 16) & 0xFF) << "." << ((localIPv4 >> 8) & 0xFF) << "." 
-                      << (localIPv4 & 0xFF) << ":" << localPort << std::endl;
+            // If socket is bound to 0.0.0.0 (INADDR_ANY), use 127.0.0.1 for localhost connections
+            if (sockIPv4 == 0) {
+                localIPv4 = 0x7F000001; // 127.0.0.1
+            } else {
+                localIPv4 = sockIPv4;
+            }
+            std::cout << "[OverteClient] getsockname: " << ((sockIPv4 >> 24) & 0xFF) << "." 
+                      << ((sockIPv4 >> 16) & 0xFF) << "." << ((sockIPv4 >> 8) & 0xFF) << "." 
+                      << (sockIPv4 & 0xFF) << ":" << localPort << std::endl;
         }
     }
     std::cout << "[OverteClient] Sending local address in DomainConnectRequest: " 
