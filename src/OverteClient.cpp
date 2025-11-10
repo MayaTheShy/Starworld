@@ -903,6 +903,14 @@ void OverteClient::handleDomainListReply(const char* data, size_t len) {
     
     std::cout << "[OverteClient] DomainList reply received (" << len << " bytes)" << std::endl;
     
+    // Dump full packet hex for debugging
+    std::cout << "[OverteClient] Full DomainList packet hex (data payload):" << std::endl;
+    for (size_t i = 0; i < len && i < 128; i++) {
+        printf("%02x ", (unsigned char)data[i]);
+        if ((i + 1) % 16 == 0) printf("\n");
+    }
+    if (len % 16 != 0) printf("\n");
+    
     if (len < 37) { // Min: 16 (UUID) + 16 (session) + 2 (localID) + 4 (perms) + 1 (auth) = 39, but let's check for 37
         std::cout << "[OverteClient] DomainList packet too short" << std::endl;
         return;
