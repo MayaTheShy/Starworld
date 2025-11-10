@@ -1111,6 +1111,17 @@ void OverteClient::handleDomainListReply(const char* data, size_t len) {
     
     std::cout << "[OverteClient] Parsed " << m_assignmentClients.size() << " assignment clients" << std::endl;
     
+    // TEMPORARY HACK: If no Avatar Mixer found, try the known port from web UI
+    if (m_avatarMixerPort == 0) {
+        std::cout << "[OverteClient] No Avatar Mixer in DomainList, trying known port 57460..." << std::endl;
+        m_avatarMixerAddr = m_udpAddr;
+        sockaddr_in* addr = reinterpret_cast<sockaddr_in*>(&m_avatarMixerAddr);
+        addr->sin_port = htons(57460);  // From screenshot
+        m_avatarMixerAddrLen = sizeof(sockaddr_in);
+        m_avatarMixerPort = 57460;
+        m_avatarMixerConnected = true;
+    }
+    
     // Connect to Avatar Mixer if found - this is how we get entity data!
     if (m_avatarMixerPort != 0) {
         std::cout << "[OverteClient] Connecting to Avatar Mixer..." << std::endl;
