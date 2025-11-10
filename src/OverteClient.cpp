@@ -1099,7 +1099,18 @@ void OverteClient::handleDomainListReply(const char* data, size_t len) {
         // Try common EntityServer ports (based on web UI showing port 33237)
         std::cout << "[OverteClient] Trying EntityQuery to common EntityServer ports..." << std::endl;
         for (uint16_t port : {33237, 33238, 33239, 40103, 48000, 48001}) {
-            sendEntityQuery(port);
+            // Temporarily set entity server address to try this port
+            m_entityServerAddr = m_udpAddr;
+            sockaddr_in* addr = reinterpret_cast<sockaddr_in*>(&m_entityServerAddr);
+            addr->sin_port = htons(port);
+            m_entityServerAddrLen = sizeof(sockaddr_in);
+            m_entityServerPort = port;
+            
+            sendEntityQuery();
+            
+            char addrStr[INET_ADDRSTRLEN];
+            inet_ntop(AF_INET, &addr->sin_addr, addrStr, sizeof(addrStr));
+            std::cout << "[OverteClient] Sent EntityQuery to " << addrStr << ":" << port << std::endl;
         }
     }
 }
