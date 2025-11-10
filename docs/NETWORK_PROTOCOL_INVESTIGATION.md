@@ -153,34 +153,136 @@ The client implementation is **correct and complete**. The issue is a server-sid
 
 For reference, the original bug that was fixed:
 
-The connection was being killed after 16 seconds because the server couldn't match our sourced packets to our node.
+### Historical Bug: Local ID Byte Order (FIXED)
+
+For reference, the original bug that was fixed:
+
+The connection was being killed after 16 seconds because we were parsing the Local ID incorrectly.
 
 **The Bug:**
 ```cpp
-// WRONG - treated little-endian data as big-endian
-uint16_t localID = ntohs(*reinterpret_cast<const uint16_t*>(data + offset));
+// WRONG - used wrong offset AND wrong byte order
+uint16_t localID = ntohs(*reinterpret_cast<const uint16_t*>(data + 32));
 ```
 
 **The Fix:**
 ```cpp
-// CORRECT - read little-endian directly (native byte order on x86)
+// CORRECT - right offset (34) and little-endian (native on x86)
 uint16_t localID;
-std::memcpy(&localID, data + offset, sizeof(uint16_t));
+std::memcpy(&localID, data + 34, sizeof(uint16_t));
 ```
 
 **Why it failed:**
-1. DomainList packet contains Local ID in **little-endian** format at bytes 32-33
+1. DomainList packet contains Local ID in **little-endian** format at bytes 34-35 (not 32-33)
 2. We were using `ntohs()` which converts FROM network byte order (big-endian) TO host order
 3. This effectively byte-swapped the already-correct little-endian value
-4. Our Ping packets then had the wrong source ID
-5. Server couldn't match packets to our node → treated as "silent" → killed after 16s
+4. Example: Server sent 0xa1f7 (41463), we parsed as 0xf7a1 (63393)
+5. Our Ping packets then had the wrong source ID
+6. Server couldn't match packets to our node → treated as "silent" → killed after 16s
 
 **Verification:**
-- Before: Server assigned 39772, we parsed 15216 → killed after 16s
-- After: Server assigned 63157, we parsed 63157 → alive 60+ seconds ✅
+- Before fix: Server assigned 21193 (0x52c9), we parsed 51538 (0xc952) ❌
+- After fix: Server assigned 21193 (0x52c9), we parsed 21193 (0x52c9) ✅
 
-### Not Working / Unknown ❓
-- **Public socket storage** - Server may store mangled IPv6 address (unconfirmed if this affects functionality)
+This fix was necessary but not sufficient - it revealed the deeper HMAC verification issue.
+
+---
+
+### Packet Structure Details
+
+## NLPacket Header Format
+
+**Non-Sourced Packet** (e.g., DomainListRequest):
+```
+Offset  Size  Field
+0-3     4     Sequence number and flags (big-endian)
+4       1     Packet type
+5       1     Protocol version
+6+      N     Payload
+```
+
+**Sourced Non-Verified Packet** (if such packets exist):
+```
+Offset  Size  Field  
+0-3     4     Sequence number and flags (big-endian)
+4       1     Packet type
+5       1     Protocol version
+6-7     2     Source ID / Local ID (little-endian)
+8+      N     Payload
+```
+
+**Sourced Verified Packet** (e.g., Ping, AvatarData):
+```
+Offset  Size  Field
+0-3     4     Sequence number and flags (big-endian)
+4       1     Packet type
+5       1     Protocol version
+6-7     2     Source ID / Local ID (little-endian)
+8-23    16    MD5 verification hash (HMAC-MD5)
+24+     N     Payload
+```
+
+**Critical Notes:**
+- Source ID is **little-endian** (native x86 byte order)
+- Sequence number is **big-endian** (network byte order)
+- Hash slot is ALWAYS present in sourced verified packets (cannot be omitted)
+- Hash is calculated over ONLY the payload (bytes 24+), NOT the header
+
+## DomainList Packet Structure
+
+Based on analysis of actual packets received:
+
+## DomainList Packet Structure
+
+Based on analysis of actual packets received:
+
+```
+Offset  Size  Field
+0-15    16    Domain Session UUID
+16-17   2     Domain Session Local ID (little-endian)
+18-33   16    Our Node UUID
+34-35   2     Our Node Local ID (little-endian) ⭐ CRITICAL
+36-39   4     Permissions flags
+40      1     Is Authenticated (boolean)
+41      1     New Connection (boolean)
+42+     N     Assignment client list (optional)
+```
+
+**Key Finding**: Local ID is at offset **34-35**, NOT 32-33!
+
+## HMAC Verification Implementation
+
+### OpenSSL HMAC-MD5 Calculation
+
+Implemented in `src/NLPacketCodec.cpp`:
+
+```cpp
+void NLPacket::writeVerificationHash(const uint8_t* connectionSecretUUID) {
+    const size_t HASH_SIZE = 16;  // MD5 produces 16 bytes
+    const size_t HASH_OFFSET = 8;  // Hash goes right after sourced header
+    
+    // Extract payload (everything after header)
+    std::vector<uint8_t> currentPayload(m_data.begin() + m_headerSize, m_data.end());
+    
+    // Resize packet to make room for hash between header and payload
+    m_data.resize(m_headerSize + HASH_SIZE + currentPayload.size());
+    
+    // Move payload to after hash slot
+    std::memcpy(m_data.data() + HASH_OFFSET + HASH_SIZE, 
+                currentPayload.data(), currentPayload.size());
+    
+    // Calculate HMAC-MD5 hash over payload using connection secret as key
+    unsigned char hash[HASH_SIZE];
+    unsigned int hashLen = HASH_SIZE;
+    HMAC(EVP_md5(), connectionSecretUUID, 16, 
+         currentPayload.data(), currentPayload.size(), hash, &hashLen);
+    
+    // Write hash into reserved slot
+    std::memcpy(m_data.data() + HASH_OFFSET, hash, HASH_SIZE);
+}
+```
+
+**Note**: This implementation is CORRECT per Overte protocol but cannot be used due to server-side HMAC configuration issue.
 
 ## The IPv6 Address Mystery
 
