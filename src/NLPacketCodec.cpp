@@ -115,11 +115,30 @@ void NLPacket::setSequenceNumber(SequenceNumber seq) {
 void NLPacket::setSourceID(LocalID id) {
     m_sourceID = id;
     m_isSourced = true;
-    // Resize if needed
-    if (m_headerSize != SOURCED_HEADER_SIZE) {
-        m_headerSize = SOURCED_HEADER_SIZE;
-        m_data.resize(m_headerSize);
+    
+    // For verified sourced packets (like Ping), we need space for:
+    // [seq+flags(4)] [type(1)] [version(1)] [sourceID(2)] [hash(16)] [payload...]
+    // Total header = 8 bytes + 16 bytes for hash = 24 bytes
+    static constexpr size_t VERIFIED_HEADER_SIZE = SOURCED_HEADER_SIZE + 16;
+    
+    // Resize header to include hash slot
+    if (m_headerSize != VERIFIED_HEADER_SIZE) {
+        size_t oldHeaderSize = m_headerSize;
+        m_headerSize = VERIFIED_HEADER_SIZE;
+        
+        // If we already have payload data, we need to move it
+        if (m_data.size() > oldHeaderSize) {
+            std::vector<uint8_t> payload(m_data.begin() + oldHeaderSize, m_data.end());
+            m_data.resize(m_headerSize);
+            m_data.insert(m_data.end(), payload.begin(), payload.end());
+        } else {
+            m_data.resize(m_headerSize);
+        }
+        
+        // Zero out the hash slot (bytes 8-23)
+        std::memset(m_data.data() + SOURCED_HEADER_SIZE, 0, 16);
     }
+    
     writeHeader();
 }
 
