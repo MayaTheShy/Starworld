@@ -23,6 +23,8 @@
 #include <cstring>
 #include <zlib.h>
 #include <endian.h>
+#include <openssl/hmac.h>
+#include <openssl/md5.h>
 
 using namespace std::chrono_literals;
 using namespace Overte;
