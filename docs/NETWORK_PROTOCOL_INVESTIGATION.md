@@ -2,20 +2,51 @@
 
 ## Current Status (Nov 10, 2025)
 
+**✅ CONNECTION PERSISTENCE ISSUE RESOLVED!**
+
 ### Working ✅
 - **DomainConnectRequest packet format** - Matches official Overte client implementation
 - **Connection established** - Server responds with DomainList packet
-- **Local ID assignment** - Server assigns a valid Local ID (e.g., 166 / 0xA6)
-- **Symmetric socket creation** - Server creates correct socket to our actual address (e.g., `127.0.0.1:47505`)
+- **Local ID assignment** - Server assigns a valid Local ID
+- **Local ID parsing** - Fixed byte order bug (was using ntohs() on little-endian data)
+- **Symmetric socket creation** - Server creates correct socket to our actual address
 - **Packet version negotiation** - Using correct version 27 (DomainConnectRequest_SocketTypes)
 - **Protocol signature** - MD5 hash `eb1600e798dc5e03c755a968dc16b7fc` matches server
 - **Packet structure** - All fields properly ordered and serialized per Qt QDataStream format
-- **Source ID handling** - Little-endian uint16, correctly set on sourced packets after receiving Local ID
+- **Source ID handling** - Little-endian uint16, correctly set on sourced packets
+- **Connection persistence** - Connection now stays alive indefinitely with correct Local ID ✅
+- **Activity tracking** - Server recognizes our sourced packets (Ping, AvatarData) and updates lastHeardMicrostamp ✅
 
-### Not Working ❌
-- **Connection persistence** - Connection killed after ~16 seconds with "Removing silent node"
-- **Public socket storage** - Server stores mangled IPv6 address instead of IPv4
-- **Activity tracking** - Server's lastHeardMicrostamp never updates despite our pings
+### Root Cause of Connection Persistence Bug (FIXED)
+
+The connection was being killed after 16 seconds because the server couldn't match our sourced packets to our node.
+
+**The Bug:**
+```cpp
+// WRONG - treated little-endian data as big-endian
+uint16_t localID = ntohs(*reinterpret_cast<const uint16_t*>(data + offset));
+```
+
+**The Fix:**
+```cpp
+// CORRECT - read little-endian directly (native byte order on x86)
+uint16_t localID;
+std::memcpy(&localID, data + offset, sizeof(uint16_t));
+```
+
+**Why it failed:**
+1. DomainList packet contains Local ID in **little-endian** format at bytes 32-33
+2. We were using `ntohs()` which converts FROM network byte order (big-endian) TO host order
+3. This effectively byte-swapped the already-correct little-endian value
+4. Our Ping packets then had the wrong source ID
+5. Server couldn't match packets to our node → treated as "silent" → killed after 16s
+
+**Verification:**
+- Before: Server assigned 39772, we parsed 15216 → killed after 16s
+- After: Server assigned 63157, we parsed 63157 → alive 60+ seconds ✅
+
+### Not Working / Unknown ❓
+- **Public socket storage** - Server may store mangled IPv6 address (unconfirmed if this affects functionality)
 
 ## The IPv6 Address Mystery
 
