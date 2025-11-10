@@ -463,10 +463,29 @@ void OverteClient::parseDomainPacket(const char* data, size_t len) {
         return;
     }
     
+    // Check if this is a control packet (bit 31 set in sequenceAndFlags)
+    bool isControlPacket = (header.sequenceAndFlags & 0x80000000) != 0;
+    bool isReliable = (header.sequenceAndFlags & 0x40000000) != 0;
+    uint32_t sequenceNumber = header.sequenceAndFlags & 0x1FFFFFFF;  // 29 bits
+    
+    if (isControlPacket) {
+        // This is a control packet (ACK, Handshake, etc.) - just log it for now
+        std::cout << "[OverteClient] Received control packet (ACK/Handshake)" << std::endl;
+        return;
+    }
+    
+    // If this is a reliable packet, send ACK
+    if (isReliable) {
+        sendACK(sequenceNumber);
+    }
+    
     PacketType packetType = NLPacket::getType(udata, len);
     std::cout << "[OverteClient] Domain packet type: " << static_cast<int>(packetType) 
               << " (0x" << std::hex << static_cast<int>(packetType) << std::dec << ")" 
-              << " version: " << (int)header.version << std::endl;
+              << " version: " << (int)header.version 
+              << " seq: " << sequenceNumber 
+              << (isReliable ? " [RELIABLE]" : "")
+              << std::endl;
     
     // Payload starts after header (6 bytes base, +2 if has source ID)
     const char* payload = data + 6;  // Assuming no source ID for now
