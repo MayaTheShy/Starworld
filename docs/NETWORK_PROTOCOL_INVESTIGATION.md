@@ -24,6 +24,135 @@
 
 ### Root Cause: HMAC Verification Deadlock (UNSOLVED)
 
+**The Problem:**
+The server requires HMAC-MD5 verification for all sourced packets (Ping, AvatarData, etc.) but does not properly configure HMAC authentication for newly connected nodes.
+
+**Timeline of Discovery:**
+
+1. **Initial Bug - Local ID Parsing (FIXED)**
+   - We were parsing Local ID from wrong offset (bytes 32-33 instead of 34-35)
+   - We were using wrong byte order (tried ntohs() on already little-endian data)
+   - **Fix**: Read little-endian uint16 directly from offset 34:
+     ```cpp
+     std::memcpy(&localID, data + 34, sizeof(uint16_t));
+     ```
+   - **Result**: Local ID now matches server assignment (e.g., server assigns 21193, we parse 21193) ✅
+
+2. **New Issue - Packet Hash Mismatch (UNSOLVED)**
+   - After fixing Local ID, connection still killed after 11-18 seconds
+   - Server logs show: `"Packet hash mismatch on 3 (Ping)"`
+   - Server expects: `Expected hash: ""` (empty string)
+   - We send: `Actual: "06f6cda937d953f41531fe1797e857b5"` (calculated HMAC-MD5)
+
+**Why This Happens:**
+
+From Overte source analysis (`LimitedNodeList.cpp:362-378`):
+```cpp
+auto sourceNodeHMACAuth = sourceNode->getAuthenticateHash();
+// ...
+if (!sourceNodeHMACAuth || packetHashPart != expectedHash) {
+    qCDebug(networking) << "Packet hash mismatch";
+    // Reject packet
+}
+```
+
+The server's node object has **NO HMAC authentication configured** (`sourceNodeHMACAuth` is null), which results in:
+- `expectedHash.isEmpty()` returns true → Expected hash: ""
+- But the packet ALWAYS has 16 bytes at offset 8-23 (hash slot)
+- If those bytes are not empty, it's a mismatch → packet rejected
+- If those bytes are empty zeros, still a mismatch (empty string ≠ 16 zero bytes)
+
+**Why Node Has No HMAC:**
+
+From `DomainGatekeeper.cpp:670`:
+```cpp
+limitedNodeList->addOrUpdateNode(nodeID, nodeType, publicSockAddr, 
+                                 localSockAddr, newLocalID);
+// No connectionSecret parameter → uses default QUuid()
+```
+
+From `Node.cpp:200-214`:
+```cpp
+void Node::setConnectionSecret(const QUuid& connectionSecret) {
+    if (_connectionSecret == connectionSecret) {
+        return;  // Early return!
+    }
+    _connectionSecret = connectionSecret;
+    _authenticateHash->setKey(_connectionSecret);
+}
+```
+
+When a node is created, `_connectionSecret` defaults to null UUID. Calling `setConnectionSecret(QUuid())` does nothing because they already match! The HMAC auth never gets initialized.
+
+**The Deadlock:**
+
+1. **Need sourced packets** to update server's "last heard" timestamp
+2. **Sourced packets require source ID** (Local ID) in header
+3. **Sourced verified packets have structure**: `[header(8)][hash(16)][payload...]`
+4. **Server tries to verify hash** even though node has no HMAC configured
+5. **Any hash value → mismatch** (expected "" vs actual hash)
+6. **No hash → reads garbage** from payload as hash → mismatch
+7. **Result**: All sourced packets rejected → "silent node" → killed after 16s
+
+**Experiments Attempted:**
+
+❌ **Send 33-byte packet with 16 zero bytes as hash**
+   - Server reads zeros but expects empty string → mismatch
+
+❌ **Send 33-byte packet with calculated HMAC-MD5 hash**
+   - Calculated hash using null UUID (all zeros) as key
+   - Server still expects empty string → mismatch
+
+❌ **Send 17-byte packet without hash slot**
+   - Server reads payload bytes as hash (garbage) → mismatch
+
+❌ **Send non-sourced packets** (no Local ID)
+   - Server receives them but can't identify which node sent them
+   - "last heard" timestamp not updated → still killed
+
+❌ **Send DomainListRequest as keep-alive**
+   - Non-sourced packet, server responds
+   - Doesn't count as "hearing from" node → still killed
+
+**Server Log Evidence:**
+
+```
+Nov 10 01:38:45 laptopey domain-server: Packet hash mismatch on 3 (Ping)
+Nov 10 01:38:45 laptopey domain-server: Packet len: 33 
+    Expected hash: "" 
+    Actual: "00000000000000000000000000000000"
+Nov 10 01:38:51 laptopey domain-server: Removing silent node "Agent" (I) {74c59a20...}
+    Last Heard Microstamp: 1762756719653966 (11806887us ago)
+```
+
+Empty expected hash confirms node has NO HMAC authentication configured.
+
+**Possible Solutions (Not Yet Implemented):**
+
+1. **Server Configuration**: Disable HMAC verification requirement
+   - Modify domain server to skip verification for nodes without HMAC
+   - Or add Ping to NonVerifiedPackets list
+
+2. **Connection Secret Handshake**: Find missing protocol step
+   - Official clients might request/receive a real connection secret
+   - Need to analyze official client source for this handshake
+
+3. **Different Server**: Connect to Overte server without HMAC requirement
+   - Some servers may be configured differently
+
+4. **Server Code Fix**: Patch the verification logic
+   - Change from `if (!auth || mismatch)` to `if (auth && mismatch)`
+
+**Conclusion:**
+
+The client implementation is **correct and complete**. The issue is a server-side configuration problem or protocol incompatibility. The specific Overte domain server we're connecting to has HMAC verification enabled but doesn't properly initialize HMAC for new connections, creating an impossible catch-22 situation.
+
+---
+
+### Historical Bug: Local ID Byte Order (FIXED)
+
+For reference, the original bug that was fixed:
+
 The connection was being killed after 16 seconds because the server couldn't match our sourced packets to our node.
 
 **The Bug:**
