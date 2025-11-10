@@ -243,6 +243,16 @@ bool OverteClient::connect() {
             m_udpFd = ::socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
             if (m_udpFd == -1) continue;
             ::fcntl(m_udpFd, F_SETFL, O_NONBLOCK);
+            
+            // Bind to any local address/port so getsockname() works
+            sockaddr_in bindAddr{};
+            bindAddr.sin_family = AF_INET;
+            bindAddr.sin_addr.s_addr = INADDR_ANY;  // 0.0.0.0
+            bindAddr.sin_port = 0;  // Let OS choose port
+            if (::bind(m_udpFd, reinterpret_cast<sockaddr*>(&bindAddr), sizeof(bindAddr)) == 0) {
+                std::cout << "[OverteClient] UDP socket bound successfully" << std::endl;
+            }
+            
             std::memcpy(&m_udpAddr, rp->ai_addr, rp->ai_addrlen);
             m_udpAddrLen = rp->ai_addrlen;
             m_udpReady = true;
@@ -1262,8 +1272,14 @@ void OverteClient::sendDomainConnectRequest() {
             auto* sin = reinterpret_cast<sockaddr_in*>(&localSs);
             localIPv4 = ntohl(sin->sin_addr.s_addr);
             localPort = ntohs(sin->sin_port);
+            std::cout << "[OverteClient] getsockname: " << ((localIPv4 >> 24) & 0xFF) << "." 
+                      << ((localIPv4 >> 16) & 0xFF) << "." << ((localIPv4 >> 8) & 0xFF) << "." 
+                      << (localIPv4 & 0xFF) << ":" << localPort << std::endl;
         }
     }
+    std::cout << "[OverteClient] Sending local address in DomainConnectRequest: " 
+              << ((localIPv4 >> 24) & 0xFF) << "." << ((localIPv4 >> 16) & 0xFF) << "." 
+              << ((localIPv4 >> 8) & 0xFF) << "." << (localIPv4 & 0xFF) << ":" << localPort << std::endl;
     // Helper lambda to write QHostAddress (IPv4) in QDataStream format: [protocol:quint8=1][IPv4:quint32]
     auto writeQHostAddressIPv4 = [&qs](uint32_t hostOrderIPv4){
         // QDataStream for QHostAddress writes a protocol tag (quint8).
