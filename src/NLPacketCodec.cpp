@@ -462,16 +462,16 @@ uint8_t NLPacket::versionForPacketType(PacketType type) {
 }
 
 std::vector<uint8_t> NLPacket::computeProtocolVersionSignature() {
-    // Protocol signature computed from Overte 2025.05.1 source
+    // Protocol signature computed from Overte 2025.05.1 source (DEV_BUILD)
     // Located in third_party/overte-src (tag 2025.05.1)
     // Computed via tools/compute_overte_protocol.py
-    // Protocol version: "VW2wiPs4Ou2HfvqpP9Izew==" (base64) = 556db088fb383aed877efaa93fd2337b (hex)
+    // Protocol version: "9MtUp4vmU6T5mKrxDZ9Izw==" (base64) = f4cb54a78be653a4f998aaf10d9f48cf (hex)
     // Based on PacketHeaders.cpp versionForPacketType() with 106 packet types
-    // EntityVersion::LAST_PACKET_TYPE = 70, default version = 22
+    // EntityVersion::LAST_PACKET_TYPE = 70, default version = 23 (DEV_BUILD)
     
     std::vector<uint8_t> signature = {
-        0x55, 0x6d, 0xb0, 0x88, 0xfb, 0x38, 0x3a, 0xed,
-        0x87, 0x7e, 0xfa, 0xa9, 0x3f, 0xd2, 0x33, 0x7b
+        0xf4, 0xcb, 0x54, 0xa7, 0x8b, 0xe6, 0x53, 0xa4,
+        0xf9, 0x98, 0xaa, 0xf1, 0x0d, 0x9f, 0x48, 0xcf
     };
     
     return signature;
