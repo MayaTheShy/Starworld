@@ -144,6 +144,23 @@ ps aux | grep domain-server
 sudo ufw status
 ```
 
+### "Removing silent node" / Connection dropped after 11-18 seconds
+```bash
+# This is a known HMAC verification issue - see NETWORK_PROTOCOL_INVESTIGATION.md
+# The client implementation is correct; the issue is server-side
+
+# Check server logs for hash mismatch
+sudo journalctl -u overte-domain-server --since "1 minute ago" | grep -i hash
+
+# Workaround options:
+# 1. Contact server admin to disable HMAC verification
+# 2. Try a different Overte server
+# 3. Wait for server-side fix
+
+# Debug packet sending
+./build/starworld --overte=127.0.0.1:40104 2>&1 | grep -E "(Ping|Local ID|periodic)"
+```
+
 ### Nothing renders in XR
 ```bash
 # Check if entities exist
@@ -174,10 +191,12 @@ STARWORLD_SIMULATE=1 ./build/starworld
 
 ### Documentation
 - `README.md` - Main documentation
-- `OVERTE_AUTH.md` - OAuth implementation guide
-- `OVERTE_ASSIGNMENT_CLIENT_TASK.md` - Protocol details
-- `CHANGELOG.md` - Version history
-- `ENTITY_RENDERING_ENHANCEMENTS.md` - Rendering implementation
+- `docs/NETWORK_PROTOCOL_INVESTIGATION.md` - Detailed protocol analysis and HMAC issue
+- `docs/OVERTE_AUTH.md` - OAuth implementation guide
+- `docs/OVERTE_ASSIGNMENT_CLIENT_TASK.md` - Protocol details
+- `docs/CHANGELOG.md` - Version history
+- `docs/IMPLEMENTATION_COMPLETE.md` - Feature implementation status
+- `docs/ENTITY_RENDERING_ENHANCEMENTS.md` - Rendering implementation
 - `MODELCACHE_IMPLEMENTATION.md` - Asset pipeline
 
 ### Tests
