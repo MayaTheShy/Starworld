@@ -1309,13 +1309,13 @@ void OverteClient::sendDomainConnectRequest() {
     };
 
     // 10. Public socket: SockAddr (QHostAddress + quint16 port)
-    // Try sending a NULL address (protocol 0) to see if server figures it out from UDP source
-    qs.writeUInt8(0); // QAbstractSocket::AnyIPProtocol (means null/unknown)
-    qs.writeUInt16BE(0); // port 0
+    // Write the actual IPv4 address and port
+    writeQHostAddressIPv4(localIPv4);
+    qs.writeUInt16BE(localPort);
 
     // 11. Local socket: SockAddr
-    qs.writeUInt8(0); // QAbstractSocket::AnyIPProtocol
-    qs.writeUInt16BE(0); // port 0
+    writeQHostAddressIPv4(localIPv4);
+    qs.writeUInt16BE(localPort);
     
     // 12. Node types of interest (QList<NodeType_t>)
     // Write as Qt container: size (qint32) + elements (quint8) -- include a few mixers we want
