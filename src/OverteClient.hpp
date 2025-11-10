@@ -107,6 +107,7 @@ private:
 	void sendDomainConnectRequest();
 	void sendEntityQuery();
 	void sendPing(int fd, const sockaddr_storage& addr, socklen_t addrLen);
+	void sendACK(uint32_t sequenceNumber);
 	
 	// Avatar Mixer protocol
 	void sendAvatarIdentity();
