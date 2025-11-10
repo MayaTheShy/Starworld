@@ -12,7 +12,7 @@ This document summarizes the implementation work completed to enable Overte enti
 ✅ **Dimension Support** - Entity dimensions properly applied as scale factors  
 ✅ **Domain Connection** - Establishes connection, receives Local ID and assignment client list
 ✅ **Packet Protocol** - Full implementation of NLPacket format with sourcing, versioning, and sequence numbers
-⏳ **Connection Persistence** - Connection established but killed after 16s (under investigation)
+✅ **Connection Persistence** - Fixed Local ID byte order bug, connection now persists indefinitely
 ⏳ **Color Tinting** - Data captured but not yet applied (requires asteroids API extension)  
 ⏳ **Texture Support** - Data captured but not yet applied (requires material API)
 
