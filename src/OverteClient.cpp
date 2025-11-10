@@ -1552,11 +1552,6 @@ void OverteClient::sendPing(int fd, const sockaddr_storage& addr, socklen_t addr
     // Ping type (0 = local, 1 = public)
     packet.writeUInt8(0);
     
-    // NOTE: Do NOT add HMAC verification hash!
-    // The domain server adds our node with a null UUID connection secret,
-    // which means NO HMAC is set up for our node. If we send an HMAC hash,
-    // the server expects an empty hash and rejects our packet.
-    
     const auto& data = packet.getData();
     
     // Debug: show destination address
