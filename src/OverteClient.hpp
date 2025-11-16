@@ -1,6 +1,7 @@
 // OverteClient.hpp
 #pragma once
 
+#include <array>
 #include <cstdint>
 #include <string>
 #include <unordered_map>
