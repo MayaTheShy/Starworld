@@ -2,64 +2,64 @@ name: Rust Quality Checks
 
 on:
   push:
-    branches: [ main, dev ]
+    branches: [main, dev]
     paths:
       - 'bridge/**'
       - '.github/workflows/rust-quality.yml'
   pull_request:
-    branches: [ main ]
+    branches: [main]
     paths:
       - 'bridge/**'
 
 jobs:
   rust-checks:
     runs-on: ubuntu-latest
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    
-    - name: Install Rust nightly
-      uses: dtolnay/rust-toolchain@nightly
-      with:
-        components: rustfmt, clippy
-    
-    - name: Cache Rust dependencies
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.cargo/bin/
-          ~/.cargo/registry/index/
-          ~/.cargo/registry/cache/
-          ~/.cargo/git/db/
-          bridge/target/
-        key: ${{ runner.os }}-cargo-${{ hashFiles('bridge/Cargo.lock', 'bridge/Cargo.toml') }}
-        restore-keys: |
-          ${{ runner.os }}-cargo-
-    
-    - name: Check formatting
-      run: |
-        cd bridge
-        cargo fmt -- --check
-    
-    - name: Run clippy
-      run: |
-        cd bridge
-        cargo clippy --all-targets --all-features -- -D warnings
-    
-    - name: Check for unused dependencies
-      run: |
-        cd bridge
-        cargo install cargo-udeps --locked || true
-        cargo +nightly udeps || true
-    
-    - name: Security audit
-      run: |
-        cd bridge
-        cargo install cargo-audit --locked || true
-        cargo audit || true
-    
-    - name: Build documentation
-      run: |
-        cd bridge
-        cargo doc --no-deps --document-private-items
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust nightly
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache Rust dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            bridge/target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('bridge/Cargo.lock', 'bridge/Cargo.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Check formatting
+        run: |
+          cd bridge
+          cargo fmt -- --check
+
+      - name: Run clippy
+        run: |
+          cd bridge
+          cargo clippy --all-targets --all-features -- -D warnings
+
+      - name: Check for unused dependencies
+        run: |
+          cd bridge
+          cargo install cargo-udeps --locked || true
+          cargo +nightly udeps || true
+
+      - name: Security audit
+        run: |
+          cd bridge
+          cargo install cargo-audit --locked || true
+          cargo audit || true
+
+      - name: Build documentation
+        run: |
+          cd bridge
+          cargo doc --no-deps --document-private-items

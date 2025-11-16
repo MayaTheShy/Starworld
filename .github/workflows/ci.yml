@@ -2,102 +2,100 @@ name: CI
 
 on:
   push:
-    branches: [ main, dev ]
+    branches: [main, dev]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        submodules: recursive
-    
-    - name: Install system dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y \
-          build-essential \
-          cmake \
-          libglm-dev \
-          libssl-dev \
-          zlib1g-dev \
-          libcurl4-openssl-dev \
-          curl
-    
-    - name: Install Rust
-      uses: dtolnay/rust-toolchain@nightly
-      with:
-        components: rustfmt, clippy
-    
-    - name: Cache CMake build
-      uses: actions/cache@v4
-      with:
-        path: build
-        key: ${{ runner.os }}-cmake-${{ hashFiles('**/CMakeLists.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-cmake-
-    
-    - name: Cache Rust dependencies
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.cargo/bin/
-          ~/.cargo/registry/index/
-          ~/.cargo/registry/cache/
-          ~/.cargo/git/db/
-          bridge/target/
-        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock', '**/Cargo.toml') }}
-        restore-keys: |
-          ${{ runner.os }}-cargo-
-    
-    - name: Build Rust bridge
-      run: |
-        cd bridge
-        cargo build --verbose
-        cd ..
-    
-    - name: Configure CMake
-      run: |
-        mkdir -p build
-        cd build
-        cmake .. -DCMAKE_BUILD_TYPE=Debug
-    
-    - name: Build C++ project
-      run: |
-        cd build
-        make -j$(nproc)
-    
-    - name: Run tests
-      run: |
-        cd build
-        ./stardust-tests
-    
-    - name: Check Rust formatting
-      run: |
-        cd bridge
-        cargo fmt -- --check
-    
-    - name: Run Rust clippy
-      run: |
-        cd bridge
-        cargo clippy -- -D warnings
-    
-    - name: Verify client binary exists
-      run: |
-        test -f build/stardust-overte-client
-        echo "Client binary built successfully"
-    
-    - name: Upload artifacts
-      uses: actions/upload-artifact@v4
-      if: success()
-      with:
-        name: binaries
-        path: |
-          build/stardust-overte-client
-          build/stardust-tests
-          build/starworld
-          build/starworld-tests
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            cmake \
+            libglm-dev \
+            libssl-dev \
+            zlib1g-dev \
+            libcurl4-openssl-dev \
+            curl
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache CMake build
+        uses: actions/cache@v4
+        with:
+          path: build
+          key: ${{ runner.os }}-cmake-${{ hashFiles('**/CMakeLists.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-cmake-
+
+      - name: Cache Rust dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            bridge/target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock', '**/Cargo.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Build Rust bridge
+        run: |
+          cd bridge
+          cargo build --verbose
+          cd ..
+
+      - name: Configure CMake
+        run: |
+          mkdir -p build
+          cd build
+          cmake .. -DCMAKE_BUILD_TYPE=Debug
+
+      - name: Build C++ project
+        run: |
+          cd build
+          make -j$(nproc)
+
+      - name: Run tests
+        run: |
+          cd build
+          ./stardust-tests
+
+      - name: Check Rust formatting
+        run: |
+          cd bridge
+          cargo fmt -- --check
+
+      - name: Run Rust clippy
+        run: |
+          cd bridge
+          cargo clippy -- -D warnings
+
+      - name: Verify client binary exists
+        run: |
+          test -f build/stardust-overte-client
+          echo "Client binary built successfully"
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: binaries
+          path: |
+            build/stardust-overte-client
+            build/stardust-tests
+            build/starworld
+            build/starworld-tests
