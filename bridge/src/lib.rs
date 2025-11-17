@@ -169,29 +169,17 @@ impl Reify for BridgeState {
                 
                 match Model::direct(&model_path) {
                     Ok(model) => {
-                        // TODO: Apply color tint to the model
-                        // The asteroids Model element doesn't expose material manipulation yet.
-                        // This would require:
-                        // 1. Loading the model's materials
-                        // 2. Multiplying base color by the tint color
-                        // 3. Re-applying the modified materials
-                        // For now, we just log the color for debugging.
+                        // TODO: Color tinting is not currently supported due to missing public API in asteroids.
+                        // When Model/MaterialParameter API is available, apply color here.
                         if node.color != [1.0, 1.0, 1.0, 1.0] {
-                            eprintln!("[bridge/reify] Node {} has color tint: RGBA({:.2}, {:.2}, {:.2}, {:.2}) - NOT YET APPLIED", 
+                            eprintln!("[bridge/reify] Node {} requested color tint RGBA({:.2}, {:.2}, {:.2}, {:.2}) -- NOT SUPPORTED YET", 
                                 id, node.color[0], node.color[1], node.color[2], node.color[3]);
                         }
-                        
-                        // TODO: Apply texture from texture_url
-                        // Similar to color, texture application requires material manipulation.
-                        // This would involve:
-                        // 1. Downloading the texture if it's an HTTP URL
-                        // 2. Loading it as a texture resource
-                        // 3. Applying it to the model's materials
+                        // TODO: Apply texture from texture_url (future)
                         if !node.texture_url.is_empty() {
                             eprintln!("[bridge/reify] Node {} has texture URL: {} - NOT YET APPLIED", 
                                 id, node.texture_url);
                         }
-                        
                         Some(model.build())
                     }
                     Err(e) => {
