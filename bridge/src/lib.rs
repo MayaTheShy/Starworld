@@ -168,6 +168,7 @@ impl Reify for BridgeState {
                     entity_type_name, id, model_source);
                 
                 match Model::direct(&model_path) {
+<<<<<<< HEAD
                     Ok(mut model) => {
                         // Asteroids Model now supports material color tinting.
                         if node.color != [1.0, 1.0, 1.0, 1.0] {
@@ -180,11 +181,24 @@ impl Reify for BridgeState {
                         }
 
                         // TODO: Apply texture from texture_url (pending API)
+=======
+                    Ok(model) => {
+                        // TODO: Color tinting is not currently supported due to missing public API in asteroids.
+                        // When Model/MaterialParameter API is available, apply color here.
+                        if node.color != [1.0, 1.0, 1.0, 1.0] {
+                            eprintln!("[bridge/reify] Node {} requested color tint RGBA({:.2}, {:.2}, {:.2}, {:.2}) -- NOT SUPPORTED YET", 
+                                id, node.color[0], node.color[1], node.color[2], node.color[3]);
+                        }
+                        // TODO: Apply texture from texture_url (future)
+>>>>>>> 0a39697599277320e2650a938b695beeb401c931
                         if !node.texture_url.is_empty() {
                             eprintln!("[bridge/reify] Node {} has texture URL: {} - NOT YET APPLIED (API limitation)",
                                 id, node.texture_url);
                         }
+<<<<<<< HEAD
 
+=======
+>>>>>>> 0a39697599277320e2650a938b695beeb401c931
                         Some(model.build())
                     }
                     Err(e) => {
@@ -217,49 +231,28 @@ lazy_static::lazy_static! {
 struct Node {
     id: u64,
     name: String,
-    #[serde(skip)]
-    transform: Mat4,
-    entity_type: u8, // 0=Unknown, 1=Box, 2=Sphere, 3=Model, etc.
-    model_url: String,
-    texture_url: String,
-    #[serde(skip)]
-    color: [f32; 4], // RGBA
-    #[serde(skip)]
-    dimensions: [f32; 3], // xyz dimensions in meters
-}
+                        Ok(mut model) => {
+                            // Asteroids Model now supports material color tinting.
+                            if node.color != [1.0, 1.0, 1.0, 1.0] {
+                                let color = ast::elements::RgbaLinear::new(
+                                    node.color[0], node.color[1], node.color[2], node.color[3]
+                                );
+                                model = model.color_tint(color);
+                                eprintln!("[bridge/reify] Node {}: applied color tint RGBA({:.2}, {:.2}, {:.2}, {:.2})",
+                                    id, node.color[0], node.color[1], node.color[2], node.color[3]);
+                            }
 
-struct Ctrl {
-    rt: Option<Runtime>,
-    handle: Option<JoinHandle<()>>, // client running thread
-    tx: Option<tokio::sync::mpsc::UnboundedSender<Command>>,
-    next_id: u64,
-    nodes: HashMap<u64, Node>,
-    shared_state: Option<Arc<Mutex<BridgeState>>>,
-}
-
-impl Default for Ctrl {
-    fn default() -> Self {
-        Self {
-            rt: None,
-            handle: None,
-            tx: None,
-            next_id: 1,
-            nodes: HashMap::new(),
-            shared_state: None,
-        }
-    }
-}
-
-#[no_mangle]
-pub extern "C" fn sdxr_start(app_id: *const std::os::raw::c_char) -> i32 {
-    if STARTED.swap(true, Ordering::SeqCst) { return 0; }
-    let _name = unsafe { CStr::from_ptr(app_id) }.to_string_lossy().to_string();
-
-    // Reset connection status flags
-    CONNECTION_SUCCESS.store(false, Ordering::SeqCst);
-    CONNECTION_FAILED.store(false, Ordering::SeqCst);
-
-    let mut ctrl = CTRL.lock().unwrap();
+                            // TODO: Apply texture from texture_url (pending API)
+                            if !node.texture_url.is_empty() {
+                                eprintln!("[bridge/reify] Node {} has texture URL: {} - NOT YET APPLIED (API limitation)",
+                                    id, node.texture_url);
+                            }
+                            Some(model.build())
+                        }
+                        Err(e) => {
+                            eprintln!("[bridge/reify] Failed to load model for node {}: {}", id, e);
+                            None
+                        }
     ctrl.next_id = 1;
     let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<Command>();
     ctrl.tx = Some(tx.clone());
