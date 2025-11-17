@@ -1,5 +1,6 @@
 // OverteAuth.cpp - Enhanced OAuth implementation with browser flow
 #include "OverteAuth.hpp"
+#include "RSAKeypair.hpp"
 
 #include <iostream>
 #include <sstream>
@@ -24,7 +25,7 @@
 
 using namespace std::chrono;
 
-OverteAuth::OverteAuth() {
+OverteAuth::OverteAuth() : m_keypair(std::make_unique<RSAKeypair>()) {
     curl_global_init(CURL_GLOBAL_DEFAULT);
     
     // Try to load saved token
@@ -697,3 +698,166 @@ bool OverteAuth::loginWithBrowser(const std::string& metaverseUrl) {
     std::cout << "[OverteAuth] Exchanging authorization code for access token..." << std::endl;
     return loginWithAuthCode(m_receivedAuthCode, getCallbackURL());
 }
+
+// ============================================================================
+// RSA Keypair Management
+// ============================================================================
+
+bool OverteAuth::generateKeypair() {
+    if (!m_keypair) {
+        m_keypair = std::make_unique<RSAKeypair>();
+    }
+    
+    std::cout << "[OverteAuth] Generating RSA keypair for username signature..." << std::endl;
+    return m_keypair->generate();
+}
+
+bool OverteAuth::uploadPublicKey() {
+    if (!m_keypair || !m_keypair->isValid()) {
+        m_lastError = "No keypair generated";
+        return false;
+    }
+    
+    if (!isAuthenticated()) {
+        m_lastError = "Must be authenticated to upload public key";
+        return false;
+    }
+    
+    std::string url = m_metaverseUrl;
+    if (url.back() == '/') url.pop_back();
+    if (url.find("/server") == std::string::npos) {
+        url += "/server";
+    }
+    url += "/api/v1/user/public_key";
+    
+    // Get public key in DER format
+    auto publicKeyDER = m_keypair->getPublicKeyDER();
+    
+    // Base64 encode for transmission
+    auto base64Encode = [](const std::vector<uint8_t>& in) {
+        static const char* tbl = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+        std::string out;
+        out.reserve(((in.size() + 2) / 3) * 4);
+        size_t i = 0;
+        while (i < in.size()) {
+            uint32_t val = 0;
+            int bytes = 0;
+            for (int j = 0; j < 3; ++j) {
+                val <<= 8;
+                if (i < in.size()) {
+                    val |= in[i++];
+                    ++bytes;
+                }
+            }
+            int pad = 3 - bytes;
+            for (int k = 0; k < 4 - pad; ++k) {
+                int idx = (val >> (18 - k * 6)) & 0x3F;
+                out.push_back(tbl[idx]);
+            }
+            for (int k = 0; k < pad; ++k) out.push_back('=');
+        }
+        return out;
+    };
+    
+    std::string publicKeyBase64 = base64Encode(publicKeyDER);
+    
+    std::ostringstream postData;
+    postData << "public_key=" << urlEncode(publicKeyBase64);
+    
+    std::cout << "[OverteAuth] Uploading public key to metaverse..." << std::endl;
+    
+    CURL* curl = curl_easy_init();
+    if (!curl) {
+        m_lastError = "Failed to initialize CURL";
+        return false;
+    }
+    
+    struct curl_slist* headers = nullptr;
+    headers = curl_slist_append(headers, "Content-Type: application/x-www-form-urlencoded");
+    
+    // Add authorization header
+    std::string authHeader = "Authorization: Bearer " + m_accessToken;
+    headers = curl_slist_append(headers, authHeader.c_str());
+    
+    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, postData.str().c_str());
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1L);
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 30L);
+    
+    std::string response;
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeCallback);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
+    
+    CURLcode res = curl_easy_perform(curl);
+    long httpCode = 0;
+    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpCode);
+    
+    curl_slist_free_all(headers);
+    curl_easy_cleanup(curl);
+    
+    if (res != CURLE_OK) {
+        m_lastError = std::string("Public key upload failed: ") + curl_easy_strerror(res);
+        return false;
+    }
+    
+    if (httpCode != 200) {
+        m_lastError = "Public key upload failed with HTTP " + std::to_string(httpCode);
+        std::cerr << "[OverteAuth] Server response: " << response << std::endl;
+        return false;
+    }
+    
+    std::cout << "[OverteAuth] Public key uploaded successfully" << std::endl;
+    return true;
+}
+
+bool OverteAuth::hasKeypair() const {
+    return m_keypair && m_keypair->isValid();
+}
+
+std::vector<uint8_t> OverteAuth::getUsernameSignature(const std::string& connectionToken) const {
+    if (!hasKeypair()) {
+        std::cerr << "[OverteAuth] Cannot generate signature: no keypair" << std::endl;
+        return {};
+    }
+    
+    // Create plaintext: lowercase_username + connectionToken (UUID bytes)
+    std::string lowercaseUsername = m_username;
+    for (char& c : lowercaseUsername) {
+        c = std::tolower(c);
+    }
+    
+    // Parse connection token as UUID and get RFC4122 bytes
+    // Format: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+    std::vector<uint8_t> plaintext(lowercaseUsername.begin(), lowercaseUsername.end());
+    
+    // Parse UUID string to bytes (16 bytes in RFC4122 format)
+    auto parseUUID = [](const std::string& uuidStr) -> std::vector<uint8_t> {
+        std::vector<uint8_t> bytes;
+        if (uuidStr.length() != 36) return bytes; // Invalid format
+        
+        std::string hex = uuidStr;
+        hex.erase(std::remove(hex.begin(), hex.end(), '-'), hex.end());
+        
+        for (size_t i = 0; i < hex.length(); i += 2) {
+            std::string byteStr = hex.substr(i, 2);
+            uint8_t byte = static_cast<uint8_t>(std::stoul(byteStr, nullptr, 16));
+            bytes.push_back(byte);
+        }
+        return bytes;
+    };
+    
+    auto tokenBytes = parseUUID(connectionToken);
+    if (tokenBytes.empty()) {
+        std::cerr << "[OverteAuth] Invalid connection token format" << std::endl;
+        return {};
+    }
+    
+    plaintext.insert(plaintext.end(), tokenBytes.begin(), tokenBytes.end());
+    
+    std::cout << "[OverteAuth] Signing username '" << m_username 
+              << "' with connection token " << connectionToken << std::endl;
+    
+    return m_keypair->sign(plaintext);
+}
+

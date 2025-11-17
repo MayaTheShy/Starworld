@@ -7,6 +7,10 @@
 #include <atomic>
 #include <memory>
 #include <thread>
+#include <vector>
+
+// Forward declaration
+class RSAKeypair;
 
 // Simple OAuth2 authentication for Overte metaverse
 class OverteAuth {
@@ -46,6 +50,12 @@ public:
     bool loadTokenFromFile();
     bool saveTokenToFile();
     
+    // RSA Keypair management (for username signature authentication)
+    bool generateKeypair();
+    bool uploadPublicKey();
+    bool hasKeypair() const;
+    std::vector<uint8_t> getUsernameSignature(const std::string& connectionToken) const;
+    
 private:
     std::string m_metaverseUrl;
     std::string m_accessToken;
@@ -55,6 +65,9 @@ private:
     std::string m_lastError;
     std::string m_clientId = "starworld";
     std::string m_clientSecret = ""; // Public client
+    
+    // RSA keypair for signature authentication
+    std::unique_ptr<RSAKeypair> m_keypair;
     
     // OAuth callback HTTP server
     int m_callbackServerFd = -1;
