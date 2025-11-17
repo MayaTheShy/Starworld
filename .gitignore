@@ -42,6 +42,10 @@ Cargo.lock
 # Logs
 *.log
 
+# Authentication tokens (should be in ~/.config but just in case)
+overte_token.txt
+**/overte_token.txt
+
 # Temporary
 *.tmp
 .DS_Store
