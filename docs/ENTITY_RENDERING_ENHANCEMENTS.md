@@ -12,163 +12,34 @@ This document describes the entity rendering system in Starworld, which loads an
 ```cpp
 enum class EntityType {
     Unknown, Box, Sphere, Model, Shape, Light, Text, 
-    Zone, Web, ParticleEffect, Line, PolyLine, Grid, Gizmo, Material
-};
-```
 
-**`OverteEntity` structure:**
-```cpp
-struct OverteEntity {
-    std::uint64_t id{0};
-    std::string name;
-    glm::mat4 transform{1.0f};
-    
-    // Visual properties
-    EntityType type{EntityType::Box};
-    std::string modelUrl;      // For Model type entities
-    std::string textureUrl;    // Texture/material URL
-    glm::vec3 color{1.0f, 1.0f, 1.0f};  // RGB color (0-1 range)
-    glm::vec3 dimensions{0.1f, 0.1f, 0.1f};  // Size/scale in meters
-    float alpha{1.0f};         // Transparency (0-1)
-};
-```
+    ## Current Implementation
 
-### 2. Entity Packet Parser (`OverteClient.cpp`)
+    All core entity rendering features are implemented:
 
-The `parseEntityPacket()` function extracts:
-- Entity type classification
-- Model URLs (for 3D models)
-- Texture URLs
-- RGB color values
-- Dimensions/scale
-- Alpha transparency
+    - 3D model rendering (GLTF/GLB) for Box, Sphere, Model types
+    - HTTP/HTTPS model and texture download and caching (SHA256-based)
+    - Primitive model generation (cube, sphere, suzanne) with Blender
+    - Transform, dimension, and color/texture data parsing and propagation
+    - Color and texture download infrastructure is complete, but visual application is pending StardustXR API support
+    - See [`docs/ENTITY_TROUBLESHOOTING.md`](ENTITY_TROUBLESHOOTING.md) for debug flags and troubleshooting
 
-Simulation mode creates diverse entity types:
-- Red cube (Box type)
-- Green sphere (Sphere type)  
-- Blue suzanne model (Model type)
+    ## Testing
 
-### 3. Rust Bridge Node Structure (`bridge/src/lib.rs`)
+    See [`README.md`](../README.md) and [`docs/IMPLEMENTATION_COMPLETE.md`](IMPLEMENTATION_COMPLETE.md) for up-to-date build and test instructions.
 
-**`Node` structure with entity data:**
-```rust
-struct Node {
-    id: u64,
-    name: String,
-    transform: Mat4,
-    entity_type: u8,       // 0=Unknown, 1=Box, 2=Sphere, 3=Model
-    model_url: String,
-    texture_url: String,
-    color: [f32; 4],       // RGBA
-    dimensions: [f32; 3],  // xyz dimensions
-}
-```
+    ## Limitations
 
-**C-ABI export functions:**
-- `sdxr_set_node_model(id, model_url)` - Set model URL
-- `sdxr_set_node_texture(id, texture_url)` - Set texture URL
-- `sdxr_set_node_color(id, r, g, b, a)` - Set RGBA color
-- `sdxr_set_node_dimensions(id, x, y, z)` - Set dimensions
-- `sdxr_set_node_entity_type(id, type)` - Set entity type
+    - Color tinting and texture application are not yet visually applied (pending StardustXR API extension)
+    - Only Box, Sphere, Model entity types are supported
+    - atp:// protocol is not yet supported
+    - See [`docs/IMPLEMENTATION_COMPLETE.md`](IMPLEMENTATION_COMPLETE.md) for full status
 
-### 4. 3D Model Rendering (`bridge/src/lib.rs` - `reify()`)
+    ## References
 
-**Current implementation uses GLTF/GLB model loading:**
-
-The rendering system loads pre-generated primitive models based on entity type:
-
-```rust
-fn get_model_path(entity_type: u8) -> Option<PathBuf> {
-    let cache_dir = dirs::cache_dir()?.join("starworld/primitives");
-    let filename = match entity_type {
-        1 => "cube.glb",      // Box
-        2 => "sphere.glb",    // Sphere  
-        3 => "model.glb",     // Model (Suzanne placeholder)
-        _ => return None,
-    };
-    // ...
-}
-```
-
-**Model Loading Process:**
-1. Determine entity type (Box, Sphere, Model)
-2. Look up corresponding GLTF/GLB file in cache
-3. Load model using `Model::direct(PathBuf)`
-4. Apply transform (position, rotation, scale from dimensions)
-5. Render in StardustXR scene
-
-**Features:**
-- Respects entity dimensions for sizing
-- Applies proper transforms (position, rotation, scale)
-- Loads models asynchronously
-- Provides error logging for missing models
-- Uses cached primitives for Box, Sphere, Model types
-- Model entity type loads Suzanne (Blender monkey head) as placeholder
-
-**Primitive Model Generation:**
-
-Models are generated using `tools/blender_export_simple.py`:
-- Creates cube.glb, sphere.glb, model.glb (Suzanne)
-- Exports to `~/.cache/starworld/primitives/`
-- Run: `blender --background --python tools/blender_export_simple.py`
-
-### 5. HTTP Asset Downloading (`ModelCache.cpp/.hpp`)
-
-**ModelCache singleton** handles HTTP/HTTPS model downloads:
-
-```cpp
-ModelCache::instance().requestModel(
-    "https://example.com/models/chair.glb",
-    [](const std::string& url, bool success, const std::string& localPath) {
-        if (success) {
-            // Pass localPath to bridge for rendering
-        }
-    }
-);
-```
-
-**Features:**
-- SHA256-based filename hashing for cache
-- Async downloads with libcurl
-- Progress callbacks
-- Caches to `~/.cache/starworld/models/`
-- Thread-safe resource tracking
-
-### 6. StardustBridge C++ Interface (`StardustBridge.hpp/.cpp`)
-
-**Bridge methods:**
-```cpp
-bool setNodeModel(NodeId id, const std::string& modelUrl);
-bool setNodeTexture(NodeId id, const std::string& textureUrl);
-bool setNodeColor(NodeId id, const glm::vec3& color, float alpha = 1.0f);
-bool setNodeDimensions(NodeId id, const glm::vec3& dimensions);
-bool setNodeEntityType(NodeId id, uint8_t entityType);
-```
-
-**HTTP model handling:**
-- Detects http:// and https:// URLs
-- Requests download via ModelCache
-- Passes local cached path to Rust bridge
-- Fallback to direct URLs for file://, atp://, etc.
-
-### 7. SceneSync Integration (`SceneSync.cpp`)
-
-**Entity synchronization:**
-- Propagates entity type on creation/update
-- Sets color and alpha properties
-- Configures dimensions
-- Handles model and texture URLs
-- Updates visual properties when entities change
-
-## Testing
-
-### Simulation Mode
-
-Run with simulation mode to see example entities:
-
-```bash
-export STARWORLD_SIMULATE=1
-./build/starworld
+    - Overte protocol: `third_party/overte-src/libraries/networking/`
+    - Stardust API: https://github.com/StardustXR/core
+    - See `docs/` for protocol, troubleshooting, and implementation details
 ```
 
 This creates three demo entities:
