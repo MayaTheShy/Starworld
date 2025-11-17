@@ -20,57 +20,13 @@ Successfully implemented comprehensive entity debugging, texture download system
 
 ---
 
+
 ## Completed Tasks
 
-### 🔴 Critical Priority Items
-
-#### 1. Fix Compilation Error ✅
-**File:** `src/OverteClient.hpp`  
-**Change:** Added missing `#include <array>`  
-**Impact:** Resolves build failure for std::array usage
-
-#### 2. Investigate Entity Server Connection ✅
-**Files:** `src/OverteClient.cpp`  
-**Changes:**
-- Implemented debug logging system with environment variable flags
-- Added `STARWORLD_DEBUG_ENTITY_PACKETS` for packet hex dumps
-- Added `STARWORLD_DEBUG_ENTITY_LIFECYCLE` for entity tracking
-- Added `STARWORLD_DEBUG_NETWORK` for general network debugging
-- Enhanced EntityQuery logging with payload details
-
-**Impact:**
-- Complete visibility into entity packet flow
-- Easy diagnosis of reception issues
-- No performance impact when disabled
-- Opt-in debugging via environment variables
-
-### 🟡 High Priority Items
-
-#### 3. Entity Rendering Pipeline Verification ✅
-**Files:** `src/OverteClient.cpp`  
-**Changes:**
-- Added entity lifecycle logging
-- Track total entity count and update queue size
-- Selective detail logging via debug flags
-
-**Impact:**
-- Full visibility into entity creation/update/deletion
-- Easy to verify if entities are being received
-- Track rendering pipeline progress
-
-#### 4. Implement Color Tinting (Partial) ⚠️
-**Status:** Infrastructure complete, visual rendering blocked by API limitation
-
-**What Works:**
-- ✅ Color parsing from entity packets
-- ✅ Color storage in OverteEntity structure
-- ✅ Color propagation to Rust bridge
-- ✅ Debug logging of color values
-
-**What's Blocked:**
-- ❌ Visual application to 3D models (StardustXR API limitation)
-
-**Documentation:** Limitation documented in ENTITY_TROUBLESHOOTING.md
+- Entity rendering pipeline is fully implemented for Box, Sphere, Model types
+- Color and texture data are parsed, stored, and logged; texture download and caching is implemented (SHA256-based)
+- Visual application of color/texture is pending StardustXR API support (see ENTITY_TROUBLESHOOTING.md)
+- Connection persistence bug is fixed (see IMPLEMENTATION_COMPLETE.md)
 
 ### 🟢 Medium Priority Items
 
@@ -299,29 +255,13 @@ export STARWORLD_DEBUG_ENTITY_PACKETS=1
 
 ---
 
+
 ## Known Limitations
 
-### 1. Color Tinting Not Visually Applied
-**Reason:** StardustXR asteroids Model element doesn't expose material manipulation API
-
-**Workarounds:**
-1. Extend StardustXR asteroids API
-2. Pre-process GLTF files to apply colors
-3. Use lower-level rendering approach
-
-**Current Status:** Infrastructure complete, waiting on API
-
-### 2. Texture Material Application
-**Reason:** Same API limitation as colors
-
-**Current Status:** Download complete, material application pending API support
-
-### 3. HMAC Verification Connection Drops
-**Reason:** Server-side configuration issue
-
-**Details:** See [NETWORK_PROTOCOL_INVESTIGATION.md](NETWORK_PROTOCOL_INVESTIGATION.md)
-
-**Current Status:** Cannot be fixed client-side
+- Color tinting and texture application are not yet visually applied (pending StardustXR API extension)
+- Only Box, Sphere, Model entity types are supported
+- atp:// protocol is not yet supported
+- See IMPLEMENTATION_COMPLETE.md and ENTITY_TROUBLESHOOTING.md for full status
 
 ---
 
@@ -408,29 +348,13 @@ make -j$(nproc)
 
 ---
 
+
 ## Future Work (Out of Scope)
 
-### Requires External Dependencies
-
-#### Server-Side Changes
-- HMAC verification workaround (server config issue)
-
-#### StardustXR API Extensions
-- Color tinting material application
-- Texture material application
-- Alpha transparency support
-
-#### Major Protocol Additions
+- Color/texture visual application (requires StardustXR API extension)
 - ATP protocol support (Overte asset server)
-- Additional OAuth 2.0 flows (already has browser flow per README)
-
-### Rationale for Deferral
-These items require:
-1. Changes to external systems (Overte server, StardustXR)
-2. Major architectural additions (new protocols)
-3. API extensions not under our control
-
-All are documented for future implementation but outside scope of client-side entity rendering enhancements.
+- Additional entity types (Text, Light, Zone, etc.)
+- See IMPLEMENTATION_COMPLETE.md for priorities
 
 ---
 
