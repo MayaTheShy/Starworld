@@ -180,6 +180,12 @@ int main(int argc, char** argv) {
     
     std::cout << "[main] Connecting to Overte domain: " << overteUrl << std::endl;
     OverteClient overte(overteUrl);
+    
+    // Pass authentication to OverteClient if we authenticated with metaverse
+    if (useAuth && auth.isAuthenticated()) {
+        overte.setAuth(&auth);
+    }
+    
     // Overte is optional; warn if unreachable but continue in offline mode.
     if (!overte.connect()) {
         std::cerr << "[main] Overte domain unreachable; running in offline mode." << std::endl;
