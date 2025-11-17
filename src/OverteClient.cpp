@@ -108,6 +108,30 @@ static std::vector<uint8_t> qCompressLike(const std::vector<uint8_t>& input, int
 }
 } // namespace
 
+// Debug logging configuration via environment variables
+namespace DebugLog {
+    static bool debugEntityPackets = false;
+    static bool debugEntityLifecycle = false;
+    static bool debugNetworkPackets = false;
+    
+    static void init() {
+        const char* envEntityPackets = std::getenv("STARWORLD_DEBUG_ENTITY_PACKETS");
+        const char* envEntityLifecycle = std::getenv("STARWORLD_DEBUG_ENTITY_LIFECYCLE");
+        const char* envNetworkPackets = std::getenv("STARWORLD_DEBUG_NETWORK");
+        
+        debugEntityPackets = (envEntityPackets && (std::string(envEntityPackets) == "1" || std::string(envEntityPackets) == "true"));
+        debugEntityLifecycle = (envEntityLifecycle && (std::string(envEntityLifecycle) == "1" || std::string(envEntityLifecycle) == "true"));
+        debugNetworkPackets = (envNetworkPackets && (std::string(envNetworkPackets) == "1" || std::string(envNetworkPackets) == "true"));
+        
+        if (debugEntityPackets || debugEntityLifecycle || debugNetworkPackets) {
+            std::cout << "[DebugLog] Debug logging enabled:" << std::endl;
+            if (debugEntityPackets) std::cout << "  - Entity packets (STARWORLD_DEBUG_ENTITY_PACKETS=1)" << std::endl;
+            if (debugEntityLifecycle) std::cout << "  - Entity lifecycle (STARWORLD_DEBUG_ENTITY_LIFECYCLE=1)" << std::endl;
+            if (debugNetworkPackets) std::cout << "  - Network packets (STARWORLD_DEBUG_NETWORK=1)" << std::endl;
+        }
+    }
+}
+
 // Generate a simple UUID-like string for session identification
 static std::string generateUUID() {
     std::random_device rd;
@@ -125,6 +149,8 @@ static std::string generateUUID() {
 
 OverteClient::OverteClient(std::string domainUrl)
     : m_domainUrl(std::move(domainUrl)) {
+    // Initialize debug logging
+    DebugLog::init();
 }
 
 OverteClient::~OverteClient() {
@@ -607,12 +633,14 @@ void OverteClient::parseEntityPacket(const char* data, size_t len) {
     
     if (len < 1) return;
     
-    // Debug: dump first bytes of packet
-    std::cout << "[OverteClient] parseEntityPacket: " << len << " bytes, first 32: ";
-    for (size_t i = 0; i < std::min(len, size_t(32)); i++) {
-        printf("%02x ", (unsigned char)data[i]);
+    // Debug: dump first bytes of packet if debug mode enabled
+    if (DebugLog::debugEntityPackets) {
+        std::cout << "[OverteClient] parseEntityPacket: " << len << " bytes, first 32: ";
+        for (size_t i = 0; i < std::min(len, size_t(32)); i++) {
+            printf("%02x ", (unsigned char)data[i]);
+        }
+        std::cout << std::endl;
     }
-    std::cout << std::endl;
     
     unsigned char packetType = static_cast<unsigned char>(data[0]);
     
@@ -729,17 +757,20 @@ void OverteClient::parseEntityPacket(const char* data, size_t len) {
             m_updateQueue.push_back(entityId);
             
             std::cout << "[OverteClient] Entity added: " << name << " (id=" << entityId << ")" << std::endl;
-            std::cout << "  Type: " << static_cast<int>(entityType) << std::endl;
-            std::cout << "  Position: (" << position.x << ", " << position.y << ", " << position.z << ")" << std::endl;
-            std::cout << "  Rotation: (" << rotation.x << ", " << rotation.y << ", " << rotation.z << ", " << rotation.w << ")" << std::endl;
-            std::cout << "  Dimensions: (" << dimensions.x << ", " << dimensions.y << ", " << dimensions.z << ")" << std::endl;
-            std::cout << "  Color: RGB(" << color.r << ", " << color.g << ", " << color.b << ")" << std::endl;
-            if (!modelUrl.empty()) {
-                std::cout << "  Model: " << modelUrl << std::endl;
+            if (DebugLog::debugEntityLifecycle) {
+                std::cout << "  Type: " << static_cast<int>(entityType) << std::endl;
+                std::cout << "  Position: (" << position.x << ", " << position.y << ", " << position.z << ")" << std::endl;
+                std::cout << "  Rotation: (" << rotation.x << ", " << rotation.y << ", " << rotation.z << ", " << rotation.w << ")" << std::endl;
+                std::cout << "  Dimensions: (" << dimensions.x << ", " << dimensions.y << ", " << dimensions.z << ")" << std::endl;
+                std::cout << "  Color: RGB(" << color.r << ", " << color.g << ", " << color.b << ")" << std::endl;
+                if (!modelUrl.empty()) {
+                    std::cout << "  Model: " << modelUrl << std::endl;
+                }
+                if (!textureUrl.empty()) {
+                    std::cout << "  Texture: " << textureUrl << std::endl;
+                }
             }
-            if (!textureUrl.empty()) {
-                std::cout << "  Texture: " << textureUrl << std::endl;
-            }
+            std::cout << "[OverteClient/Lifecycle] Total entities: " << m_entities.size() << ", Update queue: " << m_updateQueue.size() << std::endl;
             break;
         }
         
@@ -1678,6 +1709,16 @@ void OverteClient::sendEntityQuery() {
         std::cout << "[OverteClient] Sent EntityQuery to " << targetName 
                   << " (" << addrStr << ":" << ntohs(reinterpret_cast<const sockaddr_in*>(targetAddr)->sin_port)
                   << ", " << s << " bytes, seq=" << (m_sequenceNumber-1) << ")" << std::endl;
+        
+        if (DebugLog::debugEntityPackets) {
+            std::cout << "[EntityQuery Details]" << std::endl;
+            std::cout << "  Connection ID: " << connectionID << std::endl;
+            std::cout << "  Num frustums: 0 (requesting all entities)" << std::endl;
+            std::cout << "  Max PPS: 3000" << std::endl;
+            std::cout << "  Octree scale: 1.0" << std::endl;
+            std::cout << "  Flags: 0x1 (WantInitialCompletion)" << std::endl;
+            std::cout << "  Payload size: " << payload.size() << " bytes" << std::endl;
+        }
     } else {
         std::cerr << "[OverteClient] Failed to send EntityQuery: " << strerror(errno) << std::endl;
     }

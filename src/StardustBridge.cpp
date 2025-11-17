@@ -229,6 +229,33 @@ bool StardustBridge::setNodeModel(NodeId id, const std::string& modelUrl) {
 bool StardustBridge::setNodeTexture(NodeId id, const std::string& textureUrl) {
     auto it = m_nodes.find(id);
     if (it == m_nodes.end()) return false;
+    
+    // Check if URL is HTTP(S) - if so, download via ModelCache (also works for textures!)
+    if (textureUrl.substr(0, 7) == "http://" || textureUrl.substr(0, 8) == "https://") {
+        // Request download from ModelCache (cache handles all file types)
+        ModelCache::instance().requestModel(
+            textureUrl,
+            [this, id](const std::string& url, bool success, const std::string& localPath) {
+                if (success && m_fnSetTexture) {
+                    std::cout << "[StardustBridge] Texture downloaded: " << url << " -> " << localPath << std::endl;
+                    m_fnSetTexture(id, localPath.c_str());
+                } else if (!success) {
+                    std::cerr << "[StardustBridge] Failed to download texture: " << url << std::endl;
+                }
+            },
+            [id](const std::string& url, size_t bytesReceived, size_t bytesTotal) {
+                // Optional: log download progress
+                if (bytesTotal > 0 && bytesReceived % 1024 == 0) { // Log every 1KB to reduce spam
+                    float percent = (bytesReceived * 100.0f) / bytesTotal;
+                    std::cout << "[StardustBridge] Downloading texture for node " << id << ": " 
+                              << percent << "% (" << bytesReceived << "/" << bytesTotal << " bytes)" << std::endl;
+                }
+            }
+        );
+        return true; // Download initiated, will complete asynchronously
+    }
+    
+    // Direct URL (file://, data:, etc.) - pass through to bridge
     if (m_fnSetTexture) {
         return m_fnSetTexture(id, textureUrl.c_str()) == 0;
     }

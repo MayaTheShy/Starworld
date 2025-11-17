@@ -92,6 +92,88 @@ int main(){
         }
     }
 
+    // Test 4: Entity packet structure validation
+    {
+        // Simulate a simple EntityAdd packet structure:
+        // [type:u8][id:u64][name:null-terminated][position:3xf32][rotation:4xf32][dimensions:3xf32][model_url:null-terminated][texture_url:null-terminated][color:3xf32][entity_type:u8]
+        std::vector<uint8_t> entityPacket;
+        
+        // Packet type (0x10 = ENTITY_ADD)
+        entityPacket.push_back(0x10);
+        
+        // Entity ID (uint64): 12345
+        uint64_t entityId = 12345;
+        for (int i = 0; i < 8; i++) {
+            entityPacket.push_back((entityId >> (i * 8)) & 0xFF);
+        }
+        
+        // Name: "TestEntity\0"
+        std::string name = "TestEntity";
+        entityPacket.insert(entityPacket.end(), name.begin(), name.end());
+        entityPacket.push_back(0); // null terminator
+        
+        // Position: (1.0, 2.0, 3.0) as 3 floats
+        float pos[3] = {1.0f, 2.0f, 3.0f};
+        for (int i = 0; i < 3; i++) {
+            uint8_t* bytes = reinterpret_cast<uint8_t*>(&pos[i]);
+            entityPacket.insert(entityPacket.end(), bytes, bytes + 4);
+        }
+        
+        // Rotation: identity quaternion (0,0,0,1) as 4 floats
+        float rot[4] = {0.0f, 0.0f, 0.0f, 1.0f};
+        for (int i = 0; i < 4; i++) {
+            uint8_t* bytes = reinterpret_cast<uint8_t*>(&rot[i]);
+            entityPacket.insert(entityPacket.end(), bytes, bytes + 4);
+        }
+        
+        // Dimensions: (0.5, 0.5, 0.5) as 3 floats
+        float dims[3] = {0.5f, 0.5f, 0.5f};
+        for (int i = 0; i < 3; i++) {
+            uint8_t* bytes = reinterpret_cast<uint8_t*>(&dims[i]);
+            entityPacket.insert(entityPacket.end(), bytes, bytes + 4);
+        }
+        
+        // Model URL: empty
+        entityPacket.push_back(0);
+        
+        // Texture URL: empty
+        entityPacket.push_back(0);
+        
+        // Color: (1.0, 0.0, 0.0) red as 3 floats
+        float color[3] = {1.0f, 0.0f, 0.0f};
+        for (int i = 0; i < 3; i++) {
+            uint8_t* bytes = reinterpret_cast<uint8_t*>(&color[i]);
+            entityPacket.insert(entityPacket.end(), bytes, bytes + 4);
+        }
+        
+        // Entity type: 1 (Box)
+        entityPacket.push_back(1);
+        
+        std::cout << "[TEST] Entity packet structure: " << entityPacket.size() << " bytes" << std::endl;
+        
+        // Validate minimum size
+        size_t minExpectedSize = 1 + 8 + 11 + 12 + 16 + 12 + 1 + 1 + 12 + 1; // = 75 bytes
+        if (entityPacket.size() != minExpectedSize) {
+            std::cerr << "[FAIL] Entity packet size mismatch: got " << entityPacket.size() 
+                      << " expected " << minExpectedSize << "\n";
+            ++failures;
+        }
+        
+        // Validate packet type
+        if (entityPacket[0] != 0x10) {
+            std::cerr << "[FAIL] Entity packet type mismatch\n";
+            ++failures;
+        }
+        
+        // Validate entity ID
+        uint64_t readId = 0;
+        std::memcpy(&readId, &entityPacket[1], 8);
+        if (readId != entityId) {
+            std::cerr << "[FAIL] Entity ID mismatch: got " << readId << " expected " << entityId << "\n";
+            ++failures;
+        }
+    }
+
     if (failures == 0) {
         std::cout << "ALL TESTS PASS" << std::endl;
         return 0;
