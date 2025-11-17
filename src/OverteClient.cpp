@@ -154,19 +154,17 @@ OverteClient::OverteClient(std::string domainUrl)
 }
 
 OverteClient::~OverteClient() {
-    // Destructor implementation (required for unique_ptr with forward-declared type)
+    // Destructor implementation
 }
 
+// Deprecated: Use OverteAuth directly from main.cpp and call setAuth()
+// bool OverteClient::login(const std::string& username, const std::string& password, const std::string& metaverseUrl) {
+//     This method is deprecated - authentication should be handled in main.cpp
+//     and passed via setAuth()
+// }
 bool OverteClient::login(const std::string& username, const std::string& password, const std::string& metaverseUrl) {
-    if (!m_auth) {
-        m_auth = std::make_unique<OverteAuth>();
-    }
-    
-    bool success = m_auth->login(username, password, metaverseUrl);
-    if (success) {
-        m_username = username;
-    }
-    return success;
+    std::cerr << "[OverteClient] WARNING: login() is deprecated. Use OverteAuth in main.cpp and call setAuth()" << std::endl;
+    return false;
 }
 
 void OverteClient::setAuth(OverteAuth* auth) {
