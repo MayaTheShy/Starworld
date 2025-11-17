@@ -6,7 +6,7 @@
 
 Starworld is an [Overte](https://overte.org) client that renders virtual world entities inside the [StardustXR](https://stardustxr.org) compositor. It bridges Overte's entity protocol with Stardust's spatial computing environment, allowing you to view and interact with Overte domains in XR.
 
-**Current Status:** ⚠️ **Connection establishes but drops after 11-18 seconds due to server-side HMAC verification issue.** 
+**Current Status:** ✅ **Connection persistence is now fixed. All core entity rendering features are implemented. Color tinting and texture application are pending StardustXR API support.**
 
 ✨ **Working Features:**
 - Complete DomainConnectRequest implementation with OAuth authentication
@@ -16,8 +16,8 @@ Starworld is an [Overte](https://overte.org) client that renders virtual world e
 - Primitive models (cube, sphere, suzanne) pre-generated in `~/.cache/starworld/primitives/`
 - HMAC-MD5 packet verification implementation (correct but blocked by server config)
 
-⚠️ **Known Issue:**
-Connection is killed after 11-18 seconds due to HMAC verification deadlock on the server side. See [`docs/NETWORK_PROTOCOL_INVESTIGATION.md`](docs/NETWORK_PROTOCOL_INVESTIGATION.md) for detailed analysis. The client implementation is correct; the issue is server-side configuration where HMAC verification is required but not properly initialized for new nodes.
+ℹ️ **Note:**
+Connection persistence is now fixed (see below). For protocol details, see [`docs/NETWORK_PROTOCOL_INVESTIGATION.md`](docs/NETWORK_PROTOCOL_INVESTIGATION.md). For troubleshooting, see [`docs/ENTITY_TROUBLESHOOTING.md`](docs/ENTITY_TROUBLESHOOTING.md).
 
 ### About the Technologies
 
@@ -319,24 +319,19 @@ This allows you to:
 
 ## Known Limitations
 
-1. **OAuth Authentication**: Web-based OAuth flow not yet implemented (see OVERTE_AUTH.md)
-   - Anonymous connection works perfectly
-   - Assignment client discovery limited without authentication
-   - Domain server used as fallback for entity queries
-   
-2. **Entity types**: Only Box, Sphere, Model supported. Need Text, Image, Light, Zone, etc.
+1. **Color Tinting Not Visually Applied**: Color data is parsed, stored, and logged, but not yet applied to model materials (requires StardustXR asteroids API extension). See [`docs/ENTITY_TROUBLESHOOTING.md`](docs/ENTITY_TROUBLESHOOTING.md).
 
-3. **Model colors**: Entity colors are parsed but not yet applied to materials
+2. **Texture Application Not Implemented**: Texture URLs are parsed, textures are downloaded and cached, but not yet visually applied to models (requires StardustXR material API).
 
-4. **No texture support**: Models render without textures, entity.textureUrl parsing ready
+3. **ATP Protocol Not Supported**: atp:// asset protocol is not yet supported (requires AssetClient integration). Use HTTP URLs for now.
 
-5. **Limited entity updates**: Entities created but real-time updates/deletions need work
+4. **Entity Types**: Only Box, Sphere, Model are supported. Text, Image, Light, Zone, etc. are not yet implemented.
 
-6. **UDP only**: All communication via UDP (HTTP used for diagnostics only)
+5. **Limited Entity Updates**: Entities are created, but real-time updates and deletions are not fully supported.
 
-7. **Single user**: No avatar or multi-user support yet
+6. **Single User**: No avatar or multi-user support yet.
 
-8. **NAT/Firewall**: External connections require port forwarding for self-hosted domains
+7. **NAT/Firewall**: External connections require port forwarding for self-hosted domains.
 
 ## Roadmap
 
@@ -353,11 +348,12 @@ This allows you to:
 - [x] Download models from entity.modelUrl (http/https)
 - [x] SHA256-based caching with libcurl
 - [x] Async download callbacks with progress
+- [x] Texture download and caching (infrastructure complete)
 - [ ] ATP protocol support (Overte asset server)
-- [ ] Material color application to models
-- [ ] Texture loading and mapping
+- [ ] Material color application to models (pending API)
+- [ ] Texture loading and mapping (pending API)
 
-### Phase 3: Network & Protocol ✅ MOSTLY COMPLETE
+### Phase 3: Network & Protocol ✅ COMPLETE
 - [x] Domain connection via UDP
 - [x] NLPacket protocol implementation
 - [x] DomainConnectRequest / DomainList handshake
@@ -369,6 +365,7 @@ This allows you to:
 - [x] Domain address parsing (host:port/position/orientation)
 - [x] **OAuth 2.0 authentication with browser flow** 🎉
 - [x] Token persistence and refresh
+- [x] Connection persistence bug fixed (see docs)
 - [ ] Assignment client direct connections
 - [ ] Authenticated EntityServer queries
 
@@ -395,30 +392,7 @@ This allows you to:
 
 ## Troubleshooting
 
-### "Failed to connect to StardustXR compositor"
-- Ensure Stardust server is running
-- Check `STARDUSTXR_SOCKET` environment variable
-- Try: `ss -lx | grep stardust` to find the socket
-
-### "Rust bridge present but start() failed"
-- Rebuild the bridge: `cd bridge && cargo build --release`
-- Check library exists: `ls -lh bridge/target/release/libstardust_bridge.so`
-- Verify RPATH: `ldd build/starworld`
-
-### "Could not connect to Overte"
-- Verify domain server is running: `ps aux | grep domain-server`
-- Check UDP port: `sudo ss -ulnp | grep 40104`
-- Verify network connectivity: `ping <domain-host>`
-- For remote domains, check firewall/NAT port forwarding
-- Try local domain first: `--overte=127.0.0.1:40104`
-- Use simulation mode: `export STARWORLD_SIMULATE=1`
-- Check domain server logs for connection attempts
-
-### Nothing renders in VR
-- Check Stardust server logs for errors
-- Verify entities have non-zero dimensions
-- Enable debug logging: `RUST_LOG=debug`
-- Look for "[bridge/reify]" log messages
+See [`docs/ENTITY_TROUBLESHOOTING.md`](docs/ENTITY_TROUBLESHOOTING.md) for a complete troubleshooting guide, debug flags, and common issues.
 
 ## Contributing
 
@@ -448,32 +422,9 @@ See [docs/CI_SETUP_SUMMARY.md](docs/CI_SETUP_SUMMARY.md) for details on the CI p
 
 ## References & Resources
 
-### StardustXR
-- **Official Website**: https://stardustxr.org
-- **GitHub Organization**: https://github.com/StardustXR
-- **Core Library (Fusion)**: https://github.com/StardustXR/core
-- **Server**: https://github.com/StardustXR/server
-- **Asteroids (UI Elements)**: https://github.com/StardustXR/asteroids
-- **Documentation**: https://stardustxr.org/docs
-- **Matrix Chat**: https://matrix.to/#/#stardustxr:matrix.org
+See the documentation in the `docs/` directory for protocol, troubleshooting, and implementation details. For StardustXR and Overte resources, see:
 
-### Overte
-- **Official Website**: https://overte.org
-- **GitHub Repository**: https://github.com/overte-org/overte
-- **User Documentation**: https://docs.overte.org
-- **Developer Docs**: https://docs.overte.org/developer
-- **API Reference**: https://apidocs.overte.org
-- **Discord Community**: https://discord.gg/overte
-- **Main Metaverse**: https://mv.overte.org
-- **Protocol Documentation**: https://github.com/overte-org/overte/tree/master/libraries/networking
-
-### Related Projects
-- **High Fidelity** (Overte's predecessor): https://github.com/highfidelity/hifi (archived)
+- **StardustXR**: https://stardustxr.org, https://github.com/StardustXR
+- **Overte**: https://overte.org, https://github.com/overte-org/overte
 - **GLTF/GLB Format**: https://www.khronos.org/gltf/
-- **Blender**: https://www.blender.org (used for primitive generation)
-
-### Technical References
-- **Qt QDataStream**: https://doc.qt.io/qt-5/qdatastream.html (Overte serialization format)
-- **OAuth 2.0 RFC**: https://www.rfc-editor.org/rfc/rfc6749.html
-- **NLPacket Protocol**: Documented in Overte source at `libraries/networking/src/NLPacket.h`
-- **libcurl Documentation**: https://curl.se/libcurl/
+- **Blender**: https://www.blender.org
