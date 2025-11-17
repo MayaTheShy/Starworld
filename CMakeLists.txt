@@ -24,6 +24,7 @@ add_executable(starworld
     src/StardustBridge.cpp
     src/OverteClient.cpp
     src/OverteAuth.cpp
+    src/RSAKeypair.cpp
     src/SceneSync.cpp
     src/InputHandler.cpp
     src/NLPacketCodec.cpp
