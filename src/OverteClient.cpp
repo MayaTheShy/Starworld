@@ -1397,21 +1397,21 @@ void OverteClient::sendDomainConnectRequest() {
     qs.writeQString("");
     
     // 14. Directory services (metaverse) username (QString)
-    // TEMPORARILY DISABLED: Sending username might require signature
+    // NOTE: Sending a username requires a cryptographic signature (field 15) using a
+    // private key registered with the metaverse. Without a valid signature, the domain
+    // server will reject the connection. For now, we send empty string (anonymous mode).
+    // TODO: Implement RSA keypair generation and username signature
     std::string metaverseUsername = "";
-    // if (m_auth && m_auth->isAuthenticated()) {
-    //     metaverseUsername = m_auth->getUsername();
-    //     std::cout << "[OverteClient] Including metaverse username: " << metaverseUsername << std::endl;
-    // }
     qs.writeQString(metaverseUsername);
     
-    // 15. Username signature (QString) - empty (no keypair authentication yet)
+    // 15. Username signature (QString) - empty (no keypair authentication)
+    // This would be AccountInfo::getUsernameSignature(connectionToken) in official client
     qs.writeQString("");
     
-    // 16. Domain username (QString) - empty for now (domain-specific auth not yet implemented)
+    // 16. Domain username (QString) - for domain-specific auth (separate from metaverse)
     qs.writeQString("");
     
-    // 17. Domain access token:refreshToken (QString) - empty for now
+    // 17. Domain access token:refreshToken (QString) - for domain OAuth
     qs.writeQString("");
 
     // Append payload to packet

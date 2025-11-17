@@ -354,6 +354,21 @@ bool OverteAuth::login(const std::string& username, const std::string& password,
     }
     
     std::cout << "[OverteAuth] Successfully authenticated as " << username << std::endl;
+    
+    // Generate and upload RSA keypair for signature authentication
+    if (!hasKeypair()) {
+        std::cout << "[OverteAuth] Generating RSA keypair for signature authentication..." << std::endl;
+        if (generateKeypair()) {
+            if (uploadPublicKey()) {
+                std::cout << "[OverteAuth] Keypair generated and uploaded successfully" << std::endl;
+            } else {
+                std::cerr << "[OverteAuth] Warning: Failed to upload public key: " << m_lastError << std::endl;
+            }
+        } else {
+            std::cerr << "[OverteAuth] Warning: Failed to generate keypair" << std::endl;
+        }
+    }
+    
     return true;
 }
 
