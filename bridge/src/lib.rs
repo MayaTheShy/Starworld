@@ -168,30 +168,19 @@ impl Reify for BridgeState {
                     entity_type_name, id, model_source);
                 
                 match Model::direct(&model_path) {
-                    Ok(model) => {
-                        // TODO: Apply color tint to the model
-                        // The asteroids Model element doesn't expose material manipulation yet.
-                        // This would require:
-                        // 1. Loading the model's materials
-                        // 2. Multiplying base color by the tint color
-                        // 3. Re-applying the modified materials
-                        // For now, we just log the color for debugging.
+                    Ok(mut model) => {
+                        // Apply color tint to the model if not default (white)
                         if node.color != [1.0, 1.0, 1.0, 1.0] {
-                            eprintln!("[bridge/reify] Node {} has color tint: RGBA({:.2}, {:.2}, {:.2}, {:.2}) - NOT YET APPLIED", 
+                            use stardust_xr_asteroids::elements::model::MaterialParameter;
+                            model = model.mat_param("color", MaterialParameter::Color(node.color.into()));
+                            eprintln!("[bridge/reify] Node {} applying color tint: RGBA({:.2}, {:.2}, {:.2}, {:.2})", 
                                 id, node.color[0], node.color[1], node.color[2], node.color[3]);
                         }
-                        
-                        // TODO: Apply texture from texture_url
-                        // Similar to color, texture application requires material manipulation.
-                        // This would involve:
-                        // 1. Downloading the texture if it's an HTTP URL
-                        // 2. Loading it as a texture resource
-                        // 3. Applying it to the model's materials
+                        // TODO: Apply texture from texture_url (future)
                         if !node.texture_url.is_empty() {
                             eprintln!("[bridge/reify] Node {} has texture URL: {} - NOT YET APPLIED", 
                                 id, node.texture_url);
                         }
-                        
                         Some(model.build())
                     }
                     Err(e) => {
