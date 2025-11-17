@@ -73,6 +73,7 @@ public:
 	bool login(const std::string& username, const std::string& password,
 	           const std::string& metaverseUrl = "https://mv.overte.org");
 	bool isAuthenticated() const;
+	void setAuth(OverteAuth* auth); // Set metaverse authentication
 	
 	// High-level connect that brings up key mixers.
 	bool connect();
@@ -131,8 +132,8 @@ private:
 	std::uint32_t m_sequenceNumber{0};  // Packet sequence number for NLPacket protocol
 	std::uint16_t m_localID{0};         // Local ID assigned by domain server
 	
-	// Authentication
-	std::unique_ptr<OverteAuth> m_auth;
+	// Authentication (non-owning pointer to auth object from main)
+	OverteAuth* m_auth{nullptr};
 
 	// Very small in-process world state for testing
 	std::unordered_map<std::uint64_t, OverteEntity> m_entities;
