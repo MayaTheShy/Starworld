@@ -1437,13 +1437,23 @@ void OverteClient::sendDomainConnectRequest() {
     std::string metaverseUsername = "";
     std::vector<uint8_t> usernameSignature;
     
-    // If we have authentication and a connection token, use authenticated mode
-    if (m_auth && m_auth->hasKeypair() && !m_connectionToken.empty()) {
+    // If we have authentication:
+    // - First request: send username WITHOUT signature (connectionToken empty)
+    // - Second request (after receiving token): send username WITH signature
+    if (m_auth && m_auth->hasKeypair()) {
         metaverseUsername = m_auth->getUsername();
-        usernameSignature = m_auth->getUsernameSignature(m_connectionToken);
-        std::cout << "[OverteClient] Sending authenticated DomainConnectRequest for user '" 
-                  << metaverseUsername << "' with " << usernameSignature.size() 
-                  << "-byte signature" << std::endl;
+        
+        if (!m_connectionToken.empty()) {
+            // We have a connection token - send username WITH signature
+            usernameSignature = m_auth->getUsernameSignature(m_connectionToken);
+            std::cout << "[OverteClient] Sending authenticated DomainConnectRequest for user '" 
+                      << metaverseUsername << "' with " << usernameSignature.size() 
+                      << "-byte signature" << std::endl;
+        } else {
+            // First request - send username WITHOUT signature to request connection token
+            std::cout << "[OverteClient] Sending DomainConnectRequest with username '" 
+                      << metaverseUsername << "' (requesting connection token)" << std::endl;
+        }
     }
     
     qs.writeQString(metaverseUsername);
@@ -1452,7 +1462,7 @@ void OverteClient::sendDomainConnectRequest() {
     if (!usernameSignature.empty()) {
         qs.writeQByteArray(usernameSignature);
     } else {
-        // Send empty QString as placeholder when no authentication
+        // Send empty QString as placeholder when no signature available yet
         qs.writeQString("");
     }
     
