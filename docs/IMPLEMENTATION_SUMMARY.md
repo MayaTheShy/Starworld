@@ -372,12 +372,33 @@ make -j$(nproc)
 
 
 
-## Future Work
 
-- Color/texture visual application (StardustXR API extension)
-- ATP protocol support (Overte asset server)
-- More entity types (Text, Light, Zone, etc.)
-- See IMPLEMENTATION_COMPLETE.md for priorities
+## Future Risks & Priorities (6–12 Months)
+
+As Starworld evolves, the following risks and challenges will become increasingly important:
+
+- **Performance Scaling:** O(n) transform updates and distance queries will not scale for large scenes. Deep hierarchies and lack of spatial indexing will limit performance.
+- **Memory/Data Layout:** Inefficient memory layout or fragmentation from dynamic hierarchies can degrade performance.
+- **Concurrency & Synchronization:** Multithreading will require robust synchronization to avoid race conditions and data corruption.
+- **Lifecycle & Ownership:** Deletion and reparenting in hierarchies can cause dangling references or orphaned children, especially across FFI boundaries.
+- **API Misuse:** Cycles or invalid parent/child states can cause subtle bugs or crashes if not checked.
+- **Spatial Query Correctness:** Queries may become stale or incorrect if transforms are not updated atomically.
+- **XR Performance:** High frame rates and low latency are critical; entity and query systems must be highly optimized.
+- **Security/Authority:** In multi-user/networked scenarios, lack of permissions or rate-limiting could allow abuse.
+- **Extensibility:** As more systems (physics, networking, etc.) are added, poor separation of concerns could hinder future growth.
+- **Testing/Debugging:** More features and edge cases will make testing and debugging harder without good tools.
+
+### Recommended Priorities
+- **Spatial Indexing:** Integrate a spatial data structure (octree, k-d tree, etc.) for fast queries. Update incrementally as entities move.
+- **Hierarchy Traversal:** Use dirty flags for transforms and consider breadth-first traversal for deep hierarchies.
+- **Lifecycle Invariants:** Prevent cycles, define deletion/reparenting behavior, and add runtime checks.
+- **FFI Safety:** Ensure safe memory and ownership across Rust/C++.
+- **Concurrency:** Design for thread safety and test with simulated concurrent updates/queries.
+- **API Hardening:** Clearly document constraints and provide safe helpers/utilities.
+- **XR Profiling:** Benchmark with XR workloads and optimize for frame time and memory.
+- **Security:** Add permission models and rate-limiting for entity operations in multi-user mode.
+- **Testing & Tooling:** Add deep hierarchy/reparenting tests, fuzzing, and scene graph/query inspectors.
+- **Architecture:** Plan for modularity and extensibility to support future systems cleanly.
 
 ---
 
