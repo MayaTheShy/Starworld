@@ -282,6 +282,18 @@ bool OverteAuth::loadTokenFromFile() {
     
     std::cout << "[OverteAuth] Loaded saved token for " << m_username << std::endl;
     
+    // Generate keypair if we don't have one
+    if (!hasKeypair()) {
+        std::cout << "[OverteAuth] Generating RSA keypair..." << std::endl;
+        if (!generateKeypair()) {
+            std::cerr << "[OverteAuth] Failed to generate keypair" << std::endl;
+        } else if (!uploadPublicKey()) {
+            std::cerr << "[OverteAuth] Warning: Failed to upload public key to metaverse" << std::endl;
+        } else {
+            std::cout << "[OverteAuth] ✓ RSA keypair generated and public key uploaded" << std::endl;
+        }
+    }
+    
     // Check if token needs refresh
     if (isTokenExpired()) {
         std::cout << "[OverteAuth] Token expired, attempting refresh..." << std::endl;
@@ -811,6 +823,9 @@ bool OverteAuth::uploadPublicKey() {
     curl_slist_free_all(headers);
     curl_easy_cleanup(curl);
     
+    std::cout << "[OverteAuth] HTTP status: " << httpCode << std::endl;
+    std::cout << "[OverteAuth] Server response: " << response << std::endl;
+    
     if (res != CURLE_OK) {
         m_lastError = std::string("Public key upload failed: ") + curl_easy_strerror(res);
         return false;
@@ -818,7 +833,6 @@ bool OverteAuth::uploadPublicKey() {
     
     if (httpCode != 200) {
         m_lastError = "Public key upload failed with HTTP " + std::to_string(httpCode);
-        std::cerr << "[OverteAuth] Server response: " << response << std::endl;
         return false;
     }
     
