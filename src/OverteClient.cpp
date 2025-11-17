@@ -1397,11 +1397,12 @@ void OverteClient::sendDomainConnectRequest() {
     qs.writeQString("");
     
     // 14. Directory services (metaverse) username (QString)
+    // TEMPORARILY DISABLED: Sending username might require signature
     std::string metaverseUsername = "";
-    if (m_auth && m_auth->isAuthenticated()) {
-        metaverseUsername = m_auth->getUsername();
-        std::cout << "[OverteClient] Including metaverse username: " << metaverseUsername << std::endl;
-    }
+    // if (m_auth && m_auth->isAuthenticated()) {
+    //     metaverseUsername = m_auth->getUsername();
+    //     std::cout << "[OverteClient] Including metaverse username: " << metaverseUsername << std::endl;
+    // }
     qs.writeQString(metaverseUsername);
     
     // 15. Username signature (QString) - empty (no keypair authentication yet)
