@@ -335,6 +335,36 @@ This allows you to:
 
 ## Roadmap
 
+## Future Risk Surface & Priorities (6–12 Months)
+
+Starworld’s current architecture is robust for small to moderate scenes, but as the project grows, several risks and challenges will become increasingly important:
+
+### Key Risks
+- **Performance Scaling:** Scene complexity will make O(n) transform updates and distance queries a bottleneck. Deep hierarchies and lack of spatial indexing will limit scalability.
+- **Memory/Data Layout:** Inefficient memory layout or fragmentation from dynamic hierarchies can degrade performance.
+- **Concurrency & Synchronization:** If/when multithreading is introduced, unsynchronized updates and queries could cause race conditions or data corruption.
+- **Lifecycle & Ownership:** Deletion and reparenting in hierarchies can cause dangling references or orphaned children, especially across FFI boundaries.
+- **API Misuse:** Cycles or invalid parent/child states can cause subtle bugs or crashes if not checked.
+- **Spatial Query Correctness:** Queries may become stale or incorrect if transforms are not updated atomically.
+- **XR Performance:** High frame rates and low latency are critical; entity and query systems must be highly optimized.
+- **Security/Authority:** In multi-user/networked scenarios, lack of permissions or rate-limiting could allow abuse.
+- **Extensibility:** As more systems (physics, networking, etc.) are added, poor separation of concerns could hinder future growth.
+- **Testing/Debugging:** More features and edge cases will make testing and debugging harder without good tools.
+
+### Recommended Priorities
+- **Implement/Optimize Spatial Indexing:** Integrate a spatial data structure (octree, k-d tree, etc.) for fast queries. Update incrementally as entities move.
+- **Optimize Hierarchy Traversal:** Use dirty flags for transforms and consider breadth-first traversal for deep hierarchies.
+- **Enforce Lifecycle Invariants:** Prevent cycles, define deletion/reparenting behavior, and add runtime checks.
+- **Audit FFI Boundaries:** Ensure safe memory and ownership across Rust/C++.
+- **Plan for Concurrency:** Design for thread safety and test with simulated concurrent updates/queries.
+- **Document & Harden API:** Clearly document constraints and provide safe helpers/utilities.
+- **XR-Specific Profiling:** Benchmark with XR workloads and optimize for frame time and memory.
+- **Security & Authority:** Add permission models and rate-limiting for entity operations in multi-user mode.
+- **Expand Testing & Tooling:** Add deep hierarchy/reparenting tests, fuzzing, and scene graph/query inspectors.
+- **Architectural Planning:** Plan for modularity and extensibility to support future systems cleanly.
+
+**Bottom line:** Proactively addressing these areas will ensure Starworld remains performant, safe, and extensible as it grows.
+
 ### Phase 1: Core Rendering ✅ COMPLETE
 - [x] Entity type differentiation
 - [x] **3D model rendering with GLTF/GLB** 🎉
