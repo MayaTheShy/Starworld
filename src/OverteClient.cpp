@@ -169,6 +169,14 @@ bool OverteClient::login(const std::string& username, const std::string& passwor
     return success;
 }
 
+void OverteClient::setAuth(OverteAuth* auth) {
+    m_auth = auth;
+    if (m_auth && m_auth->isAuthenticated()) {
+        std::cout << "[OverteClient] Metaverse authentication configured for user: " 
+                  << m_auth->getUsername() << std::endl;
+    }
+}
+
 bool OverteClient::isAuthenticated() const {
     return m_auth && m_auth->isAuthenticated();
 }
@@ -1390,19 +1398,21 @@ void OverteClient::sendDomainConnectRequest() {
     // 13. Place name (QString) - empty
     qs.writeQString("");
     
-    // 14. Directory services username (QString) - empty for now
-    // TODO: Username sending causes domain server to not respond
-    // const char* usernameEnv = std::getenv("OVERTE_USERNAME");
-    // std::string dsUsername = usernameEnv ? usernameEnv : "";
-    qs.writeQString("");  // Always send empty for now
+    // 14. Directory services (metaverse) username (QString)
+    std::string metaverseUsername = "";
+    if (m_auth && m_auth->isAuthenticated()) {
+        metaverseUsername = m_auth->getUsername();
+        std::cout << "[OverteClient] Including metaverse username: " << metaverseUsername << std::endl;
+    }
+    qs.writeQString(metaverseUsername);
     
-    // 15. Username signature (QString) - empty (no keypair authentication)
+    // 15. Username signature (QString) - empty (no keypair authentication yet)
     qs.writeQString("");
     
-    // 16. Domain username (QString) - send empty for compatibility
+    // 16. Domain username (QString) - empty for now (domain-specific auth not yet implemented)
     qs.writeQString("");
     
-    // 17. Domain access token:refreshToken (QString) - send empty for compatibility  
+    // 17. Domain access token:refreshToken (QString) - empty for now
     qs.writeQString("");
 
     // Append payload to packet
