@@ -104,6 +104,7 @@ private:
 	void parseDomainPacket(const char* data, size_t len);
 	void handleDomainListReply(const char* data, size_t len);
 	void handleDomainConnectionDenied(const char* data, size_t len);
+	void handleDomainServerConnectionToken(const char* data, size_t len);
 	void handleICEPing(const char* data, size_t len);
 	void handlePing(const char* payload, size_t len);
 	void sendDomainListRequest();
@@ -129,6 +130,7 @@ private:
 	bool m_domainConnected{false};
 	std::string m_sessionUUID; // Our client session UUID
 	std::string m_username;     // Domain account username (for future signature-based auth)
+	std::string m_connectionToken; // Connection token from domain server (UUID string)
 	std::uint32_t m_sequenceNumber{0};  // Packet sequence number for NLPacket protocol
 	std::uint16_t m_localID{0};         // Local ID assigned by domain server
 	

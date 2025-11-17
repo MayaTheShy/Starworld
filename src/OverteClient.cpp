@@ -557,6 +557,10 @@ void OverteClient::parseDomainPacket(const char* data, size_t len) {
             handleDomainConnectionDenied(payload, payloadLen);
             break;
             
+        case PacketType::DomainServerConnectionToken:
+            handleDomainServerConnectionToken(payload, payloadLen);
+            break;
+            
         case PacketType::DomainServerRequireDTLS:
             std::cout << "[OverteClient] Domain server requires DTLS (not yet implemented)" << std::endl;
             break;
@@ -1297,6 +1301,39 @@ void OverteClient::handleDomainConnectionDenied(const char* data, size_t len) {
     m_domainConnected = false;
 }
 
+void OverteClient::handleDomainServerConnectionToken(const char* data, size_t len) {
+    // Domain server sends a 16-byte RFC4122 UUID as connection token
+    // Client must sign this with username and send DomainConnectRequest
+    
+    if (len < 16) {
+        std::cerr << "[OverteClient] Invalid connection token packet (length " << len << ")" << std::endl;
+        return;
+    }
+    
+    // Parse UUID bytes to string format
+    char uuidStr[37];
+    const uint8_t* bytes = reinterpret_cast<const uint8_t*>(data);
+    snprintf(uuidStr, sizeof(uuidStr),
+             "%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
+             bytes[0], bytes[1], bytes[2], bytes[3],
+             bytes[4], bytes[5], bytes[6], bytes[7],
+             bytes[8], bytes[9], bytes[10], bytes[11],
+             bytes[12], bytes[13], bytes[14], bytes[15]);
+    
+    m_connectionToken = uuidStr;
+    
+    std::cout << "[OverteClient] Received connection token: " << m_connectionToken << std::endl;
+    
+    // Now re-send DomainConnectRequest with username and signature
+    if (m_auth && m_auth->hasKeypair()) {
+        std::cout << "[OverteClient] Re-sending DomainConnectRequest with authentication" << std::endl;
+        sendDomainConnectRequest();
+    } else {
+        std::cout << "[OverteClient] No authentication available, sending anonymous request" << std::endl;
+        sendDomainConnectRequest();
+    }
+}
+
 void OverteClient::sendDomainConnectRequest() {
     if (!m_udpReady || m_udpFd == -1) return;
     
@@ -1397,16 +1434,27 @@ void OverteClient::sendDomainConnectRequest() {
     qs.writeQString("");
     
     // 14. Directory services (metaverse) username (QString)
-    // NOTE: Sending a username requires a cryptographic signature (field 15) using a
-    // private key registered with the metaverse. Without a valid signature, the domain
-    // server will reject the connection. For now, we send empty string (anonymous mode).
-    // TODO: Implement RSA keypair generation and username signature
     std::string metaverseUsername = "";
+    std::vector<uint8_t> usernameSignature;
+    
+    // If we have authentication and a connection token, use authenticated mode
+    if (m_auth && m_auth->hasKeypair() && !m_connectionToken.empty()) {
+        metaverseUsername = m_auth->getUsername();
+        usernameSignature = m_auth->getUsernameSignature(m_connectionToken);
+        std::cout << "[OverteClient] Sending authenticated DomainConnectRequest for user '" 
+                  << metaverseUsername << "' with " << usernameSignature.size() 
+                  << "-byte signature" << std::endl;
+    }
+    
     qs.writeQString(metaverseUsername);
     
-    // 15. Username signature (QString) - empty (no keypair authentication)
-    // This would be AccountInfo::getUsernameSignature(connectionToken) in official client
-    qs.writeQString("");
+    // 15. Username signature (QByteArray if authenticated, QString("") if not)
+    if (!usernameSignature.empty()) {
+        qs.writeQByteArray(usernameSignature);
+    } else {
+        // Send empty QString as placeholder when no authentication
+        qs.writeQString("");
+    }
     
     // 16. Domain username (QString) - for domain-specific auth (separate from metaverse)
     qs.writeQString("");
