@@ -1437,6 +1437,14 @@ void OverteClient::sendDomainConnectRequest() {
     std::string metaverseUsername = "";
     std::vector<uint8_t> usernameSignature;
     
+    // Debug authentication status
+    std::cout << "[OverteClient] Debug: m_auth = " << (m_auth ? "set" : "null") << std::endl;
+    if (m_auth) {
+        std::cout << "[OverteClient] Debug: hasKeypair = " << (m_auth->hasKeypair() ? "yes" : "no") << std::endl;
+        std::cout << "[OverteClient] Debug: username = " << m_auth->getUsername() << std::endl;
+        std::cout << "[OverteClient] Debug: connectionToken = " << m_connectionToken << std::endl;
+    }
+    
     // If we have authentication:
     // - First request: send username WITHOUT signature (connectionToken empty)
     // - Second request (after receiving token): send username WITH signature
