@@ -64,7 +64,7 @@ jobs:
       run: |
         mkdir -p build
         cd build
-        cmake .. -DCMAKE_BUILD_TYPE=Debug
+        cmake .. -DCMAKE_BUILD_TYPE=Release
     
     - name: Build C++ project
       run: |
