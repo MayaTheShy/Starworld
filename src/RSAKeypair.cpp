@@ -8,6 +8,7 @@
 #include <openssl/bn.h>
 #include <openssl/sha.h>
 #include <openssl/err.h>
+#include <openssl/objects.h>  // For NID_sha256
 
 RSAKeypair::RSAKeypair() {}
 
