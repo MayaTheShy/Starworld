@@ -3,6 +3,7 @@ project(starworld LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 option(USE_OVERTE_SDK "Link against Overte SDK if available" OFF)
 option(USE_STARDUST_SDK "Link against StardustXR SDK if available" OFF)
