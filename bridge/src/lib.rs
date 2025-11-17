@@ -168,15 +168,16 @@ impl Reify for BridgeState {
                     entity_type_name, id, model_source);
                 
                 match Model::direct(&model_path) {
-                    Ok(model) => {
-                        // TODO(starworld): Apply color tint to the model's materials when StardustXR asteroids API supports it.
-                        // See https://github.com/StardustXR/asteroids/issues/1 (example issue link)
+                    Ok(mut model) => {
+                        // Asteroids Model now supports material color tinting.
                         if node.color != [1.0, 1.0, 1.0, 1.0] {
-                            eprintln!("[bridge/reify] Node {} has color tint: RGBA({:.2}, {:.2}, {:.2}, {:.2}) - NOT YET APPLIED (API limitation, see TODO)",
+                            let color = ast::elements::RgbaLinear::new(
+                                node.color[0], node.color[1], node.color[2], node.color[3]
+                            );
+                            model = model.color_tint(color);
+                            eprintln!("[bridge/reify] Node {}: applied color tint RGBA({:.2}, {:.2}, {:.2}, {:.2})",
                                 id, node.color[0], node.color[1], node.color[2], node.color[3]);
                         }
-                        // TODO(starworld): When material API is available, set model material color here.
-                        // For now, this is a no-op.
 
                         // TODO: Apply texture from texture_url (pending API)
                         if !node.texture_url.is_empty() {
